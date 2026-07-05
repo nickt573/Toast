@@ -88,7 +88,7 @@ export function ResourceCard({ res }) {
       </div>
       {res.url && (
         <span className="st-resource-card-url" onClick={openResource}>
-          {res.url}<span style={{ marginLeft: 3, fontSize: 9 }}>↗</span>
+          Link<span style={{ marginLeft: 3, fontSize: 9 }}>↗</span>
         </span>
       )}
       {res.notes && <div className="st-resource-card-notes">{res.notes}</div>}

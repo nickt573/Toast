@@ -358,7 +358,7 @@ function ResourcesSection({ planId, setToast, onChanged }) {
                                 {r.url &&
                                     <a href={r.url} className="plan-resource-url"
                                         onClick={(e) => { e.preventDefault(); openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`); }}>
-                                        {r.url}
+                                        Link<span style={{ marginLeft: 3, fontSize: 9 }}>↗</span>
                                     </a>}
                                 {r.notes && <div className="plan-resource-notes">{r.notes}</div>}
                             </div>
