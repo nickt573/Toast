@@ -156,9 +156,9 @@ function buildByDeckData(groupStats) {
     byDeck[r.group_name].demote  += r.num_demote;
   });
 
-  const decks = Object.keys(byDeck).filter(
-    d => byDeck[d].new + byDeck[d].promote + byDeck[d].demote > 0
-  );
+  const decks = Object.keys(byDeck)
+    .filter(d => byDeck[d].new + byDeck[d].promote + byDeck[d].demote > 0)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
   return {
     labels: decks,
@@ -400,7 +400,8 @@ function DeckSessionsTab({ groupStats, planId, onDeleted }) {
   const [deckFilter, setDeckFilter]   = useState("all");
   const [expanded, setExpanded]       = useState({});
 
-  const deckNames = [...new Set(groupStats.map(r => r.group_name))].sort();
+  const deckNames = [...new Set(groupStats.map(r => r.group_name))]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
   const visible = deckFilter === "all"
     ? groupStats

@@ -24,6 +24,9 @@ const parseFile = (file) => {
   return file.split(/[\\/]/).pop();
 };
 
+// Matches the backend's ORDER BY name COLLATE NOCASE
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
 // ─── Deck List ────────────────────────────────────────────────────────────────
 
 function DeckList({ setToast, onOpenDeck }) {
@@ -60,7 +63,7 @@ function DeckList({ setToast, onOpenDeck }) {
     if (!name) return;
     try {
       const deck = await loggedInvoke("create_deck", { name });
-      setDecks((prev) => [...prev, deck]);
+      setDecks((prev) => [...prev, deck].sort(byName));
       setToast(`${deck.name} successfully created.`);
       setNewName("");
     } catch (e) { logError("catch", e); setToast("Unable to create new deck.", "error"); }
@@ -110,7 +113,7 @@ function DeckList({ setToast, onOpenDeck }) {
     if (!name) { setEditingId(null); setToast("Please choose a valid name."); return; }
     try {
       await loggedInvoke("update_deck", { deck: { id, name, group_type: "deck" } });
-      setDecks((d) => d.map((dk) => dk.id === id ? { ...dk, name } : dk));
+      setDecks((d) => d.map((dk) => dk.id === id ? { ...dk, name } : dk).sort(byName));
       setToast(`${editingName} successfully updated.`);
     } catch (e) { logError("catch", e); setToast(`Failed to update ${editingName}`, "error"); }
     setEditingId(null);
