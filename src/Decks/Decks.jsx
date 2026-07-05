@@ -778,11 +778,6 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     setCards((prev) => prev.map((c) => c.id === id ? { ...c, sequence: -9999, is_due: true, is_paused: false } : c));
   };
 
-  const FILTER_LABELS = {
-    due: "Due", overdue: "Overdue", new: "New", review: "Review",
-    paused: "Paused", unpaused: "Unpaused", custom: "Custom", uploaded: "Uploaded",
-  };
-
   return (
     <div className="dk-cards-root">
       <div className="dk-cards-header">
@@ -815,14 +810,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                 <button className={sort === "id" ? "active" : ""} onClick={() => setSort("id")}>Created Date</button>
                 <button className={sort === "sequence" ? "active" : ""} onClick={() => setSort("sequence")}>Due Date</button>
               </div>
-              <button className={`dk-filter-toggle${filtersOpen ? " active" : ""}`} onClick={() => setFiltersOpen(o => !o)}>
+              <button className={`dk-filter-toggle${filtersOpen || filter !== "all" ? " active" : ""}`} onClick={() => setFiltersOpen(o => !o)}>
                 Filters {filtersOpen ? "▾" : "▸"}
               </button>
-              {!filtersOpen && filter !== "all" && (
-                <span className="dk-filter-active-chip" onClick={() => setFiltersOpen(true)}>
-                  {FILTER_LABELS[filter] ?? filter}
-                </span>
-              )}
               {today && (
                 <div className="dk-date-filter">
                   <span>Last seen:</span>
