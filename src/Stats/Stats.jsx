@@ -56,7 +56,9 @@ function addDays(dateStr, n) {
 
 function parseCategories(catStr) {
   if (!catStr) return [];
-  return catStr.split(",").map(s => s.trim()).filter(Boolean);
+  return catStr.split(",").map(s => s.trim()).filter(Boolean)
+    // "Other" was renamed to "Culture" (bit 64) — alias old stat rows
+    .map(s => s === "Other" ? "Culture" : s);
 }
 
 function categoryStringToMap(catStr) {
