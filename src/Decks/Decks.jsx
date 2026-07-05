@@ -224,6 +224,7 @@ function DeckList({ setToast, onOpenDeck }) {
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiMakeSearchable} onChange={(e) => setAnkiMakeSearchable(e.target.checked)} />
             Make all searchable
+            <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas and ignore anything in parentheses." />
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiCreateFlipped} onChange={(e) => setAnkiCreateFlipped(e.target.checked)} />
