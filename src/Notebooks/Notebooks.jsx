@@ -31,6 +31,9 @@ async function pickFile(extensions) {
     } catch { return null; }
 }
 
+// Matches the backend's ORDER BY name COLLATE NOCASE
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
 // ─── Notebook List ────────────────────────────────────────────────────────────
 
 function NotebookList({ setToast, onOpenNotebook }) {
@@ -58,7 +61,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
         if (!name) {setToast("Please enter a valid name."); return; };
         try {
             const nb = await loggedInvoke("create_notebook", { name });
-            setNotebooks((prev) => [...prev, nb]);
+            setNotebooks((prev) => [...prev, nb].sort(byName));
             setToast(`${nb.name} successfully created.`);
             setNewName("");
         } catch (e) { logError("catch", e); setToast("Failed to create notebook.", "error"); }
@@ -71,7 +74,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
         if (!name) { setEditingId(null); setToast("Please enter a valid name."); return; }
         try {
             await loggedInvoke("update_notebook", { notebook: { id, plan_id: null, name, group_type: "notebook" } });
-            setNotebooks((prev) => prev.map((n) => n.id === id ? { ...n, name } : n));
+            setNotebooks((prev) => prev.map((n) => n.id === id ? { ...n, name } : n).sort(byName));
             setToast(`${editingName} successfully updated.`);
         } catch (e) { logError("catch", e); setToast("Failed to update notebook.", "error"); }
         setEditingId(null);

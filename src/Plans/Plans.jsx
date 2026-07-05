@@ -9,6 +9,9 @@ import "./Plans.css";
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
 
+// Matches the backend's ORDER BY name COLLATE NOCASE
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
 // ─── SRS Group Row ────────────────────────────────────────────────────────────
 
 function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData, srsGroups, setToast, onNavigateToGroup }) {
@@ -576,7 +579,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
         if (!trimmed) { setEditingId(null); setToast("Please enter a valid name."); return; }
         try {
             await loggedInvoke("update_plan", { id, name: trimmed });
-            setPlans((prev) => prev.map((p) => p.id === id ? { ...p, name: trimmed } : p));
+            setPlans((prev) => prev.map((p) => p.id === id ? { ...p, name: trimmed } : p).sort(byName));
             setToast("Plan updated.");
         } catch (e) { logError("catch", e); setToast("Failed to update plan.", "error"); }
         setEditingId(null);

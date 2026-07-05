@@ -2,7 +2,7 @@ use crate::crud::models::*;
 use rusqlite::{Connection, Result};
 
 pub fn get_plans(conn: &Connection) -> Result<Vec<Plan>> {
-    conn.prepare("SELECT id, name FROM plan")?
+    conn.prepare("SELECT id, name FROM plan ORDER BY name COLLATE NOCASE ASC")?
         .query_map([], |row| {
             Ok(Plan {
                 id: row.get(0)?,
@@ -34,6 +34,7 @@ pub fn get_todos(plan_id: i64, conn: &Connection) -> Result<Vec<Todo>> {
         SELECT id, plan_id, text, frequency, category, is_done, is_disabled
         FROM todo
         WHERE plan_id = ?1
+        ORDER BY text COLLATE NOCASE ASC
         "#,
     )?
     .query_map([plan_id], |row| {
@@ -55,7 +56,7 @@ pub fn get_groups(conn: &Connection) -> Result<Vec<Group>> {
         r#"
         SELECT id, plan_id, name, group_type
         FROM "group"
-        ORDER BY id ASC
+        ORDER BY name COLLATE NOCASE ASC
         "#,
     )?;
 
@@ -98,7 +99,7 @@ pub fn get_decks(conn: &Connection) -> Result<Vec<Group>> {
         FROM "group"
         WHERE
             group_type = 'deck'
-        ORDER BY id ASC
+        ORDER BY name COLLATE NOCASE ASC
         "#,
     )?
     .query_map([], |row| {
@@ -188,7 +189,7 @@ pub fn get_notebooks(conn: &Connection) -> Result<Vec<Group>> {
         FROM "group"
         WHERE
             group_type = 'notebook'
-        ORDER BY id ASC
+        ORDER BY name COLLATE NOCASE ASC
         "#,
     )?
     .query_map([], |row| {
@@ -251,7 +252,7 @@ pub fn get_plan_srs_groups(plan_id: i64, conn: &Connection) -> Result<Vec<(Group
         FROM "group" g
         INNER JOIN scheduler s ON s.group_id = g.id
         WHERE g.plan_id = ?1
-        ORDER BY g.id ASC
+        ORDER BY g.name COLLATE NOCASE ASC
         "#,
     )?;
 
@@ -293,7 +294,7 @@ pub fn get_unassigned_groups(conn: &Connection) -> Result<Vec<Group>> {
         FROM "group"
         WHERE plan_id IS NULL
             AND group_type = 'deck'
-        ORDER BY id ASC
+        ORDER BY name COLLATE NOCASE ASC
         "#,
     )?;
 
