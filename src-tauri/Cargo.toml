@@ -38,3 +38,10 @@ chrono = "0.4.44"
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 
+# Used to set the Dock icon at runtime so macOS 26+ shows the transparent
+# toast shape instead of compositing the bundled .icns onto a grey squircle
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSResponder"] }
+objc2-foundation = { version = "0.3", features = ["NSData"] }
+

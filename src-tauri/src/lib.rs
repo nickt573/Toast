@@ -16,6 +16,23 @@ pub struct AppState {
     pub app_dir: PathBuf,
 }
 
+// macOS 26+ composites bundled .icns icons onto a default grey squircle in the
+// Dock. Setting the icon at runtime (which is what `tauri dev` does — hence the
+// transparent toast in dev) makes the Dock and Cmd-Tab show the PNG as-is.
+// Finder and Launchpad still show the bundled icon.
+#[cfg(target_os = "macos")]
+fn set_dock_icon() {
+    use objc2::{AnyThread, MainThreadMarker};
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::NSData;
+
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    let data = NSData::with_bytes(include_bytes!("../icons/icon.png"));
+    if let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) {
+        unsafe { NSApplication::sharedApplication(mtm).setApplicationIconImage(Some(&image)) };
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -33,6 +50,9 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            set_dock_icon();
+
             let app_dir = app
                 .path()
                 .app_data_dir()
