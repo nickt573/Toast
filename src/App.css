@@ -630,6 +630,6 @@ input.input-readonly, textarea.input-readonly {
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .st-resource-card-name { font-weight: 700; font-size: 13px; color: var(--t-clay); }
 .st-resource-card-type { font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-pill); padding: 1px 7px; user-select: none; }
-.st-resource-card-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 3px; cursor: pointer; word-break: break-all; }
+.st-resource-card-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 3px; cursor: pointer; }
 .st-resource-card-url:hover { text-decoration: underline; }
 .st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }
