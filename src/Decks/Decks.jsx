@@ -228,7 +228,7 @@ function DeckList({ setToast, onOpenDeck }) {
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiCreateFlipped} onChange={(e) => setAnkiCreateFlipped(e.target.checked)} />
-            Create flipped copy
+            Create flipped copies
           </label>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="primary" onClick={confirmAnkiImport}>Import</button>
