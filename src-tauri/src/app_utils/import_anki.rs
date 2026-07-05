@@ -395,16 +395,19 @@ pub fn import_anki_deck(
 
         let max_idx = raw_fields.len().saturating_sub(1);
 
+        // Empty fields are skipped so they don't leave stray <hr/> dividers
         let front_cloze = front_field_indices
             .iter()
             .filter(|&&i| i <= max_idx)
             .map(|&i| strip_cloze(raw_fields[i]))
+            .filter(|f| !f.trim().is_empty())
             .collect::<Vec<_>>()
             .join("<hr/>");
         let back_cloze = back_field_indices
             .iter()
             .filter(|&&i| i <= max_idx)
             .map(|&i| strip_cloze(raw_fields[i]))
+            .filter(|f| !f.trim().is_empty())
             .collect::<Vec<_>>()
             .join("<hr/>");
 
