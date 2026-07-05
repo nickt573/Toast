@@ -1,0 +1,45 @@
+/* ── Plans subcomponents ── */
+
+/* SRS Group Row */
+.plan-srs-row { border: 1px solid var(--t-border-2); border-radius: var(--t-r-xl); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 45%); }
+.plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.plan-srs-name { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
+.plan-srs-name.clickable { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.plan-srs-counts { font-size: 12px; color: var(--t-text-3); flex-shrink: 0; }
+.plan-srs-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
+.plan-srs-tip-wrap { display: inline-flex; align-items: center; gap: 2px; }
+.plan-srs-settings { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.plan-srs-settings-fields { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.plan-srs-settings-label { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.plan-srs-settings-input { width: 60px; margin-left: 6px; }
+.plan-srs-settings-actions { display: flex; gap: 8px; align-items: center; }
+.plan-srs-confirm { margin-top: 10px; padding: 10px; border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); font-size: 13px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); }
+.plan-srs-confirm-message { margin-bottom: 6px; }
+.plan-srs-confirm-sub { font-size: 12px; color: var(--t-text-3); margin-bottom: 8px; }
+.plan-srs-confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* SRS add form — carries the deck-family gradient like its clay/yellow siblings */
+.plan-srs-add { border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r-lg); padding: 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 55%); }
+
+/* Resource row */
+.plan-resource-row { border: 1px solid var(--t-border-2); border-radius: var(--t-r-xl); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 45%); }
+.plan-resource-edit-form { display: flex; flex-direction: column; gap: 6px; }
+.plan-resource-edit-actions { display: flex; gap: 6px; }
+.plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
+.plan-resource-body { flex: 1; }
+.plan-resource-name { font-weight: 600; font-size: 14px; color: var(--t-text); }
+.plan-resource-url { font-size: 12px; color: var(--t-blue); margin-top: 2px; display: block; }
+.plan-resource-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; }
+.plan-resource-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.plan-resource-add { border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r-lg); padding: 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); }
+
+/* Todo creator */
+.plan-todo-creator { margin-top: 0; }
+.plan-todo-form { border: 1px solid var(--t-yellow-bdr); border-radius: var(--t-r-lg); padding: 12px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%); }
+.plan-form-sublabel { font-size: 12px; margin-bottom: 4px; color: var(--t-text-2); }
+.plan-pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.plan-form-actions { display: flex; gap: 8px; }
+.plan-resources-indent { margin-left: 10px; padding-left: 14px; border-left: 2px solid var(--t-clay-bdr); }
+
+/* Previously used but undefined */
+.plan-section-title { font-size: 11px; font-weight: 600; color: var(--t-text-2); margin-bottom: 2px; }
