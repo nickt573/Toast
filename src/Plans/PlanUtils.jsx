@@ -10,7 +10,7 @@ export const CATEGORIES = [
     { label: "Listening",  bit: 8,  color: "#4A8C5E" },  // green
     { label: "Vocabulary", bit: 16, color: "#3E6E96" },  // blue
     { label: "Grammar",    bit: 32, color: "#7A5E8A" },  // purple
-    { label: "Other",      bit: 64, color: "#8A6E55" },  // brown
+    { label: "Culture",    bit: 64, color: "#8A6E55" },  // brown
 ];
 
 // Single source of truth for category colors — themed to the cozy palette.

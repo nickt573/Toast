@@ -458,7 +458,7 @@ fn category_mask_to_string(mask: i64) -> String {
         (8, "Listening"),
         (16, "Vocabulary"),
         (32, "Grammar"),
-        (64, "Other"),
+        (64, "Culture"),
     ];
     let parts: Vec<&str> = categories
         .iter()
