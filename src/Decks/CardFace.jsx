@@ -35,6 +35,11 @@ export function cleanAnkiHtml(html) {
         .replace(/(\s*,){2,}\s*/g, ", ")
         .replace(/(<(?:br|hr)[^>]*>\s*)(,\s*)+/gi, "$1")
         .replace(/^\s*(,\s*)+/, "")
+        // Empty fields joined during import leave stray dividers: collapse
+        // consecutive <hr>s and drop any at the very start or end
+        .replace(/(?:<hr[^>]*>\s*){2,}/gi, "<hr/>")
+        .replace(/^(?:\s*<hr[^>]*>)+/i, "")
+        .replace(/(?:<hr[^>]*>\s*)+$/i, "")
         .trim();
 }
 
