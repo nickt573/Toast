@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { loggedInvoke, logError } from "./logger";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { getVersion } from "@tauri-apps/api/app";
 
 import { CardFace, stripHtml } from "./Decks/CardFace";
 import { ResourceCard, GroupTypeBadge } from "./UIUtils";
@@ -739,6 +740,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
     const [activeGroup, setActiveGroup] = useState(null);
     const [planCounts, setPlanCounts] = useState({});
     const [displayDate, setDisplayDate] = useState("");
+    const [version, setVersion] = useState("");
 
     function loadDisplayDate() {
         loggedInvoke("get_current_date").then(ds => {
@@ -752,6 +754,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
     useEffect(() => {
         loadDisplayDate();
         loadPlans();
+        getVersion().then(setVersion).catch(e => logError("getVersion", e));
     }, []);
 
     useEffect(() => {
@@ -884,6 +887,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                     </div>
                 )}
             </div>
+            {version && <div className="hp-version">Toast v{version}</div>}
         </div>
     );
 }

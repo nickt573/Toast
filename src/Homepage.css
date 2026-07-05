@@ -11,6 +11,18 @@
   margin: 0 auto;
 }
 
+/* Version tag pinned to the bottom-right corner of the homepage */
+.hp-version {
+  position: fixed;
+  right: 12px;
+  bottom: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--t-text-3);
+  user-select: none;
+  pointer-events: none;
+}
+
 .hp-greeting-row {
   display: flex;
   align-items: flex-start;
