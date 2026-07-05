@@ -138,10 +138,13 @@
 
 /* Deck actions dropdown */
 .dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: 0 6px 20px rgba(0,0,0,0.12); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
-.dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }
+/* Square (radius 0) so hover highlights sit flush inside the menu container,
+   whose own border radius clips the outer corners */
+.dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }
 .dk-menu-item:hover { background: var(--t-surface-2); color: var(--t-text); box-shadow: none; }
-.dk-menu-item.danger { color: var(--t-red); }
-.dk-menu-sep { height: 1px; background: var(--t-border); margin: 3px 0; }
+/* Outranks the global button.danger fill — flat like its siblings, red tint on hover only */
+.dk-actions-menu .dk-menu-item.danger { background: none; border-radius: 0; color: var(--t-red); }
+.dk-actions-menu .dk-menu-item.danger:hover { background: var(--t-red-bg); color: var(--t-red); }
 
 /* Confirm reset bar */
 .dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); border-bottom: 1px solid var(--t-red-bdr); font-size: 13px; color: var(--t-red); flex-shrink: 0; }

@@ -672,7 +672,6 @@ function DeckActions({ onPauseAll, onUnpauseAll, onResetRequest }) {
         <div className="dk-actions-menu">
           <button className="dk-menu-item" onClick={() => act(onPauseAll)}>Pause All</button>
           <button className="dk-menu-item" onClick={() => act(onUnpauseAll)}>Unpause All</button>
-          <div className="dk-menu-sep" />
           <button className="dk-menu-item danger" onClick={() => act(onResetRequest)}>Reset Progress...</button>
         </div>
       )}
