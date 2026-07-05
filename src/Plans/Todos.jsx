@@ -1,0 +1,183 @@
+import { useState, useEffect } from "react";
+import { loggedInvoke, logError } from "../logger";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { computeFrequency, maskToArray, computeCategory, maskToCategories, FrequencyPicker, CategoryPicker, CategoryPills } from "./PlanUtils";
+import { ConfirmDelete, GroupTypeBadge } from "../UIUtils";
+
+export default function Todos({ todo, setToast, refresh, onNavigateToGroup, planResources, allGroups, planName }) {
+    const [editing, setEditing] = useState(false);
+    const [text, setText] = useState(todo.text);
+    const [frequency, setFrequency] = useState(() => maskToArray(todo.frequency ?? 127));
+    const [categoryMap, setCategoryMap] = useState(() => maskToCategories(todo.category ?? 64));
+    const [linkedGroups, setLinkedGroups] = useState([]);
+    const [linkedResources, setLinkedResources] = useState([]);
+    const [selectedGroupIds, setSelectedGroupIds] = useState([]);
+    const [selectedResourceIds, setSelectedResourceIds] = useState([]);
+
+    // Reload on mount, and whenever the plan's resources/groups change so the
+    // todo's linked pills update live — no leave/return.
+    useEffect(() => { loadLinks(); }, [planResources, allGroups]);
+
+    async function loadLinks() {
+        try {
+            const [g, r] = await Promise.all([
+                loggedInvoke("get_todo_groups", { todoId: todo.id }),
+                loggedInvoke("get_todo_resources", { todoId: todo.id }),
+            ]);
+            setLinkedGroups(g);
+            setLinkedResources(r);
+            setSelectedGroupIds(g.map(g => g.id));
+            setSelectedResourceIds(r.map(r => r.id));
+        } catch (e) { logError("catch", e); }
+    }
+
+    function toggleFrequency(i) {
+        setFrequency(prev => { const copy = [...prev]; copy[i] = !copy[i]; return copy; });
+    }
+    function toggleCategory(bit) {
+        setCategoryMap(prev => ({ ...prev, [bit]: !prev[bit] }));
+    }
+    function toggleGroup(id) {
+        setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    }
+    function toggleResource(id) {
+        setSelectedResourceIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    }
+
+    async function updateTodo() {
+        if (!text.trim()) { setToast("Todo description cannot be empty."); return; }
+        const category = computeCategory(categoryMap);
+        if (category === 0) { setToast("Please select at least one category.", "error"); return; }
+        try {
+            await loggedInvoke("update_todo", { todo: {
+                id: todo.id, plan_id: todo.plan_id, text: text.trim(),
+                is_done: todo.is_done, is_disabled: todo.is_disabled,
+                frequency: computeFrequency(frequency), category,
+            }});
+            await Promise.all([
+                loggedInvoke("set_todo_groups", { todoId: todo.id, groupIds: selectedGroupIds }),
+                loggedInvoke("set_todo_resources", { todoId: todo.id, resourceIds: selectedResourceIds }),
+            ]);
+            await loadLinks();
+            await refresh();
+            setToast("Todo updated.");
+            setEditing(false);
+        } catch (err) { logError("catch", err); setToast("Failed to update todo.", "error"); }
+    }
+
+    async function deleteTodo() {
+        try {
+            await loggedInvoke("delete_todo", { id: todo.id });
+            await refresh();
+            setToast("Todo deleted.");
+        } catch (err) { logError("catch", err); setToast("Failed to delete todo.", "error"); }
+    }
+
+    if (!editing) {
+        return (
+            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", opacity: todo.is_disabled ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                            {todo.text}
+                        </div>
+
+                        <div style={{ marginTop: "6px", fontSize: 12, color: "var(--t-text-3)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <CategoryPills mask={todo.category} />
+                            {(() => {
+                                const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+                                    .filter((_, i) => (todo.frequency & (1 << i)) !== 0)
+                                    .join(" · ");
+                                return days && <><span style={{ opacity: 0.5 }}>|</span><span>{days}</span></>;
+                            })()}
+                        </div>
+
+                        {(linkedGroups.length > 0 || linkedResources.length > 0) && (
+                            <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {linkedGroups.map(g => (
+                                    <span key={g.id}
+                                        onClick={() => onNavigateToGroup(g, { menu: "plans", label: "Plans" })}
+                                        className={`pill ${g.group_type === "notebook" ? "pill-plum" : "pill-blue"} pill-clickable`}>
+                                        {g.name}
+                                        <GroupTypeBadge type={g.group_type} />
+                                    </span>
+                                ))}
+                                {linkedResources.map(r => (
+                                    <span key={r.id}
+                                        onClick={() => r.url && openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`)}
+                                        className={`pill pill-clay${r.url ? " pill-clickable" : ""}`}>
+                                        {r.name}{r.url && <span style={{ opacity: 0.55, marginLeft: 2, fontSize: 9 }}>↗</span>}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                        <button onClick={() => setEditing(true)}>Edit</button>
+                        <ConfirmDelete onConfirm={deleteTodo} small />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Todo description…"
+                    style={{ fontSize: 14 }} />
+
+                <div>
+                    <div style={{ fontSize: 12, marginBottom: 4 }}>Category</div>
+                    <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
+                </div>
+
+                <div>
+                    <div style={{ fontSize: 12, marginBottom: 4 }}>Frequency</div>
+                    <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
+                </div>
+
+                {allGroups && allGroups.length > 0 && (
+                    <div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>Study Materials</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {allGroups.map(g => {
+                                const active = selectedGroupIds.includes(g.id);
+                                const fam = g.group_type === "notebook" ? " active-notebook" : " active-deck";
+                                return (
+                                <label key={g.id} className={`picker-pill${active ? fam : ""}`}>
+                                    <input type="checkbox" checked={active}
+                                        onChange={() => toggleGroup(g.id)} style={{ margin: 0 }} />
+                                    {g.name}
+                                    <GroupTypeBadge type={g.group_type} />
+                                </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {planResources && planResources.length > 0 && (
+                    <div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>Resources</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {planResources.map(r => (
+                                <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
+                                    <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
+                                        onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
+                                    {r.name}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div style={{ display: "flex", gap: "8px" }}>
+                    <button className="primary" onClick={updateTodo}>Save</button>
+                    <button onClick={() => setEditing(false)}>Cancel</button>
+                </div>
+            </div>
+        </div>
+    );
+}

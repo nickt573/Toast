@@ -1,0 +1,635 @@
+/* ── Toast Design System ─────────────────────────────────────────────────────── */
+
+:root {
+  /* Backgrounds — peachy Neapolitan cream + warm surfaces */
+  --t-bg:            #FDE6D8;   /* main app background — peach cream */
+  --t-surface:       #FFF9F4;   /* card / surface fill — warm off-white */
+  --t-surface-2:     #FBEAE0;   /* muted: read-only fields, form zones */
+  --t-surface-3:     #F7D9C4;   /* deep peach: table/section headers over white bodies */
+  --t-border:        #F0D9CC;   /* default dividers */
+  --t-border-2:      #E8CDBD;   /* card / input / secondary-button borders */
+
+  /* Text — chocolate-plum */
+  --t-text:          #4A3A3D;   /* primary */
+  --t-text-2:        #6B5458;   /* secondary */
+  --t-text-3:        #9A8488;   /* tertiary / quiet */
+  --t-placeholder:   #C0AAAE;
+
+  /* Plans / primary accent — wheat / caramel */
+  --t-accent:        #C99A63;
+  --t-accent-h:      #B5854E;
+  --t-accent-bg:     #F3E4CF;
+  --t-accent-bdr:    #DFC59C;
+  --t-accent-fg:     #FFF9F4;   /* text on caramel fill */
+
+  /* Todos — sunflower yellow (incomplete / pending) */
+  --t-yellow:        #E0A92E;
+  --t-yellow-bg:     #FBEBC4;
+  --t-yellow-bdr:    #EBD08A;
+
+  /* Done / safe — forest green */
+  --t-green:         #4A8C5E;
+  --t-green-bg:      #D9E8D6;
+  --t-green-bdr:     #A6C6A8;
+
+  /* Destructive — red */
+  --t-red:           #B85454;
+  --t-red-bg:        #F5E0E0;
+  --t-red-bg-h:      #EFCBCB;   /* danger hover (deepened) */
+  --t-red-bdr:       #D8AEAE;
+
+  /* Decks / Cards — slate blue (softened to harmonize) */
+  --t-blue:          #5A7A90;
+  --t-blue-bg:       #DDE7EC;
+  --t-blue-bdr:      #AEC4D0;
+
+  /* Warning / at-risk — weak yellow-tan (amber) */
+  --t-amber:         #C49A44;
+  --t-amber-bg:      #F5EAD2;
+  --t-amber-bdr:     #D8C088;
+
+  /* Notebooks — plum (softened to harmonize) */
+  --t-plum:          #8A6A96;
+  --t-plum-bg:       #ECE0F0;
+  --t-plum-bdr:      #C8B4D2;
+
+  /* Resources — terracotta (token name kept as legacy "clay") */
+  --t-clay:          #C2705A;
+  --t-clay-bg:       #F6E0D6;
+  --t-clay-bdr:      #E2B5A4;
+
+  /* Stats — dark / burnt orange (distinct from caramel plans) */
+  --t-stat:          #C85A2A;
+  --t-stat-h:        #B04A1F;
+  --t-stat-bg:       #F7DDC9;
+  --t-stat-bdr:      #E5B091;
+
+  /* Strawberry pink — homepage identity + decorative accent */
+  --t-pink:          #F6A7B8;
+  --t-pink-2:        #F8C1C9;
+  --t-pink-bg:       #FDE0E6;
+  --t-pink-bdr:      #F2B8C4;
+
+  /* Neutral (maintenance) buttons — muted mauve pulled from the text family */
+  --t-btn:           #9A8488;
+  --t-btn-h:         #87696F;   /* hover deepens */
+  --t-btn-bdr:       #8A7176;
+  --t-btn-fg:        #FFF9F4;   /* text on mauve fill */
+
+  /* Nav — chocolate */
+  --t-nav-bg:        #4A3A3D;
+  --t-nav-fg:        #FDE6D8;
+  --t-nav-dim:       #B89AA0;
+
+  /* Typography */
+  --t-font-head:     'Bitter', Georgia, 'Times New Roman', serif;
+  --t-font-body:     'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* Spacing / shape */
+  --t-nav-h:         54px;
+  --t-page-pad:      24px;
+  --t-r:             3px;
+  --t-r-btn:         6px;   /* non-pill buttons — slightly softer */
+  --t-r-lg:          5px;
+  --t-r-xl:          8px;
+  --t-r-pill:        999px;
+  --t-ease:          0.12s ease;
+
+  /* Shadows */
+  --t-shadow-sm:     0 1px 3px rgba(26,18,8,0.05);
+  --t-shadow:        0 2px 8px rgba(26,18,8,0.09);
+  --t-shadow-lg:     0 6px 20px rgba(26,18,8,0.13);
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--t-bg);
+  color: var(--t-text);
+  font-family: var(--t-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: var(--t-blue); text-decoration: underline; }
+
+/* ── Universal button ── */
+button {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  padding: 4px 11px;
+  border: 1px solid var(--t-btn-bdr);
+  border-radius: var(--t-r-btn);
+  background: var(--t-btn);
+  color: var(--t-btn-fg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease), box-shadow var(--t-ease);
+}
+/* Neutral hover DEEPENS the mauve — never switches to a page background */
+button:hover  { background: var(--t-btn-h); color: var(--t-btn-fg); border-color: var(--t-btn-h); }
+button:active { background: var(--t-btn-h); filter: brightness(0.95); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
+
+/* Primary — copper fill */
+button.primary { background: var(--t-accent); color: var(--t-accent-fg); border-color: var(--t-accent); box-shadow: var(--t-shadow-sm); }
+button.primary:hover { background: var(--t-accent-h); border-color: var(--t-accent-h); color: var(--t-accent-fg); }
+
+/* Destructive — soft red fill at rest, deepens on hover (never transparent) */
+button.danger { color: var(--t-red); border-color: var(--t-red-bdr); background: var(--t-red-bg); }
+button.danger:hover { background: var(--t-red-bg-h); border-color: var(--t-red); color: var(--t-red); }
+
+/* Quiet — alias of the neutral mauve (kept for Back/Cancel/Hide semantics) */
+button.quiet { background: var(--t-btn); border-color: var(--t-btn-bdr); color: var(--t-btn-fg); box-shadow: none; }
+button.quiet:hover { background: var(--t-btn-h); border-color: var(--t-btn-h); color: var(--t-btn-fg); }
+
+button.btn-amber { background: var(--t-amber-bg); border-color: var(--t-amber-bdr); color: var(--t-amber); }
+button.btn-amber:hover { border-color: var(--t-amber); background: var(--t-amber-bg); filter: brightness(0.95); }
+button.btn-blue  { background: var(--t-blue-bg);  border-color: var(--t-blue-bdr);  color: var(--t-blue);  }
+button.btn-blue:hover  { border-color: var(--t-blue);  background: var(--t-blue-bg); filter: brightness(0.95); }
+
+/* Checkbox pills/labels — double-click shouldn't text-select them */
+label:has(input[type="checkbox"]),
+input[type="checkbox"] + label { user-select: none; }
+
+/* ── Universal inputs ── */
+input, textarea, select {
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--t-text);
+  background: var(--t-surface);
+  border: 1px solid var(--t-border-2);
+  border-radius: var(--t-r);
+  padding: 5px 9px;
+  line-height: 1.5;
+  box-shadow: inset 0 1px 2px rgba(58,48,36,0.05);
+  transition: border-color var(--t-ease), box-shadow var(--t-ease);
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--t-accent);
+  box-shadow: 0 0 0 3px var(--t-accent-bg);
+}
+input::placeholder, textarea::placeholder { color: var(--t-placeholder); }
+textarea { resize: vertical; }
+
+/* ── Custom checkboxes — themed, not system default ──
+   Checked fill uses currentColor so each checkbox inherits its context's family
+   color (blue in deck pills, plum in notebook pills, clay in resource pills…). */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  border: 1px solid var(--t-btn-bdr);
+  border-radius: 4px;
+  background: var(--t-surface);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background var(--t-ease), border-color var(--t-ease);
+}
+input[type="checkbox"]:hover { border-color: currentColor; }
+input[type="checkbox"]:checked {
+  background-color: currentColor;
+  border-color: currentColor;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5 6.5l2.5 2.5 4.5-5' fill='none' stroke='%23FFF9F4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 10px;
+}
+/* Ring only for keyboard focus — mouse clicks shouldn't leave a glow behind */
+input[type="checkbox"]:focus { outline: none; border-color: var(--t-btn-bdr); box-shadow: none; }
+input[type="checkbox"]:checked:focus { border-color: currentColor; }
+input[type="checkbox"]:focus-visible { border-color: var(--t-accent); box-shadow: 0 0 0 3px var(--t-accent-bg); }
+
+/* Read-only field — muted fill, no focus affordance */
+.input-readonly,
+input.input-readonly, textarea.input-readonly {
+  background: var(--t-surface-2);
+  border-color: var(--t-border-2);
+  color: var(--t-text);
+}
+
+/* ── Global scrollbar hiding ── */
+.landing-body, .plans-scroll, .dk-list,
+.st-body, .hp-root, .hp-session { scrollbar-width: none; }
+.landing-body::-webkit-scrollbar, .plans-scroll::-webkit-scrollbar,
+.dk-list::-webkit-scrollbar,
+.st-body::-webkit-scrollbar, .hp-root::-webkit-scrollbar,
+.hp-session::-webkit-scrollbar { display: none; }
+
+/* ── App shell ── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Navigation — dark espresso bar ── */
+.app-nav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 14px;
+  height: var(--t-nav-h);
+  background: var(--t-nav-bg);
+  border-bottom: none;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.app-nav-logo {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  margin-right: 12px;
+  opacity: 0.95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-nav-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.app-nav-tab {
+  background: none;
+  border: none;
+  box-shadow: none;
+  color: var(--t-nav-dim);
+  padding: 0 13px;
+  height: var(--t-nav-h);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: color var(--t-ease), background var(--t-ease);
+}
+.app-nav-tab:hover  { background: rgba(255,255,255,0.06); border-color: transparent; color: var(--t-nav-fg); box-shadow: none; }
+.app-nav-tab:active { background: rgba(255,255,255,0.03); box-shadow: none; }
+.app-nav-tab.active { color: var(--t-nav-fg); background: none; }
+/* Home — no underline; a soft rounded pink pill instead */
+.app-nav-tab--home { height: 36px; align-self: center; border-radius: var(--t-r-xl); }
+.app-nav-tab--home.active { background: rgba(246,167,184,0.16); }
+.app-nav-tab--home.active::after { display: none; }
+.app-nav-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--tab-underline, var(--t-accent));
+  border-radius: 3px 3px 0 0;
+}
+.app-nav-tab-label { font-size: 13px; font-weight: 500; line-height: 1.3; }
+.app-nav-tab-sub   { font-size: 9px; font-weight: 500; letter-spacing: 0.03em; opacity: 0.45; line-height: 1; }
+.app-nav-tab.active .app-nav-tab-sub { opacity: 0.65; }
+
+.app-nav-spacer { flex: 1; }
+
+.app-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Toast notification ── */
+.toast {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  padding: 8px 16px;
+  background: var(--t-text);
+  color: var(--t-bg);
+  border-radius: var(--t-r-lg);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: var(--t-red); color: var(--t-btn-fg); }
+
+/* ── Shared section label ── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--t-text-3);
+}
+
+/* ── Pill badges ── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--t-r);
+  border: 1px solid;
+  line-height: 1.4;
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.pill-green  { background: var(--t-green-bg);  color: var(--t-green);  border-color: var(--t-green-bdr);  }
+.pill-blue   { background: var(--t-blue-bg);   color: var(--t-blue);   border-color: var(--t-blue-bdr);   }
+.pill-plum   { background: var(--t-plum-bg);   color: var(--t-plum);   border-color: var(--t-plum-bdr);   }
+.pill-clay   { background: var(--t-clay-bg);   color: var(--t-clay);   border-color: var(--t-clay-bdr);   }
+.pill-pink   { background: var(--t-pink-bg);   color: var(--t-clay);   border-color: var(--t-pink-bdr);   }
+.pill-neutral { background: var(--t-surface-2); color: var(--t-text-2); border-color: var(--t-border-2); }
+.pill-dead    { opacity: 0.45; cursor: default; }
+
+/* ── Clickable pill ── */
+.pill-clickable { cursor: pointer; }
+.pill-clickable:hover { filter: brightness(0.94); }
+
+/* ── Picker pills — the ONE checkbox-pill control used by every form/popup
+      (Homepage popups, plan builder, todo editor, Frequency/Category pickers) ── */
+.picker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: var(--t-r-pill);
+  border: 1px solid var(--t-border-2);
+  background: var(--t-surface);
+  color: var(--t-text-2);
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease);
+}
+.picker-pill.active-deck     { border-color: var(--t-blue-bdr);   background: var(--t-blue-bg);   color: var(--t-blue); }
+.picker-pill.active-notebook { border-color: var(--t-plum-bdr);   background: var(--t-plum-bg);   color: var(--t-plum); }
+.picker-pill.active-resource { border-color: var(--t-clay-bdr);   background: var(--t-clay-bg);   color: var(--t-clay); }
+.picker-pill.active-accent   { border-color: var(--t-accent-bdr); background: var(--t-accent-bg); color: var(--t-accent); }
+
+/* ── Shared new-card form (Decks + Notebooks) ── */
+.dk-new-card {
+  flex-shrink: 0;
+  border-top: 1px solid var(--t-border);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background: var(--t-bg);
+}
+.dk-new-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--t-text-3);
+  margin-bottom: 2px;
+}
+.dk-new-card-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+.dk-new-card-row label {
+  font-size: 12px;
+  color: var(--t-text-2);
+  white-space: nowrap;
+  min-width: 74px;
+}
+.dk-new-card-row input[type="text"],
+.dk-new-card-row textarea,
+.dk-new-card-row select { flex: 1; }
+.dk-new-card-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--t-text-2);
+  flex-shrink: 0;
+}
+/* Reset the browser's asymmetric default checkbox margins so the flex gap is the
+   only spacing — keeps the box, its label, and the ? tip evenly spaced. */
+.dk-new-card-check input[type="checkbox"] { margin: 0; }
+/* Cancel the 74px label min-width inherited from .dk-new-card-row label, which
+   otherwise stretches short labels ("Searchable") and flings the ? tip far right. */
+.dk-new-card-check label { min-width: 0; }
+/* Actions area. Width budget: on the deck page this form sits in the 440px
+   table pane (~412px usable), and the first check row alone is ~360px — so the
+   Add Card button cannot sit beside row one. Layout: row one (Searchable /
+   Priority add / Create flipped copy) spans the full width; row two holds the
+   two flip-only checks with the button on its right, where there is room.
+   The flip-only checks are always rendered (disabled until "Create flipped
+   copy" is on) so nothing shifts as it toggles. */
+.dk-new-card-actions {
+  display: grid;
+  grid-template-columns: 1fr max-content;
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: center;
+}
+.dk-new-card-checks { display: contents; }
+.dk-new-card-checkrow {
+  display: flex;
+  align-items: center;
+  column-gap: 12px;
+  min-width: 0;
+}
+.dk-new-card-checkrow:first-child { grid-column: 1 / -1; }
+.dk-new-card-actions button.primary { grid-column: 2; grid-row: 2; justify-self: end; }
+/* Fade only the checkbox + label when disabled — the ? tip stays fully
+   opaque so its explanation remains readable. */
+.dk-new-card-check.disabled input,
+.dk-new-card-check.disabled label { opacity: 0.4; }
+.dk-new-card-check.disabled label { cursor: default; }
+.dk-new-card button.primary { flex-shrink: 0; }
+
+/* ── Plans containers ── */
+.plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.plans-scroll { flex: 1; overflow-y: auto; padding: var(--t-page-pad); }
+
+/* ── Unified landing pages (Plans / Decks / Notebooks) ── */
+.landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: var(--t-surface); flex-shrink: 0; }
+.landing-hdr--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 72%); }
+.landing-hdr--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 72%); }
+.landing-hdr--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 72%); }
+.landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
+.landing-body { flex: 1; overflow-y: auto; padding: 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
+.landing-footer { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
+.landing-footer input { flex: 1; }
+.landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
+
+/* Empty-section placeholder — a white bubble holding the space where content will go */
+.empty-bubble {
+  background: var(--t-surface);
+  border: 1px dashed var(--t-border-2);
+  border-radius: var(--t-r-xl);
+  padding: 22px 16px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--t-text-3);
+  font-style: italic;
+}
+
+/* The card — shared visual DNA for all list items */
+.landing-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border-2);
+  border-radius: var(--t-r-xl);
+  cursor: pointer;
+  box-shadow: var(--t-shadow-sm);
+  transition: border-color var(--t-ease), background var(--t-ease), box-shadow var(--t-ease), transform var(--t-ease);
+}
+.landing-card:hover {
+  border-color: var(--t-text-3);
+  box-shadow: var(--t-shadow);
+  transform: translateY(-1px);
+}
+/* Per-feature gradient washes (replace the old left-bar stripes) */
+.landing-card--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 45%); }
+.landing-card--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 45%); }
+.landing-card--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 45%); }
+.landing-card--plan:hover     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 62%); }
+.landing-card--deck:hover     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 62%); }
+.landing-card--notebook:hover { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 62%); }
+.landing-card-body { flex: 1; min-width: 0; }
+.landing-card-body > input { width: 100%; box-sizing: border-box; }
+.landing-card-name { font-size: 14px; font-weight: 600; color: var(--t-text); }
+.landing-card-meta { font-size: 11px; color: var(--t-text-3); margin-top: 2px; }
+.landing-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+/* Little stat chips beneath the name — lift off the card's gradient wash */
+.landing-card-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
+/* Summary pills: tinted in the family's light color, with the relevant text
+   (the count) bolded to the dark family color and the label at an intermediate tone. */
+.landing-stat {
+  --stat-c: var(--t-text-2);
+  --stat-bg: var(--t-surface);
+  --stat-bdr: var(--t-border-2);
+  display: inline-flex; align-items: baseline; gap: 4px;
+  font-size: 11px; font-weight: 500; line-height: 1;
+  color: color-mix(in srgb, var(--stat-c) 60%, var(--t-text-3));
+  background: var(--stat-bg);
+  border: 1px solid var(--stat-bdr);
+  border-radius: var(--t-r-pill);
+  padding: 4px 9px;
+  box-shadow: var(--t-shadow-sm);
+}
+.landing-stat b { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--stat-c); }
+.landing-stat--todos     { --stat-c: var(--t-yellow); --stat-bg: var(--t-yellow-bg); --stat-bdr: var(--t-yellow-bdr); }
+.landing-stat--resources { --stat-c: var(--t-clay);   --stat-bg: var(--t-clay-bg);   --stat-bdr: var(--t-clay-bdr); }
+.landing-stat--deck      { --stat-c: var(--t-blue);   --stat-bg: var(--t-blue-bg);   --stat-bdr: var(--t-blue-bdr); }
+.landing-stat--card      { --stat-c: var(--t-blue);   --stat-bg: var(--t-blue-bg);   --stat-bdr: var(--t-blue-bdr); }
+.landing-stat--page      { --stat-c: var(--t-plum);   --stat-bg: var(--t-plum-bg);   --stat-bdr: var(--t-plum-bdr); }
+/* Plan-link chip on deck cards: names a plan rather than a count, so no bold segment. */
+.landing-stat--plan      { --stat-c: var(--t-accent); --stat-bg: var(--t-accent-bg); --stat-bdr: var(--t-accent-bdr); }
+
+/* ── Plan builder ── */
+.plan-builder-cols { display: flex; flex-direction: column; gap: 26px; }
+.plan-col-main { min-width: 0; }
+.plan-col-side { min-width: 0; padding-top: 22px; border-top: 1px solid var(--t-border); }
+.plan-col-label { font-family: var(--t-font-head); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 10px; }
+.plan-col-label--toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 7px; }
+.plan-col-label-caret { font-size: 10px; color: var(--t-text-3); }
+.plan-col-label--todos     { color: var(--t-yellow); }
+.plan-col-label--resources { color: var(--t-clay); }
+.plan-col-label--srs       { color: var(--t-blue); }
+
+/* ── ProseMirror editor styles ── */
+.nb-editor-scroll .ProseMirror {
+  outline: none;
+  min-height: 200px;
+  font-size: 13px;
+  line-height: 1.65;
+  padding-bottom: 40px;
+  color: var(--t-text);
+}
+.nb-editor-scroll .ProseMirror p  { margin: 0; }
+.nb-editor-scroll .ProseMirror h1 { font-family: var(--t-font-head); font-size: 1.65em; font-weight: 700; margin: 1.1em 0 0.3em; color: var(--t-text); }
+.nb-editor-scroll .ProseMirror h2 { font-family: var(--t-font-head); font-size: 1.3em;  font-weight: 700; margin: 0.9em 0 0.3em; color: var(--t-text); }
+.nb-editor-scroll .ProseMirror h3 { font-family: var(--t-font-head); font-size: 1.1em;  font-weight: 600; margin: 0.8em 0 0.25em; color: var(--t-text); }
+.nb-editor-scroll .ProseMirror ul,
+.nb-editor-scroll .ProseMirror ol { padding-left: 1.5em; margin: 0.4em 0 0.8em; }
+.nb-editor-scroll .ProseMirror li { margin-bottom: 0.2em; }
+.nb-editor-scroll .ProseMirror blockquote {
+  border-left: 3px solid var(--t-plum-bdr);
+  margin: 0.8em 0;
+  padding: 0.3em 0 0.3em 1em;
+  color: var(--t-text-2);
+  background: var(--t-plum-bg);
+  border-radius: 0 var(--t-r) var(--t-r) 0;
+}
+.nb-editor-scroll .ProseMirror img {
+  display: block;
+  max-width: 100%;
+  max-height: 380px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--t-r);
+  margin: 10px auto;
+  border: 1px solid var(--t-border);
+}
+.nb-editor-scroll .ProseMirror table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+.nb-editor-scroll .ProseMirror th,
+.nb-editor-scroll .ProseMirror td {
+  border: 1px solid var(--t-border);
+  padding: 6px 10px;
+  min-width: 60px;
+  font-size: 13px;
+  vertical-align: top;
+  background-color: var(--t-surface);
+  font-weight: 400;
+}
+.nb-editor-scroll .ProseMirror .selectedCell { background-color: var(--t-blue-bg) !important; }
+.nb-editor-scroll .ProseMirror a { color: var(--t-blue); text-decoration: underline; cursor: pointer; }
+.nb-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid var(--t-border); margin: 1.2em 0; }
+.nb-view-content .ProseMirror { cursor: default; }
+.nb-view-content .ProseMirror a { cursor: pointer; }
+
+/* ── Resource card (name / type / url / notes) — shared by Stats + study page ── */
+.st-resource-cards { display: flex; flex-direction: column; gap: 6px; }
+.st-resource-card { border: 1px solid var(--t-clay-bdr); background: var(--t-clay-bg); border-radius: var(--t-r); padding: 7px 11px; }
+.st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.st-resource-card-name { font-weight: 700; font-size: 13px; color: var(--t-clay); }
+.st-resource-card-type { font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-pill); padding: 1px 7px; user-select: none; }
+.st-resource-card-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 3px; cursor: pointer; word-break: break-all; }
+.st-resource-card-url:hover { text-decoration: underline; }
+.st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }
