@@ -4,10 +4,10 @@ Learning a language is an intense process, and there is an overwhelming amount o
 
 ## What's Inside
 
-- **Decks**: Study flashcards with images and audio, reviewed on a spaced repetition schedule. Cards you know well come back less often, cards you miss come back sooner. Use Toast's unique 'support' field to put example sentences, mnemonics, pronunciation guides, and more for each of your cards. You can also import your favorite existing Anki decks (.apkg files).
+- **Decks**: Study flashcards with images and audio, reviewed on a spaced repetition schedule. Cards you know well come back less often, cards you miss come back sooner. Create 'searchable' cards that ensure you never confuse similar cards while studying, and use Toast's unique 'support' field to have things like example sentences, mnemonics, pronunciation guides, and more on each of your cards. You can also import your favorite existing Anki decks (.apkg files) and map how they should look in Toast.
 - **Notebooks**: Take rich notes with formatting like tables, images, and audio recordings to do things like practice writing, keep a journal, or answer practice questions.
 - **Plans**: Bring it all together and build daily study plans with todo-list items separated by core language skill (reading, speaking, grammar, etc.), track external resources, and link decks for SRS study. Each morning you get a dashboard of what's due today.
-- **Stats**: View retention rates, study streaks, time spent, and charts of your progress over time.
+- **Stats**: View retention rates, study streaks, time spent, and charts of your progress over time. Stats persist even when the content it refers to is deleted, so you as the user get to decide what is included in your stats.
 
 The point of Toast is to not force any features on you. Prefer another flashcard resource over Toast's decks? Skip our decks and tag it as an external resource instead. Toast is designed to keep track of all of your favorite language tools and doesn't require that you use ours.
 
@@ -19,14 +19,14 @@ Scroll down to **Assets** and pick the file for your computer:
 
 | Computer | File |
 |---|---|
-| *Mac with Apple Silicon (M1 or newer) | `Toast_x.x.x_aarch64.dmg` |
-| *Mac with Intel | `Toast_x.x.x_x64.dmg` |
+| Mac* | `Toast_x.x.x_aarch64.dmg` or `Toast_x.x.x_x64.dmg` |
 | Windows | `Toast_x.x.x_x64-setup.exe` |
 | Linux | `Toast_x.x.x_amd64.AppImage` |
 
-The other files in the list (`.sig`, `.tar.gz`, `latest.json`) belong to the auto updater. You can ignore them.
+***Mac users:** Toast isn't signed with an Apple certificate yet, so macOS will refuse to open it normally on the first launch. After attempting to launch, you must go to System Settings -> Privacy & Security -> Open Anyway.
 
-***Mac users:** Toast isn't signed with an Apple certificate yet, so macOS will refuse to open it normally. Right-click the app and choose **Open**, then confirm. You only have to do this once.
+Any other files that may be in the list (`.sig`, `.tar.gz`, `latest.json`) can be ignored.
 
 Toast checks for updates when it starts. When a new version is out, it asks if you want to update, installs it, and restarts itself. Nothing to download manually after the first install.
 
+The code for Toast was planned and created by entirely me, with help from Claude Code for frontend design and backend cleanup. A special thanks to Bryana for designing the Toast icon!
