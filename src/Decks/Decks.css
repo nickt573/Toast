@@ -85,7 +85,7 @@
 
 /* Creator toggle row */
 .dk-creator-toggle-row { border-top: 1px solid var(--t-border); padding: 8px 10px; background: var(--t-surface-3); color: var(--t-text-2); }
-.dk-creator-toggle-row.open { border-top: 1px solid var(--t-border); }
+.dk-creator-toggle-row.open { border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border-2); }
 .dk-creator-toggle-row .dk-filter-toggle { background: var(--t-btn); border-color: var(--t-btn-bdr); color: var(--t-btn-fg); border-radius: var(--t-r-pill); }
 .dk-creator-toggle-row .dk-filter-toggle:hover { background: var(--t-btn-h); color: var(--t-btn-fg); }
 
