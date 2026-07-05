@@ -46,8 +46,6 @@
 .dk-filter-btn:hover { color: var(--t-btn-fg); background: var(--t-btn-h); box-shadow: none; }
 .dk-filter-btn.active,
 .dk-filter-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
-.dk-filter-active-chip { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: var(--t-r-pill); background: var(--t-blue-bg); color: var(--t-blue); border: 1px solid var(--t-blue-bdr); cursor: pointer; white-space: nowrap; user-select: none; }
-.dk-filter-active-chip:hover { filter: brightness(0.97); }
 
 /* Card table */
 .dk-table-scroll { flex: 1; overflow-y: auto; }
