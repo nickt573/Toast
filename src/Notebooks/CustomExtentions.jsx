@@ -6,6 +6,23 @@ import { useState } from "react";
 // Plain-text prompt + answer. In edit mode both fields are visible and editable.
 // In read-only mode the answer is hidden behind a Reveal toggle.
 
+// Fixed-basis label column so the Prompt and Answer cells (and their right
+// borders) always line up regardless of content width.
+const revealLabelCell = {
+    flex: "0 0 76px",
+    padding: "6px 10px",
+    background: "var(--t-surface-3)",
+    borderRight: "1px solid var(--t-border-2)",
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: "0.02em",
+    color: "var(--t-text-2)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    userSelect: "none",
+};
+
 function RevealBlockView({ node, updateAttributes, editor }) {
     const [revealed, setRevealed] = useState(false);
     const isEditable = editor.isEditable;
@@ -14,30 +31,19 @@ function RevealBlockView({ node, updateAttributes, editor }) {
         <NodeViewWrapper>
             <div style={{
                 border: "1px solid var(--t-border-2)",
-                borderRadius: "6px",
+                borderRadius: "var(--t-r-lg)",
                 overflow: "hidden",
                 margin: "8px 0",
                 fontSize: 14,
+                background: "var(--t-surface)",
             }}>
                 {/* Prompt row */}
                 <div style={{
                     display: "flex",
                     alignItems: "stretch",
-                    borderBottom: "1px solid var(--t-border)",
+                    borderBottom: "1px solid var(--t-border-2)",
                 }}>
-                    <div style={{
-                        padding: "6px 10px",
-                        background: "var(--t-surface-2)",
-                        borderRight: "1px solid var(--t-border)",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: "0.02em",
-                        color: "var(--t-text-3)",
-                        display: "flex",
-                        alignItems: "center",
-                        minWidth: 64,
-                        userSelect: "none",
-                    }}>
+                    <div style={revealLabelCell}>
                         Prompt
                     </div>
                     {isEditable ? (
@@ -53,7 +59,7 @@ function RevealBlockView({ node, updateAttributes, editor }) {
                                 padding: "8px 10px",
                                 fontSize: 14,
                                 fontFamily: "inherit",
-                                background: "#fff",
+                                background: "var(--t-surface)",
                             }}
                         />
                     ) : (
@@ -66,20 +72,10 @@ function RevealBlockView({ node, updateAttributes, editor }) {
                 {/* Answer row */}
                 <div style={{ display: "flex", alignItems: "stretch" }}>
                     <div style={{
-                        padding: "6px 10px",
-                        background: "var(--t-surface-2)",
-                        borderRight: "1px solid var(--t-border)",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: "0.02em",
-                        color: "var(--t-text-3)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        minWidth: 64,
-                        userSelect: "none",
+                        ...revealLabelCell,
                         flexDirection: "column",
-                        gap: 4,
+                        justifyContent: "center",
+                        gap: 5,
                     }}>
                         <span>Answer</span>
                         {!isEditable && (
@@ -87,12 +83,17 @@ function RevealBlockView({ node, updateAttributes, editor }) {
                                 onClick={() => setRevealed((r) => !r)}
                                 style={{
                                     fontSize: 10,
-                                    padding: "2px 6px",
-                                    border: "1px solid var(--t-border-2)",
-                                    borderRadius: 3,
-                                    background: "#fff",
+                                    fontWeight: 700,
+                                    fontFamily: "inherit",
+                                    letterSpacing: "0.02em",
+                                    padding: "2px 9px",
+                                    border: "1px solid var(--t-accent-bdr)",
+                                    borderRadius: "var(--t-r-pill)",
+                                    background: revealed ? "var(--t-accent)" : "var(--t-surface)",
+                                    color: revealed ? "var(--t-accent-fg)" : "var(--t-accent-h)",
                                     cursor: "pointer",
                                     whiteSpace: "nowrap",
+                                    transition: "background var(--t-ease), color var(--t-ease)",
                                 }}
                             >
                                 {revealed ? "Hide" : "Show"}
@@ -113,17 +114,28 @@ function RevealBlockView({ node, updateAttributes, editor }) {
                                 fontSize: 14,
                                 fontFamily: "inherit",
                                 resize: "vertical",
-                                background: "#fff",
+                                background: "var(--t-surface)",
                             }}
                         />
+                    ) : revealed ? (
+                        <div style={{
+                            flex: 1,
+                            padding: "8px 10px",
+                            whiteSpace: "pre-wrap",
+                        }}>
+                            {node.attrs.answer || <em style={{ color: "var(--t-text-3)" }}>No answer</em>}
+                        </div>
                     ) : (
                         <div style={{
                             flex: 1,
                             padding: "8px 10px",
-                            display: revealed ? "block" : "none",
-                            whiteSpace: "pre-wrap",
+                            display: "flex",
+                            alignItems: "center",
+                            color: "var(--t-text-3)",
+                            letterSpacing: "0.2em",
+                            userSelect: "none",
                         }}>
-                            {node.attrs.answer || <em style={{ color: "var(--t-text-3)" }}>No answer</em>}
+                            •••
                         </div>
                     )}
                 </div>
