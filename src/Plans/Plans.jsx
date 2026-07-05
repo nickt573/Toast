@@ -466,6 +466,21 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
                         <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
                     </div>
 
+                    {planResources.length > 0 && (
+                        <div>
+                            <div className="plan-form-sublabel">Resources</div>
+                            <div className="plan-pill-group">
+                                {planResources.map(r => (
+                                    <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
+                                        <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
+                                            onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
+                                        {r.name}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {groups.length > 0 && (
                         <div>
                             <div className="plan-form-sublabel">Study Materials</div>
@@ -482,21 +497,6 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
                                         </label>
                                     );
                                 })}
-                            </div>
-                        </div>
-                    )}
-
-                    {planResources.length > 0 && (
-                        <div>
-                            <div className="plan-form-sublabel">Resources</div>
-                            <div className="plan-pill-group">
-                                {planResources.map(r => (
-                                    <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
-                                        <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
-                                            onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
-                                        {r.name}
-                                    </label>
-                                ))}
                             </div>
                         </div>
                     )}

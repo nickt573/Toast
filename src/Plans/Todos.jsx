@@ -94,19 +94,19 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
                         {(linkedGroups.length > 0 || linkedResources.length > 0) && (
                             <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                {linkedResources.map(r => (
+                                    <span key={r.id}
+                                        onClick={() => r.url && openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`)}
+                                        className={`pill pill-clay${r.url ? " pill-clickable" : ""}`}>
+                                        {r.name}{r.url && <span style={{ opacity: 0.55, marginLeft: 2, fontSize: 9 }}>↗</span>}
+                                    </span>
+                                ))}
                                 {linkedGroups.map(g => (
                                     <span key={g.id}
                                         onClick={() => onNavigateToGroup(g, { menu: "plans", label: "Plans" })}
                                         className={`pill ${g.group_type === "notebook" ? "pill-plum" : "pill-blue"} pill-clickable`}>
                                         {g.name}
                                         <GroupTypeBadge type={g.group_type} />
-                                    </span>
-                                ))}
-                                {linkedResources.map(r => (
-                                    <span key={r.id}
-                                        onClick={() => r.url && openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`)}
-                                        className={`pill pill-clay${r.url ? " pill-clickable" : ""}`}>
-                                        {r.name}{r.url && <span style={{ opacity: 0.55, marginLeft: 2, fontSize: 9 }}>↗</span>}
                                     </span>
                                 ))}
                             </div>
@@ -138,6 +138,21 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                     <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
                 </div>
 
+                {planResources && planResources.length > 0 && (
+                    <div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>Resources</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {planResources.map(r => (
+                                <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
+                                    <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
+                                        onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
+                                    {r.name}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {allGroups && allGroups.length > 0 && (
                     <div>
                         <div style={{ fontSize: 12, marginBottom: 4 }}>Study Materials</div>
@@ -154,21 +169,6 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                                 </label>
                                 );
                             })}
-                        </div>
-                    </div>
-                )}
-
-                {planResources && planResources.length > 0 && (
-                    <div>
-                        <div style={{ fontSize: 12, marginBottom: 4 }}>Resources</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            {planResources.map(r => (
-                                <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
-                                    <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
-                                        onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
-                                    {r.name}
-                                </label>
-                            ))}
                         </div>
                     </div>
                 )}

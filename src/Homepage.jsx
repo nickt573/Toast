@@ -147,6 +147,21 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                     <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                 </div>
 
+                {planResources.length > 0 && (
+                    <div>
+                        <div className="hp-popup-label">Resources</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {planResources.map(r => (
+                                <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
+                                    <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
+                                        onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
+                                    {r.name}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {allGroups.length > 0 && (
                     <div>
                         <div className="hp-popup-label">Study materials</div>
@@ -157,21 +172,6 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                                         onChange={() => toggleGroup(g.id)} style={{ margin: 0 }} />
                                     {g.name}
                                     <GroupTypeBadge type={g.group_type} />
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {planResources.length > 0 && (
-                    <div>
-                        <div className="hp-popup-label">Resources</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            {planResources.map(r => (
-                                <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
-                                    <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
-                                        onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
-                                    {r.name}
                                 </label>
                             ))}
                         </div>
@@ -271,6 +271,21 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
                     <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                 </div>
 
+                {planResources.length > 0 && (
+                    <div>
+                        <div className="hp-popup-label">Resources</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                            {planResources.map(r => (
+                                <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
+                                    <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
+                                        onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
+                                    {r.name}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {allGroups.length > 0 && (
                     <div>
                         <div className="hp-popup-label">Study materials</div>
@@ -281,21 +296,6 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
                                         onChange={() => toggleGroup(g.id)} style={{ margin: 0 }} />
                                     {g.name}
                                     <GroupTypeBadge type={g.group_type} />
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {planResources.length > 0 && (
-                    <div>
-                        <div className="hp-popup-label">Resources</div>
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            {planResources.map(r => (
-                                <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
-                                    <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
-                                        onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
-                                    {r.name}
                                 </label>
                             ))}
                         </div>
@@ -643,11 +643,11 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                     <CategoryPills mask={todo.category} style={{ marginTop: 5 }} />
                                     {(links.groups.length > 0 || links.resources.length > 0) && (
                                         <div style={{ marginTop: 5, display: "flex", gap: 5, flexWrap: "wrap" }}>
-                                            {links.groups.map(g => (
-                                                <GroupPill key={g.id} group={g} onClick={() => navigateFromPlan(g)} />
-                                            ))}
                                             {links.resources.map(r => (
                                                 <ResourcePill key={r.id} resource={r} />
+                                            ))}
+                                            {links.groups.map(g => (
+                                                <GroupPill key={g.id} group={g} onClick={() => navigateFromPlan(g)} />
                                             ))}
                                         </div>
                                     )}
