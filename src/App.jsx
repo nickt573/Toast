@@ -1,5 +1,8 @@
 
 import { useState, useEffect, useRef } from "react";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { loggedInvoke, logError } from "./logger";
 import "./App.css";
 
@@ -75,6 +78,27 @@ export default function App() {
     setPlansReturnContext(null);
     setStatsReturnContext(null);
   }
+
+  // Check GitHub Releases for a newer version on launch; if the user accepts,
+  // download, verify signature, install, and relaunch. Silently no-ops in dev.
+  useEffect(() => {
+    (async () => {
+      try {
+        const update = await check();
+        if (!update) return;
+        const yes = await ask(
+          `Toast ${update.version} is available (you have ${update.currentVersion}). Update now?`,
+          { title: "Update Available", kind: "info", okLabel: "Update", cancelLabel: "Later" }
+        );
+        if (!yes) return;
+        showToast("Downloading update…");
+        await update.downloadAndInstall();
+        await relaunch();
+      } catch (e) {
+        logError("updater", e);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     loggedInvoke("cleanup_orphaned_media").catch(e => logError("cleanup_orphaned_media", e));
