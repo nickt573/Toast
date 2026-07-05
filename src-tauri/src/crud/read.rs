@@ -56,7 +56,7 @@ pub fn get_groups(conn: &Connection) -> Result<Vec<Group>> {
         r#"
         SELECT id, plan_id, name, group_type
         FROM "group"
-        ORDER BY name COLLATE NOCASE ASC
+        ORDER BY group_type ASC, name COLLATE NOCASE ASC
         "#,
     )?;
 
@@ -363,7 +363,7 @@ pub fn get_todo_groups(todo_id: i64, conn: &Connection) -> Result<Vec<Group>> {
         FROM "group" g
         INNER JOIN todo_group tg ON tg.group_id = g.id
         WHERE tg.todo_id = ?1
-        ORDER BY g.name ASC
+        ORDER BY g.group_type ASC, g.name COLLATE NOCASE ASC
         "#,
     )?;
     let rows = stmt

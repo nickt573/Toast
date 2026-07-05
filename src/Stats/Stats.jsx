@@ -687,6 +687,14 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
               {isOpen && !isEditing && (
                 <div className="st-todo-expanded">
                   {r.details && <p className="st-todo-notes">{r.details}</p>}
+                  {r.resources.length > 0 && (
+                    <div className="st-todo-section">
+                      <div className="st-todo-section-label">Resources</div>
+                      <div className="st-resource-cards">
+                        {r.resources.map((res, i) => <ResourceCard key={i} res={res} />)}
+                      </div>
+                    </div>
+                  )}
                   {r.groups.length > 0 && (
                     <div className="st-todo-section">
                       <div className="st-todo-section-label">Study Materials</div>
@@ -716,14 +724,6 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
                             </span>
                           );
                         })}
-                      </div>
-                    </div>
-                  )}
-                  {r.resources.length > 0 && (
-                    <div className="st-todo-section">
-                      <div className="st-todo-section-label">Resources</div>
-                      <div className="st-resource-cards">
-                        {r.resources.map((res, i) => <ResourceCard key={i} res={res} />)}
                       </div>
                     </div>
                   )}
@@ -781,6 +781,20 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
                       style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
                     />
                   </div>
+                  {editForm.resources.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Resources</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {editForm.resources.map((res, i) => (
+                          <span key={i} className="pill pill-clay">
+                            {res}
+                            <button onClick={() => setEditForm(f => ({ ...f, resources: f.resources.filter(n => n !== res) }))}
+                              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {editForm.groups.length > 0 && (
                     <div>
                       <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Study Materials</div>
@@ -797,20 +811,6 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
                             </span>
                           );
                         })}
-                      </div>
-                    </div>
-                  )}
-                  {editForm.resources.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Resources</div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {editForm.resources.map((res, i) => (
-                          <span key={i} className="pill pill-clay">
-                            {res}
-                            <button onClick={() => setEditForm(f => ({ ...f, resources: f.resources.filter(n => n !== res) }))}
-                              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
-                          </span>
-                        ))}
                       </div>
                     </div>
                   )}
