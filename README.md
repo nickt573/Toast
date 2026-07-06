@@ -39,4 +39,22 @@ Any other files that may be in the list (`.sig`, `.tar.gz`, `latest.json`) can b
 
 Toast checks for updates when it starts. When a new version is out, it asks if you want to update, installs it, and restarts itself. Nothing to download manually after the first install.
 
+## Running from Source
+
+Want to clone the repo and contribute? Toast is a [Tauri 2](https://v2.tauri.app/) app, so you'll need [Node.js](https://nodejs.org/) and [Rust](https://rustup.rs/) installed (see the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform).
+
+```bash
+git clone https://github.com/nickt573/Toast.git
+cd Toast
+npm install
+
+# Run the desktop app in development with hot-reload
+npm run app
+
+# Build a release binary
+npm run tauri build
+```
+
+`npm run app` uses a separate dev identifier, so your development database and media are safe from any installed copy of Toast.
+
 The code for Toast was planned and created by entirely me, with help from Claude Code for frontend design and backend cleanup. A special thanks to Bryana for designing the Toast icon!
