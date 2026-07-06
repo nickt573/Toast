@@ -352,9 +352,14 @@
   align-items: center;
   gap: 8px;
 }
-.hp-similar-content { text-align: center; margin-bottom: 10px; }
-.hp-similar-front { font-weight: 500; font-size: 13px; color: var(--t-text); margin-bottom: 4px; }
-.hp-similar-back  { font-size: 13px; color: var(--t-text-2); }
+.hp-similar-content { text-align: center; margin-bottom: 12px; }
+.hp-similar-content img { max-height: 140px !important; }
+.hp-similar-face-front { font-size: 14px; font-weight: 600; color: var(--t-text); }
+.hp-similar-face-back  { font-size: 13px; color: var(--t-text); }
+.hp-similar-divider { border-top: 1px solid var(--t-border); margin: 10px 0; }
+/* Notebook fallback (deprecated SRS notebooks) */
+.hp-similar-front { font-weight: 500; font-size: 13px; color: var(--t-text); margin-bottom: 4px; text-align: center; }
+.hp-similar-back  { font-size: 13px; color: var(--t-text-2); text-align: center; }
 .hp-similar-nav   { display: flex; gap: 8px; justify-content: center; }
 
 /* Popup overlays */

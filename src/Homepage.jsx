@@ -3,7 +3,7 @@ import { loggedInvoke, logError } from "./logger";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getVersion } from "@tauri-apps/api/app";
 
-import { CardFace, stripHtml } from "./Decks/CardFace";
+import { CardFace, renderAnkiHtml, stripAudioTags } from "./Decks/CardFace";
 import { ResourceCard, GroupTypeBadge } from "./UIUtils";
 import { computeCategory, maskToCategories, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
 import "./Homepage.css";
@@ -79,6 +79,18 @@ function GradeButtons({ onGrade, card }) {
 
 // ─── Similar Items Navigator ──────────────────────────────────────────────────
 
+function SimilarFace({ item, side }) {
+    return (
+        <div className={`hp-similar-face hp-similar-face-${side}`}>
+            {item.is_uploaded ? (
+                <div dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(item[side])) }} />
+            ) : (
+                <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{item[side]}</div>
+            )}
+        </div>
+    );
+}
+
 function SimilarNavigator({ items, frontCount = 0, groupType }) {
     const [idx, setIdx] = useState(0);
     if (!items || items.length === 0) return null;
@@ -99,8 +111,9 @@ function SimilarNavigator({ items, frontCount = 0, groupType }) {
             <div className="hp-similar-content">
                 {groupType === "deck" ? (
                     <>
-                        <div className="hp-similar-front">{stripHtml(item.front)}</div>
-                        <div className="hp-similar-back">{stripHtml(item.back)}</div>
+                        <SimilarFace item={item} side="front" />
+                        <div className="hp-similar-divider" />
+                        <SimilarFace item={item} side="back" />
                     </>
                 ) : (
                     <>

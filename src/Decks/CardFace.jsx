@@ -95,7 +95,7 @@ function extractRawAudioSrcs(html) {
     return srcs;
 }
 
-function stripAudioTags(html) {
+export function stripAudioTags(html) {
     if (!html) return "";
     return html
         .replace(/<audio\b[^>]*>[\s\S]*?<\/audio>/gi, "")
