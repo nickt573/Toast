@@ -110,12 +110,47 @@ fn strip_cloze(html: &str) -> String {
     result
 }
 
-/// Rewrites Anki media references to the copied files' absolute paths:
-/// `src="file"` / `src='file'` values are replaced in place, and Anki's
-/// `[sound:file]` markers become full `<audio>` tags.
-/// NOTE: every branch must advance `pos` past what it consumed — a branch
-/// that leaves `pos` at the match start would loop forever.
-fn rewrite_media(html: &str, media_str_map: &HashMap<String, String>) -> String {
+/// Copies one extracted media file into the cards dir under a fresh UUID name.
+fn copy_media_file(src: &Path, filename: &str, app_dir: &Path) -> Option<String> {
+    let ext = Path::new(filename)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "ogg" | "m4a" | "flac");
+
+    let dest_dir = if is_audio {
+        app_dir.join("cards").join("audio")
+    } else {
+        app_dir.join("cards").join("images")
+    };
+    if std::fs::create_dir_all(&dest_dir).is_err() {
+        return None;
+    }
+
+    let safe_name = if ext.is_empty() {
+        uuid::Uuid::new_v4().to_string()
+    } else {
+        format!("{}.{}", uuid::Uuid::new_v4(), ext)
+    };
+    let dest = dest_dir.join(&safe_name);
+    if std::fs::copy(src, &dest).is_ok() {
+        Some(dest.to_string_lossy().to_string())
+    } else {
+        None
+    }
+}
+
+/// Rewrites `src` values in place and turns `[sound:file]` into `<audio>` tags.
+/// Files are copied on first reference and cached in `copies`, which must be
+/// scoped to one card so no two cards ever share a file on disk.
+/// NOTE: every branch must advance `pos` past what it consumed, or it loops forever.
+fn rewrite_media(
+    html: &str,
+    sources: &HashMap<String, PathBuf>,
+    app_dir: &Path,
+    copies: &mut HashMap<String, String>,
+) -> String {
     let mut result = html.to_string();
     let mut pos = 0;
 
@@ -141,15 +176,23 @@ fn rewrite_media(html: &str, media_str_map: &HashMap<String, String>) -> String 
                 let after = &result[start + prefix_len..];
                 if let Some(end) = after.find(end_char) {
                     let filename = after[..end].to_string();
-                    if media_str_map.contains_key(&filename) {
+                    let dest = match copies.get(&filename) {
+                        Some(d) => Some(d.clone()),
+                        None => sources.get(&filename).and_then(|src| {
+                            let copied = copy_media_file(src, &filename, app_dir);
+                            if let Some(ref d) = copied {
+                                copies.insert(filename.clone(), d.clone());
+                            }
+                            copied
+                        }),
+                    };
+                    if let Some(dest) = dest {
                         if is_sound {
-                            let dest = media_str_map.get(&filename).cloned().unwrap_or_default();
                             let audio_tag = format!("<audio controls src=\"{}\"></audio>", dest);
                             let tag_end = start + prefix_len + end + 1;
                             result.replace_range(start..tag_end, &audio_tag);
                             pos = start + audio_tag.len();
                         } else {
-                            let dest = media_str_map[&filename].clone();
                             let from = start + prefix_len;
                             let to = from + end;
                             result.replace_range(from..to, &dest);
@@ -256,7 +299,8 @@ fn read_deck_name(anki_conn: &Connection) -> String {
         .to_string()
 }
 
-fn copy_media(tmp_dir: &tempfile::TempDir, app_dir: &Path) -> Result<HashMap<String, PathBuf>> {
+/// Maps Anki media filenames to their extracted temp-file paths.
+fn media_sources(tmp_dir: &tempfile::TempDir) -> Result<HashMap<String, PathBuf>> {
     let media_manifest_path = tmp_dir.path().join("media");
     let media_json: HashMap<String, String> = if media_manifest_path.exists() {
         let content = std::fs::read_to_string(&media_manifest_path)
@@ -267,14 +311,7 @@ fn copy_media(tmp_dir: &tempfile::TempDir, app_dir: &Path) -> Result<HashMap<Str
         HashMap::new()
     };
 
-    let img_dest_dir = app_dir.join("cards").join("images");
-    let aud_dest_dir = app_dir.join("cards").join("audio");
-    std::fs::create_dir_all(&img_dest_dir)
-        .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
-    std::fs::create_dir_all(&aud_dest_dir)
-        .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
-
-    let mut media_map: HashMap<String, PathBuf> = HashMap::new();
+    let mut sources: HashMap<String, PathBuf> = HashMap::new();
     for (num_key, filename) in &media_json {
         if filename.starts_with('_') {
             continue;
@@ -283,31 +320,9 @@ fn copy_media(tmp_dir: &tempfile::TempDir, app_dir: &Path) -> Result<HashMap<Str
         if !src.exists() {
             continue;
         }
-        let ext = Path::new(filename)
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("")
-            .to_lowercase();
-        let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "ogg" | "m4a" | "flac");
-
-        // ── UUID rename to avoid collisions across duplicate imports ──
-        let safe_name = if ext.is_empty() {
-            uuid::Uuid::new_v4().to_string()
-        } else {
-            format!("{}.{}", uuid::Uuid::new_v4(), ext)
-        };
-        let dest = if is_audio {
-            aud_dest_dir.join(&safe_name)
-        } else {
-            img_dest_dir.join(&safe_name)
-        };
-        // ─────────────────────────────────────────────────────────────
-
-        if std::fs::copy(&src, &dest).is_ok() {
-            media_map.insert(filename.clone(), dest);
-        }
+        sources.insert(filename.clone(), src);
     }
-    Ok(media_map)
+    Ok(sources)
 }
 
 pub fn peek_anki_fields(apkg_path: &str) -> std::result::Result<Vec<String>, String> {
@@ -362,7 +377,7 @@ pub fn import_anki_deck(
 ) -> Result<(i64, usize)> {
     let tmp_dir = extract_zip(apkg_path)?;
     let anki_conn = open_anki_db(&tmp_dir)?;
-    let media_map = copy_media(&tmp_dir, app_dir)?;
+    let sources = media_sources(&tmp_dir)?;
     let deck_name = read_deck_name(&anki_conn);
 
     struct NoteRow {
@@ -377,11 +392,6 @@ pub fn import_anki_deck(
             .collect();
         rows
     };
-
-    let media_str_map: HashMap<String, String> = media_map
-        .iter()
-        .map(|(k, v)| (k.clone(), v.to_string_lossy().to_string()))
-        .collect();
 
     let tx = conn.transaction()?;
     let new_deck = create_deck(deck_name, &*tx)?;
@@ -427,24 +437,23 @@ pub fn import_anki_deck(
         let back_html = strip_event_handlers(&strip_scripts(&back_cloze));
         let support_html = strip_event_handlers(&strip_scripts(&support_cloze));
 
-        let front_clean = rewrite_media(&front_html, &media_str_map);
-        let back_clean = rewrite_media(&back_html, &media_str_map);
-        // Support fields stay out of front/back so they never pollute
-        // similar-card matching; stored read-only in imported_support.
+        let mut card_media: HashMap<String, String> = HashMap::new();
+        let front_clean = rewrite_media(&front_html, &sources, app_dir, &mut card_media);
+        let back_clean = rewrite_media(&back_html, &sources, app_dir, &mut card_media);
         let support_clean = if support_html.trim().is_empty() {
             None
         } else {
-            Some(rewrite_media(&support_html, &media_str_map))
+            Some(rewrite_media(&support_html, &sources, app_dir, &mut card_media))
         };
 
         let new_card = NewCard {
             group_id: new_deck.id,
-            front: front_clean.clone(),
-            back: back_clean.clone(),
+            front: front_clean,
+            back: back_clean,
             is_searchable: is_searchable,
             is_uploaded: true,
             support: None,
-            imported_support: support_clean.clone(),
+            imported_support: support_clean,
             front_image: None,
             back_image: None,
             front_audio: None,
@@ -455,16 +464,24 @@ pub fn import_anki_deck(
         card_count += 1;
 
         if create_flipped {
+            // Fresh media map: the flipped copy gets its own file copies.
+            let mut flipped_media: HashMap<String, String> = HashMap::new();
+            let flipped_front = rewrite_media(&back_html, &sources, app_dir, &mut flipped_media);
+            let flipped_back = rewrite_media(&front_html, &sources, app_dir, &mut flipped_media);
+            let flipped_support = if support_html.trim().is_empty() {
+                None
+            } else {
+                Some(rewrite_media(&support_html, &sources, app_dir, &mut flipped_media))
+            };
+
             let flipped = NewCard {
                 group_id: new_deck.id,
-                front: back_clean,
-                back: front_clean,
+                front: flipped_front,
+                back: flipped_back,
                 is_searchable: is_searchable,
                 is_uploaded: true,
                 support: None,
-                // Support is side-agnostic (always shown after flip), so the
-                // flipped copy carries the same imported support.
-                imported_support: support_clean,
+                imported_support: flipped_support,
                 front_image: None,
                 back_image: None,
                 front_audio: None,
