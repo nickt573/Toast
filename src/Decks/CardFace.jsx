@@ -40,6 +40,8 @@ export function cleanAnkiHtml(html) {
         .replace(/(?:<hr[^>]*>\s*){2,}/gi, "<hr/>")
         .replace(/^(?:\s*<hr[^>]*>)+/i, "")
         .replace(/(?:<hr[^>]*>\s*)+$/i, "")
+        // Field separators show as a vertical gap, not a visible bar
+        .replace(/<hr[^>]*>/gi, '<div style="height:10px"></div>')
         .trim();
 }
 

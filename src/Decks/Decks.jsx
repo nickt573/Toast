@@ -408,7 +408,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onMarkedForReview, inP
         </div>
         <div className="dk-preview">
           <div className="dk-preview-label">{previewFlipped ? "Front + Back" : "Front"}</div>
-          <div className={`dk-preview-card${form.is_uploaded ? " uploaded" : ""}`}>
+          <div className="dk-preview-card">
             <CardFace card={form} showBack={previewFlipped} />
           </div>
         </div>
