@@ -356,6 +356,7 @@ pub fn import_anki_deck(
     conn: &mut Connection,
     front_field_indices: Vec<usize>,
     back_field_indices: Vec<usize>,
+    support_field_indices: Vec<usize>,
     create_flipped: bool,
     is_searchable: bool,
 ) -> Result<(i64, usize)> {
@@ -410,6 +411,13 @@ pub fn import_anki_deck(
             .filter(|f| !f.trim().is_empty())
             .collect::<Vec<_>>()
             .join("<hr/>");
+        let support_cloze = support_field_indices
+            .iter()
+            .filter(|&&i| i <= max_idx)
+            .map(|&i| strip_cloze(raw_fields[i]))
+            .filter(|f| !f.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join("<hr/>");
 
         if front_cloze.trim().is_empty() && back_cloze.trim().is_empty() {
             continue;
@@ -417,9 +425,17 @@ pub fn import_anki_deck(
 
         let front_html = strip_event_handlers(&strip_scripts(&front_cloze));
         let back_html = strip_event_handlers(&strip_scripts(&back_cloze));
+        let support_html = strip_event_handlers(&strip_scripts(&support_cloze));
 
         let front_clean = rewrite_media(&front_html, &media_str_map);
         let back_clean = rewrite_media(&back_html, &media_str_map);
+        // Support fields stay out of front/back so they never pollute
+        // similar-card matching; stored read-only in imported_support.
+        let support_clean = if support_html.trim().is_empty() {
+            None
+        } else {
+            Some(rewrite_media(&support_html, &media_str_map))
+        };
 
         let new_card = NewCard {
             group_id: new_deck.id,
@@ -428,6 +444,7 @@ pub fn import_anki_deck(
             is_searchable: is_searchable,
             is_uploaded: true,
             support: None,
+            imported_support: support_clean.clone(),
             front_image: None,
             back_image: None,
             front_audio: None,
@@ -445,6 +462,9 @@ pub fn import_anki_deck(
                 is_searchable: is_searchable,
                 is_uploaded: true,
                 support: None,
+                // Support is side-agnostic (always shown after flip), so the
+                // flipped copy carries the same imported support.
+                imported_support: support_clean,
                 front_image: None,
                 back_image: None,
                 front_audio: None,

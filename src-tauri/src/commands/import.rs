@@ -12,6 +12,7 @@ pub fn import_anki_deck(
     path: String,
     front_field_indices: Vec<usize>,
     back_field_indices: Vec<usize>,
+    support_field_indices: Vec<usize>,
     create_flipped: bool,
     is_searchable: bool,
     state: tauri::State<AppState>,
@@ -24,6 +25,7 @@ pub fn import_anki_deck(
         &mut conn,
         front_field_indices,
         back_field_indices,
+        support_field_indices,
         create_flipped,
         is_searchable,
     )

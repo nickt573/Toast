@@ -1,5 +1,35 @@
 use rusqlite::Connection;
 
+/// Adds a column to an existing table if it doesn't already have it.
+/// CREATE TABLE IF NOT EXISTS won't alter tables that predate a new column,
+/// so databases from released versions are migrated here.
+fn add_column_if_missing(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> rusqlite::Result<()> {
+    let exists = conn
+        .prepare(&format!("PRAGMA table_info({table})"))?
+        .query_map([], |row| row.get::<_, String>(1))?
+        .filter_map(|r| r.ok())
+        .any(|name| name == column);
+    if !exists {
+        conn.execute_batch(&format!(
+            "ALTER TABLE {table} ADD COLUMN {column} {definition}"
+        ))?;
+    }
+    Ok(())
+}
+
+/// Migrations for databases created by older releases. Each call is idempotent.
+fn migrate_schema(conn: &Connection) -> rusqlite::Result<()> {
+    // v1.0.2: read-only support content mapped from Anki fields on import,
+    // kept separate from front/back so it stays out of similar-card matching.
+    add_column_if_missing(conn, "card", "imported_support", "TEXT")?;
+    Ok(())
+}
+
 /// Creates all tables (idempotent) and enables foreign keys.
 pub fn init_schema(conn: &Connection) -> rusqlite::Result<()> {
     conn.execute_batch(r#"
@@ -65,6 +95,7 @@ pub fn init_schema(conn: &Connection) -> rusqlite::Result<()> {
                 back TEXT NOT NULL,
 
                 support TEXT,
+                imported_support TEXT, -- read-only support from mapped Anki fields (Anki HTML)
                 front_image TEXT,
                 back_image TEXT,
                 front_audio TEXT,
@@ -239,5 +270,7 @@ pub fn init_schema(conn: &Connection) -> rusqlite::Result<()> {
                 date DATE NOT NULL
             );
             "#
-    )
+    )?;
+
+    migrate_schema(conn)
 }

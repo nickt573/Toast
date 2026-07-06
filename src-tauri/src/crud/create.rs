@@ -159,10 +159,10 @@ pub fn create_card(card: NewCard, conn: &mut Connection, app_dir: &Path) -> Resu
     conn.execute(
         r#"
         INSERT INTO card (
-            group_id, front, back, is_searchable, support,
+            group_id, front, back, is_searchable, support, imported_support,
             front_image, back_image, front_audio, back_audio, is_uploaded
         )
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
         "#,
         rusqlite::params![
             card.group_id,
@@ -170,6 +170,7 @@ pub fn create_card(card: NewCard, conn: &mut Connection, app_dir: &Path) -> Resu
             card.back,
             card.is_searchable,
             card.support,
+            card.imported_support,
             front_image,
             back_image,
             front_audio,
@@ -190,6 +191,7 @@ pub fn create_card(card: NewCard, conn: &mut Connection, app_dir: &Path) -> Resu
         sequence: 0,
         is_searchable: card.is_searchable,
         support: card.support,
+        imported_support: card.imported_support,
         front_image,
         back_image,
         front_audio,
@@ -206,10 +208,10 @@ pub fn create_card_imported(card: NewCard, conn: &Connection) -> Result<Card> {
     conn.execute(
         r#"
         INSERT INTO card (
-            group_id, front, back, is_searchable, support,
+            group_id, front, back, is_searchable, support, imported_support,
             front_image, back_image, front_audio, back_audio, is_uploaded
         )
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
         "#,
         rusqlite::params![
             card.group_id,
@@ -217,6 +219,7 @@ pub fn create_card_imported(card: NewCard, conn: &Connection) -> Result<Card> {
             card.back,
             card.is_searchable,
             card.support,
+            card.imported_support,
             card.front_image,
             card.back_image,
             card.front_audio,
@@ -237,6 +240,7 @@ pub fn create_card_imported(card: NewCard, conn: &Connection) -> Result<Card> {
         sequence: 0,
         is_searchable: card.is_searchable,
         support: card.support,
+        imported_support: card.imported_support,
         front_image: card.front_image,
         back_image: card.back_image,
         front_audio: card.front_audio,
