@@ -134,6 +134,8 @@ pub fn update_card(card: Card, conn: &Connection, app_dir: &Path) -> Result<()> 
         card.back_audio.clone()
     };
 
+    // imported_support is intentionally never updated: it is read-only content
+    // set once at Anki import time (the user-editable slot is `support`).
     conn.execute(
         r#"
         UPDATE card SET

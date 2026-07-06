@@ -47,7 +47,7 @@ pub fn get_similar_cards(
     }
 
     let sql = format!(
-        "SELECT id, group_id, front, back, support, \
+        "SELECT id, group_id, front, back, support, imported_support, \
          front_image, back_image, front_audio, back_audio, \
          tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded, position \
          FROM card WHERE is_searchable = TRUE AND id != ? AND group_id = ? AND ({})",
@@ -70,19 +70,20 @@ pub fn get_similar_cards(
                 front: row.get(2)?,
                 back: row.get(3)?,
                 support: row.get(4)?,
-                front_image: row.get(5)?,
-                back_image: row.get(6)?,
-                front_audio: row.get(7)?,
-                back_audio: row.get(8)?,
-                tier: row.get(9)?,
-                ease: row.get(10)?,
-                sequence: row.get(11)?,
-                is_searchable: row.get(12)?,
-                is_due: row.get(13)?,
-                is_overdue: row.get(14)?,
-                is_paused: row.get(15)?,
-                is_uploaded: row.get(16)?,
-                position: row.get(17)?,
+                imported_support: row.get(5)?,
+                front_image: row.get(6)?,
+                back_image: row.get(7)?,
+                front_audio: row.get(8)?,
+                back_audio: row.get(9)?,
+                tier: row.get(10)?,
+                ease: row.get(11)?,
+                sequence: row.get(12)?,
+                is_searchable: row.get(13)?,
+                is_due: row.get(14)?,
+                is_overdue: row.get(15)?,
+                is_paused: row.get(16)?,
+                is_uploaded: row.get(17)?,
+                position: row.get(18)?,
             })
         })
         .map_err(|e| e.to_string())?

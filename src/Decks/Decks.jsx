@@ -16,7 +16,7 @@ async function pickFile(extensions) {
 }
 
 function emptyNewCard(groupId) {
-  return { group_id: groupId, front: "", back: "", is_searchable: true, is_uploaded: false, support: "", front_image: null, back_image: null, front_audio: null, back_audio: null };
+  return { group_id: groupId, front: "", back: "", is_searchable: true, is_uploaded: false, support: "", imported_support: null, front_image: null, back_image: null, front_audio: null, back_audio: null };
 }
 
 const parseFile = (file) => {
@@ -40,6 +40,7 @@ function DeckList({ setToast, onOpenDeck }) {
   const [ankiPending, setAnkiPending] = useState(null);
   const [ankiFrontIndices, setAnkiFrontIndices] = useState([]);
   const [ankiBackIndices, setAnkiBackIndices] = useState([]);
+  const [ankiSupportIndices, setAnkiSupportIndices] = useState([]);
   const [ankiCreateFlipped, setAnkiCreateFlipped] = useState(false);
   const [ankiMakeSearchable, setAnkiMakeSearchable] = useState(false);
   const [merging, setMerging] = useState(false);
@@ -77,6 +78,7 @@ function DeckList({ setToast, onOpenDeck }) {
       setAnkiPending({ path, fields });
       setAnkiFrontIndices(fields.length > 0 ? [0] : []);
       setAnkiBackIndices(fields.length > 1 ? [1] : []);
+      setAnkiSupportIndices([]);
       setAnkiCreateFlipped(false);
       setAnkiMakeSearchable(false);
     } catch (e) { logError("catch", e); setToast(`Failed to read deck: ${e}`, "error"); }
@@ -91,6 +93,7 @@ function DeckList({ setToast, onOpenDeck }) {
         path: ankiPending.path,
         frontFieldIndices: ankiFrontIndices,
         backFieldIndices: ankiBackIndices,
+        supportFieldIndices: ankiSupportIndices,
         createFlipped: ankiCreateFlipped,
         isSearchable: ankiMakeSearchable,
       });
@@ -203,6 +206,10 @@ function DeckList({ setToast, onOpenDeck }) {
               <span style={{ flex: 1 }}>Field</span>
               <span style={{ width: 50, textAlign: "center" }}>Front</span>
               <span style={{ width: 50, textAlign: "center" }}>Back</span>
+              <span style={{ width: 56, textAlign: "center", display: "inline-flex", justifyContent: "center", alignItems: "center", gap: 2 }}>
+                Support
+                <Tip text="Support fields are shown after flipping a card but stay out of similar-card matching. Map example sentences, mnemonics, or notes here to keep the similar cards panel clean. Flipped copies keep the same support. Fields mapped here can't be edited after import, but you can always add your own notes alongside them." />
+              </span>
             </div>
             {ankiPending.fields.map((f, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", background: i % 2 === 1 ? "rgba(26,18,8,0.03)" : "transparent", borderRadius: 4, padding: "2px 0" }}>
@@ -217,6 +224,10 @@ function DeckList({ setToast, onOpenDeck }) {
                 <label style={{ width: 50, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
                   <input type="checkbox" checked={ankiBackIndices.includes(i)}
                     onChange={() => setAnkiBackIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
+                </label>
+                <label style={{ width: 56, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
+                  <input type="checkbox" checked={ankiSupportIndices.includes(i)}
+                    onChange={() => setAnkiSupportIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
                 </label>
               </div>
             ))}
@@ -483,9 +494,16 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onMarkedForReview, inP
         </div>
       )}
 
+      {form.imported_support && (
+        <div className="dk-field">
+          <label>Anki Support <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span></label>
+          <div className="dk-field-uploaded" dangerouslySetInnerHTML={{ __html: renderAnkiHtml(form.imported_support) }} />
+        </div>
+      )}
+
       <div className="dk-field">
-        <label>Support <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(optional, shown after flip)</span></label>
-        <textarea rows={2} value={form.support} onChange={(e) => set("support", e.target.value)} />
+        <label>{form.imported_support ? "Your Support" : "Support"} <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>{form.imported_support ? "(optional, shown after flip together with Anki support)" : "(optional, shown after flip)"}</span></label>
+        <textarea rows={2} value={form.support} onChange={(e) => set("support", e.target.value)}/>
       </div>
 
       <div className="dk-field-row dk-field-checks">

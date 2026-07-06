@@ -117,7 +117,7 @@ pub fn get_cards(deck_id: i64, conn: &Connection) -> Result<Vec<Card>> {
     conn.prepare(
         r#"
         SELECT
-            id, group_id, front, back, is_searchable, support,
+            id, group_id, front, back, is_searchable, support, imported_support,
             front_image, back_image, front_audio, back_audio, is_uploaded,
             tier, ease, sequence, is_due, is_overdue, is_paused, position
         FROM card
@@ -133,18 +133,19 @@ pub fn get_cards(deck_id: i64, conn: &Connection) -> Result<Vec<Card>> {
             back: row.get(3)?,
             is_searchable: row.get(4)?,
             support: row.get(5)?,
-            front_image: row.get(6)?,
-            back_image: row.get(7)?,
-            front_audio: row.get(8)?,
-            back_audio: row.get(9)?,
-            is_uploaded: row.get(10)?,
-            tier: row.get(11)?,
-            ease: row.get(12)?,
-            sequence: row.get(13)?,
-            is_due: row.get(14)?,
-            is_overdue: row.get(15)?,
-            is_paused: row.get(16)?,
-            position: row.get(17)?,
+            imported_support: row.get(6)?,
+            front_image: row.get(7)?,
+            back_image: row.get(8)?,
+            front_audio: row.get(9)?,
+            back_audio: row.get(10)?,
+            is_uploaded: row.get(11)?,
+            tier: row.get(12)?,
+            ease: row.get(13)?,
+            sequence: row.get(14)?,
+            is_due: row.get(15)?,
+            is_overdue: row.get(16)?,
+            is_paused: row.get(17)?,
+            position: row.get(18)?,
         })
     })?
     .collect()

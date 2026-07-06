@@ -187,6 +187,7 @@ const audioStyle = { width: "100%", maxWidth: 320 };
 export function CardFace({ card, showBack }) {
     const frontAudioSrcs = card.is_uploaded ? extractRawAudioSrcs(card.front) : [];
     const backAudioSrcs  = card.is_uploaded ? extractRawAudioSrcs(card.back)  : [];
+    const supportAudioSrcs = card.is_uploaded && card.imported_support ? extractRawAudioSrcs(card.imported_support) : [];
 
     const frontAudio = card.is_uploaded
         ? frontAudioSrcs.map((src, i) => <AudioPlayer key={i} path={src} style={audioStyle} />)
@@ -229,9 +230,21 @@ export function CardFace({ card, showBack }) {
                                 <LinkifiedText text={card.back} />
                             </div>
                         )}
-                        {card.support && (
+                        {(card.imported_support || card.support) && (
                             <div style={{ fontSize: 13, color: "var(--t-text-2)", marginTop: 10, whiteSpace: "pre-wrap", borderTop: "1px solid var(--t-border)", paddingTop: 10 }}>
-                                <LinkifiedText text={card.support} />
+                                {card.imported_support && (
+                                    <div dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(card.imported_support)) }} />
+                                )}
+                                {supportAudioSrcs.length > 0 && (
+                                    <div style={audioWrapStyle}>
+                                        {supportAudioSrcs.map((src, i) => <AudioPlayer key={i} path={src} style={audioStyle} />)}
+                                    </div>
+                                )}
+                                {card.support && (
+                                    <div style={{ marginTop: card.imported_support ? 8 : 0 }}>
+                                        <LinkifiedText text={card.support} />
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
