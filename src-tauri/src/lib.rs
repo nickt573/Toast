@@ -110,6 +110,7 @@ pub fn run() {
             commands::cards::get_cards,
             commands::cards::update_card,
             commands::cards::delete_card,
+            commands::cards::set_all_searchable,
             commands::cards::mark_for_review,
             commands::cards::prioritize_card,
             commands::cards::reset_deck,

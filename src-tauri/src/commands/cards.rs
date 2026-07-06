@@ -29,6 +29,16 @@ pub fn delete_card(id: i64, state: tauri::State<AppState>) -> Result<(), String>
 }
 
 #[tauri::command]
+pub fn set_all_searchable(
+    group_id: i64,
+    searchable: bool,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    update::set_all_searchable(group_id, searchable, &conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn mark_for_review(card_id: i64, state: tauri::State<AppState>) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
     scheduling::mark_for_review(card_id, &conn).map_err(|e| e.to_string())

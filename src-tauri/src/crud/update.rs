@@ -168,6 +168,14 @@ pub fn update_card(card: Card, conn: &Connection, app_dir: &Path) -> Result<()> 
     Ok(())
 }
 
+pub fn set_all_searchable(group_id: i64, searchable: bool, conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE card SET is_searchable = ?1 WHERE group_id = ?2",
+        rusqlite::params![searchable, group_id],
+    )?;
+    Ok(())
+}
+
 pub fn update_notebook(notebook: Group, conn: &Connection) -> Result<()> {
     conn.execute(
         r#"

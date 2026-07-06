@@ -326,6 +326,11 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onMarkedForReview, inP
     setForm(f => ({ ...f, is_paused: card.is_paused }));
   }, [card?.is_paused]);
 
+  useEffect(() => {
+    if (!card || !form || card.id !== form.id) return;
+    setForm(f => ({ ...f, is_searchable: card.is_searchable }));
+  }, [card?.is_searchable]);
+
   useLayoutEffect(() => {
     if (!paneRef.current) return;
     if (prevCardIdRef.current !== (form?.id ?? null)) {
@@ -670,7 +675,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
 
 // ─── Deck Actions Dropdown ────────────────────────────────────────────────────
 
-function DeckActions({ onPauseAll, onUnpauseAll, onResetRequest }) {
+function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearchable, onResetRequest }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -690,6 +695,8 @@ function DeckActions({ onPauseAll, onUnpauseAll, onResetRequest }) {
         <div className="dk-actions-menu">
           <button className="dk-menu-item" onClick={() => act(onPauseAll)}>Pause All</button>
           <button className="dk-menu-item" onClick={() => act(onUnpauseAll)}>Unpause All</button>
+          <button className="dk-menu-item" onClick={() => act(onAllSearchable)}>All Searchable</button>
+          <button className="dk-menu-item" onClick={() => act(onAllNotSearchable)}>All Not Searchable</button>
           <button className="dk-menu-item danger" onClick={() => act(onResetRequest)}>Reset Progress...</button>
         </div>
       )}
@@ -742,6 +749,14 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
       setCards(fresh);
       setToast("All cards unpaused.");
     } catch (e) { logError("catch", e); setToast("Failed to unpause cards.", "error"); }
+  };
+
+  const setAllSearchable = async (searchable) => {
+    try {
+      await loggedInvoke("set_all_searchable", { groupId: deck.id, searchable });
+      setCards((prev) => prev.map((c) => ({ ...c, is_searchable: searchable })));
+      setToast(searchable ? "All cards set to searchable." : "All cards set to not searchable.");
+    } catch (e) { logError("catch", e); setToast("Failed to update cards.", "error"); }
   };
 
   const resetDeck = async () => {
@@ -807,7 +822,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
         <h2>{deck.name}</h2>
         {planName && <span className="dk-cards-plan">{planName}</span>}
         <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>{cards.length} card{cards.length !== 1 ? "s" : ""}</span>
-        <DeckActions onPauseAll={pauseAll} onUnpauseAll={unpauseAll} onResetRequest={() => setConfirmReset(true)} />
+        <DeckActions onPauseAll={pauseAll} onUnpauseAll={unpauseAll}
+          onAllSearchable={() => setAllSearchable(true)} onAllNotSearchable={() => setAllSearchable(false)}
+          onResetRequest={() => setConfirmReset(true)} />
       </div>
 
       {confirmReset && (
