@@ -486,7 +486,7 @@ function StudySession({ group, onBack, setToast }) {
                     className="hp-workspace"
                     value={workspace}
                     onChange={(e) => setWorkspace(e.target.value)}
-                    placeholder="Workspace — write your answer or practice here"
+                    placeholder="Workspace to write your answer or practice"
                     rows={3}
                     autoCorrect="off"
                     autoCapitalize="off"
