@@ -130,8 +130,7 @@
 
 /* Preview */
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
-.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: 0 2px 8px rgba(26,18,8,0.06); }
-.dk-preview-card.uploaded { border-color: var(--t-blue-bdr); }
+.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: 0 2px 8px rgba(26,18,8,0.06); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
 
 /* Deck actions dropdown */
