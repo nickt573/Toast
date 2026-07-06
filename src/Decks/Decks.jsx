@@ -852,7 +852,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                 <div className="dk-date-filter">
                   <span>Last seen:</span>
                   <input type="date" value={dateSince} onChange={e => setDateSince(e.target.value)} />
-                  {dateSince && <button style={{ fontSize: 11, padding: "1px 5px" }} onClick={() => setDateSince("")}>Clear</button>}
+                  {dateSince && <button className="dk-date-clear" title="Clear" onClick={() => setDateSince("")}>×</button>}
                 </div>
               )}
             </div>
