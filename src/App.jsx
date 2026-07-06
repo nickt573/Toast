@@ -87,7 +87,7 @@ export default function App() {
         const update = await check();
         if (!update) return;
         const yes = await ask(
-          `Toast ${update.version} is available (you have ${update.currentVersion}). Update now?`,
+          `Toast ${update.version} is available (currently ${update.currentVersion}). Update now?`,
           { title: "Update Available", kind: "info", okLabel: "Update", cancelLabel: "Later" }
         );
         if (!yes) return;
