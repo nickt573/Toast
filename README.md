@@ -11,6 +11,16 @@ Learning a language is an intense process, and there is an overwhelming amount o
 
 The point of Toast is to not force any features on you. Prefer another flashcard resource over Toast's decks? Skip our decks and tag it as an external resource instead. Toast is designed to keep track of all of your favorite language tools and doesn't require that you use ours.
 
+## Searchable Cards and Support
+
+Two deck features work together to keep study sessions clean: searchable cards and the support field.
+
+**Searchable** cards appear in the similar cards panel during study. When a card comes up, Toast searches the deck for other searchable cards that share a term with it and lists them next to the card, so words that look alike or share a meaning can be compared on the spot instead of confused. Matching works on the front and back text of a card: separate terms with commas, and anything in parentheses is ignored. Cards that match the front of the studied card are listed first, followed by cards that only match the back.
+
+**Support** is an optional extra field shown after you flip a card, below the back. It's the place for example sentences, mnemonics, pronunciation guides, and context notes. The similar cards panel only ever matches against a card's front and back, so anything in the support field stays out of it and an example sentence full of common words adds context to its own card without bringing unrelated cards into the panel. If you create a flipped copy of a card, both copies keep the same support.
+
+When importing an Anki deck, you can map any of its fields to support. All fields mapped this way can't be edited after import, but you can always add additional support.
+
 ## Download and Updates
 
 Download the latest version here: https://github.com/nickt573/Toast/releases/latest
