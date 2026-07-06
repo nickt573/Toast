@@ -633,7 +633,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
         {form.back_audio && <button onClick={() => set("back_audio", null)}>Clear</button>}
       </div>
       <div className="dk-new-card-row">
-        <label>Support <Tip text="Always shown after flipping a card. Most useful when creating flipped copies. Great for example sentences, pronunciation guides, context notes, or mnemonics. " /></label>
+        <label>Support <Tip text="Support fields are shown after flipping a card but stay out of similar-card matching. Map example sentences, mnemonics, or notes here to keep the similar cards panel clean. Flipped copies keep the same support." /></label>
         <textarea rows={2} value={form.support} onChange={(e) => set("support", e.target.value)} />
       </div>
       <div className="dk-new-card-row dk-new-card-actions">
