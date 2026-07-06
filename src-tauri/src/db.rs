@@ -24,7 +24,7 @@ fn add_column_if_missing(
 
 /// Migrations for databases created by older releases. Each call is idempotent.
 fn migrate_schema(conn: &Connection) -> rusqlite::Result<()> {
-    // v1.0.2: read-only support content mapped from Anki fields on import,
+    // v1.1.0: read-only support content mapped from Anki fields on import,
     // kept separate from front/back so it stays out of similar-card matching.
     add_column_if_missing(conn, "card", "imported_support", "TEXT")?;
     Ok(())
