@@ -23,6 +23,9 @@ pub struct Todo {
     pub category: i64,
     pub is_done: bool,
     pub is_disabled: bool,
+    // Manual order; set via set_todo_position, never through update_todo.
+    #[serde(default)]
+    pub position: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]

@@ -1,6 +1,6 @@
 use crate::app_utils::{delete_audio::*, delete_img::*, manage_audio::*, manage_img::*};
 use crate::crud::scheduling::*;
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, OptionalExtension, Result};
 use std::path::Path;
 
 pub fn delete_plan(id: i64, conn: &mut Connection) -> Result<()> {
@@ -20,16 +20,28 @@ pub fn delete_plan(id: i64, conn: &mut Connection) -> Result<()> {
     Ok(())
 }
 
-pub fn delete_todo(id: i64, conn: &Connection) -> Result<()> {
-    conn.execute(
-        r#"
-        DELETE FROM todo
-        WHERE id = ?1
-        "#,
-        [id],
-    )?;
+pub fn delete_todo(id: i64, conn: &mut Connection) -> Result<()> {
+    let tx = conn.transaction()?;
 
-    Ok(())
+    let row: Option<(i64, Option<i64>)> = tx
+        .query_row(
+            "SELECT plan_id, position FROM todo WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+
+    tx.execute("DELETE FROM todo WHERE id = ?1", [id])?;
+
+    // Close the gap so numbered todos stay contiguous 1..N
+    if let Some((plan_id, Some(pos))) = row {
+        tx.execute(
+            "UPDATE todo SET position = position - 1 WHERE plan_id = ?1 AND position > ?2",
+            rusqlite::params![plan_id, pos],
+        )?;
+    }
+
+    tx.commit()
 }
 
 /// Collects (image, audio) file paths embedded in an uploaded card's HTML

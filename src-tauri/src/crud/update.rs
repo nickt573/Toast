@@ -66,6 +66,51 @@ pub fn update_todo(todo: Todo, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Sets or clears a todo's manual order, keeping numbered todos contiguous 1..N
+/// within the plan: the todo is first pulled out (compacting the gap it leaves),
+/// then reinserted at the requested spot, clamped to 1..=N+1, shifting later
+/// todos up by one.
+pub fn set_todo_position(todo_id: i64, position: Option<i64>, conn: &mut Connection) -> Result<()> {
+    let tx = conn.transaction()?;
+
+    let (plan_id, old_pos): (i64, Option<i64>) = tx.query_row(
+        "SELECT plan_id, position FROM todo WHERE id = ?1",
+        [todo_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+
+    if let Some(old) = old_pos {
+        tx.execute(
+            "UPDATE todo SET position = position - 1 WHERE plan_id = ?1 AND position > ?2",
+            rusqlite::params![plan_id, old],
+        )?;
+    }
+
+    let new_pos = match position {
+        None => None,
+        Some(p) => {
+            let numbered: i64 = tx.query_row(
+                "SELECT COUNT(*) FROM todo WHERE plan_id = ?1 AND position IS NOT NULL AND id != ?2",
+                rusqlite::params![plan_id, todo_id],
+                |row| row.get(0),
+            )?;
+            let p = p.clamp(1, numbered + 1);
+            tx.execute(
+                "UPDATE todo SET position = position + 1 WHERE plan_id = ?1 AND position >= ?2 AND id != ?3",
+                rusqlite::params![plan_id, p, todo_id],
+            )?;
+            Some(p)
+        }
+    };
+
+    tx.execute(
+        "UPDATE todo SET position = ?1 WHERE id = ?2",
+        rusqlite::params![new_pos, todo_id],
+    )?;
+
+    tx.commit()
+}
+
 pub fn update_deck(deck: Group, conn: &Connection) -> Result<()> {
     conn.execute(
         r#"

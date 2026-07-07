@@ -7,6 +7,7 @@ import { ConfirmDelete, GroupTypeBadge } from "../UIUtils";
 export default function Todos({ todo, setToast, refresh, onNavigateToGroup, planResources, allGroups, planName }) {
     const [editing, setEditing] = useState(false);
     const [text, setText] = useState(todo.text);
+    const [orderNum, setOrderNum] = useState(todo.position ?? "");
     const [frequency, setFrequency] = useState(() => maskToArray(todo.frequency ?? 127));
     const [categoryMap, setCategoryMap] = useState(() => maskToCategories(todo.category ?? 64));
     const [linkedGroups, setLinkedGroups] = useState([]);
@@ -17,6 +18,9 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
     // Reload on mount, and whenever the plan's resources/groups change so the
     // todo's linked pills update live — no leave/return.
     useEffect(() => { loadLinks(); }, [planResources, allGroups]);
+
+    // The backend clamps and shifts order numbers; show the value it settled on
+    useEffect(() => { setOrderNum(todo.position ?? ""); }, [todo.position]);
 
     async function loadLinks() {
         try {
@@ -58,6 +62,8 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                 loggedInvoke("set_todo_groups", { todoId: todo.id, groupIds: selectedGroupIds }),
                 loggedInvoke("set_todo_resources", { todoId: todo.id, resourceIds: selectedResourceIds }),
             ]);
+            const parsed = parseInt(orderNum, 10);
+            await loggedInvoke("set_todo_position", { todoId: todo.id, position: Number.isNaN(parsed) ? null : parsed });
             await loadLinks();
             await refresh();
             setToast("Todo updated.");
@@ -125,11 +131,26 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
     return (
         <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%)" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Todo description…"
-                    style={{ fontSize: 14 }} />
+                <div>
+                    <div style={{ fontSize: 12, marginBottom: 4 }}>Order</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <input type="number" min="1" step="1" value={orderNum}
+                            onChange={(e) => setOrderNum(e.target.value)}
+                            placeholder="None" style={{ width: 70 }} />
+                        <span style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+                            Numbered todos are listed first; the rest follow alphabetically.
+                        </span>
+                    </div>
+                </div>
 
                 <div>
-                    <div style={{ fontSize: 12, marginBottom: 4 }}>Category</div>
+                    <div style={{ fontSize: 12, marginBottom: 4 }}>Description</div>
+                    <input value={text} onChange={(e) => setText(e.target.value)}
+                        style={{ fontSize: 14, width: "100%", boxSizing: "border-box" }} />
+                </div>
+
+                <div>
+                    <div style={{ fontSize: 12, marginBottom: 4 }}>Categories</div>
                     <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                 </div>
 

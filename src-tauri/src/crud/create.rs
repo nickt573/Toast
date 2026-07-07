@@ -42,6 +42,7 @@ pub fn create_todo(todo: NewTodo, conn: &mut Connection) -> Result<Todo> {
         category: todo.category,
         is_done: false,
         is_disabled: false,
+        position: None,
     })
 }
 

@@ -398,6 +398,7 @@ function ResourcesSection({ planId, setToast, onChanged }) {
 function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
     const [open, setOpen] = useState(false);
     const [text, setText] = useState("");
+    const [orderNum, setOrderNum] = useState("");
     const [selectedGroupIds, setSelectedGroupIds] = useState([]);
     const [selectedResourceIds, setSelectedResourceIds] = useState([]);
     const [frequency, setFrequency] = useState([true, true, true, true, true, true, true]);
@@ -438,8 +439,12 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
                     ? loggedInvoke("set_todo_resources", { todoId: created.id, resourceIds: selectedResourceIds })
                     : Promise.resolve(),
             ]);
+            const parsed = parseInt(orderNum, 10);
+            if (!Number.isNaN(parsed)) {
+                await loggedInvoke("set_todo_position", { todoId: created.id, position: parsed });
+            }
             setToast("Todo created.");
-            setText(""); setSelectedGroupIds([]); setSelectedResourceIds([]);
+            setText(""); setOrderNum(""); setSelectedGroupIds([]); setSelectedResourceIds([]);
             setFrequency([true, true, true, true, true, true, true]);
             setCategoryMap(DEFAULT_CATEGORY());
             setOpen(false);
@@ -454,11 +459,26 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
             ) : (
                 <div className="plan-todo-form">
                     <div className="plan-section-title">New Todo</div>
-                    <input placeholder="Todo description…" value={text} onChange={(e) => setText(e.target.value)} autoFocus
-                        onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false); }} />
+                    <div>
+                        <div className="plan-form-sublabel">Order</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <input type="number" min="1" step="1" value={orderNum}
+                                onChange={(e) => setOrderNum(e.target.value)}
+                                placeholder="None" style={{ width: 70 }} />
+                            <span style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+                                Numbered todos are listed first; the rest follow alphabetically.
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <div className="plan-form-sublabel">Description</div>
+                        <input value={text} onChange={(e) => setText(e.target.value)} autoFocus
+                            onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") setOpen(false); }}
+                            style={{ width: "100%", boxSizing: "border-box" }} />
+                    </div>
 
                     <div>
-                        <div className="plan-form-sublabel">Category</div>
+                        <div className="plan-form-sublabel">Categories</div>
                         <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                     </div>
                     <div>
