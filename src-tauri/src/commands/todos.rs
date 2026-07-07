@@ -21,8 +21,18 @@ pub fn update_todo(todo: Todo, state: tauri::State<AppState>) -> Result<(), Stri
 
 #[tauri::command]
 pub fn delete_todo(id: i64, state: tauri::State<AppState>) -> Result<(), String> {
-    let conn = state.conn.lock().unwrap();
-    delete::delete_todo(id, &conn).map_err(|e| e.to_string())
+    let mut conn = state.conn.lock().unwrap();
+    delete::delete_todo(id, &mut conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_todo_position(
+    todo_id: i64,
+    position: Option<i64>,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let mut conn = state.conn.lock().unwrap();
+    update::set_todo_position(todo_id, position, &mut conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

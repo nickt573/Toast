@@ -27,6 +27,9 @@ fn migrate_schema(conn: &Connection) -> rusqlite::Result<()> {
     // v1.1.0: read-only support content mapped from Anki fields on import,
     // kept separate from front/back so it stays out of similar-card matching.
     add_column_if_missing(conn, "card", "imported_support", "TEXT")?;
+    // v1.2.0: optional manual order for todos; numbered todos sort ahead of
+    // unnumbered ones and stay contiguous 1..N per plan (see set_todo_position).
+    add_column_if_missing(conn, "todo", "position", "INTEGER DEFAULT NULL")?;
     Ok(())
 }
 
@@ -50,6 +53,8 @@ pub fn init_schema(conn: &Connection) -> rusqlite::Result<()> {
 
                 is_done BOOLEAN NOT NULL DEFAULT FALSE,
                 is_disabled BOOLEAN NOT NULL DEFAULT FALSE, -- disabled by frequency
+
+                position INTEGER DEFAULT NULL, -- manual order; contiguous 1..N per plan, NULL sorts last
 
                 FOREIGN KEY(plan_id)
                     REFERENCES plan(id)

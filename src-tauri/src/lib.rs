@@ -85,6 +85,7 @@ pub fn run() {
             commands::todos::get_todos,
             commands::todos::update_todo,
             commands::todos::delete_todo,
+            commands::todos::set_todo_position,
             commands::todos::get_todo_resources,
             commands::todos::set_todo_resources,
             commands::todos::get_todo_groups,
