@@ -2,8 +2,7 @@
 .nb-root { display: flex; flex-direction: column; height: 100%; }
 
 /* List */
-.nb-list { flex: 1; overflow-y: auto; padding: 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; scrollbar-width: none; }
-.nb-list::-webkit-scrollbar { display: none; }
+.nb-list { flex: 1; overflow-y: auto; padding: 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
 .nb-notebook-name { font-weight: 600; font-size: 14px; color: var(--t-text); }
 .nb-notebook-name-input { flex: 1; }
 .nb-new-notebook { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
@@ -62,8 +61,7 @@
 /* Editor */
 .nb-editor-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; max-width: 700px; margin: 0 auto 6px; width: 100%; box-sizing: border-box; padding: 0 20px; min-height: 0; }
 .nb-view-content .nb-editor-wrap { max-width: 100%; padding: 0; }
-.nb-editor-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; scrollbar-width: none; }
-.nb-editor-scroll::-webkit-scrollbar { display: none; }
+.nb-editor-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; }
 .nb-view-content .nb-editor-scroll { border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
 
 /* Audio bar */
