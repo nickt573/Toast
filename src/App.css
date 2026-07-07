@@ -222,13 +222,20 @@ input.input-readonly, textarea.input-readonly {
   color: var(--t-text);
 }
 
-/* ── Global scrollbar hiding ── */
-.landing-body, .plans-scroll, .dk-list,
-.st-body, .hp-root, .hp-session { scrollbar-width: none; }
-.landing-body::-webkit-scrollbar, .plans-scroll::-webkit-scrollbar,
-.dk-list::-webkit-scrollbar,
-.st-body::-webkit-scrollbar, .hp-root::-webkit-scrollbar,
-.hp-session::-webkit-scrollbar { display: none; }
+/* ── Scrollbars — visible whenever content overflows ──
+   Styling ::-webkit-scrollbar opts out of the macOS overlay style, so the
+   thumb stays shown as a cue that a region scrolls. The deck card table is
+   excluded (:not) so it keeps the native floating overlay scrollbar. */
+:not(.dk-table-scroll)::-webkit-scrollbar { width: 10px; height: 10px; }
+:not(.dk-table-scroll)::-webkit-scrollbar-track { background: transparent; }
+:not(.dk-table-scroll)::-webkit-scrollbar-thumb {
+  background: var(--t-border-2);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+:not(.dk-table-scroll)::-webkit-scrollbar-thumb:hover { background: var(--t-btn-bdr); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* ── App shell ── */
 .app-shell {
