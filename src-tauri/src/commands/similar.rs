@@ -208,8 +208,9 @@ fn decode_entities(s: &str) -> String {
         .replace("&quot;", "\"")
 }
 
-// Splits a card field into comma-separated tokens: br/hr/div become separators,
-// remaining HTML is stripped, entities decoded, parenthetical text discarded.
+// Splits a card field into comma- or semicolon-separated tokens: br/hr/div
+// become separators, remaining HTML is stripped, entities decoded,
+// parenthetical text discarded.
 fn extract_tokens(s: &str) -> Vec<String> {
     let s = remove_tag_pair(s, "audio");
     let s = replace_tag_with(&s, "br", ",");
@@ -217,7 +218,7 @@ fn extract_tokens(s: &str) -> Vec<String> {
     let s = replace_tag_with(&s, "div", ",");
     let s = strip_html(&s);
     let s = decode_entities(&s);
-    s.split(',')
+    s.split([',', ';'])
         .map(|t| strip_parens(t).trim().to_lowercase())
         .filter(|t| !t.is_empty())
         .collect()
