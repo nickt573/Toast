@@ -30,6 +30,9 @@ fn migrate_schema(conn: &Connection) -> rusqlite::Result<()> {
     // v1.2.0: optional manual order for todos; numbered todos sort ahead of
     // unnumbered ones and stay contiguous 1..N per plan (see set_todo_position).
     add_column_if_missing(conn, "todo", "position", "INTEGER DEFAULT NULL")?;
+    // v1.2.0: todo time is whole minutes now; round decimals logged by older
+    // releases (idempotent, the column itself stays FLOAT).
+    conn.execute_batch("UPDATE todo_stats SET time_spent_minutes = ROUND(time_spent_minutes);")?;
     Ok(())
 }
 
