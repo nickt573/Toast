@@ -235,7 +235,7 @@ function DeckList({ setToast, onOpenDeck }) {
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiMakeSearchable} onChange={(e) => setAnkiMakeSearchable(e.target.checked)} />
             Make all searchable
-            <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas and ignore anything in parentheses." />
+            <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas or semicolons and ignore anything in parentheses." />
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiCreateFlipped} onChange={(e) => setAnkiCreateFlipped(e.target.checked)} />
@@ -515,7 +515,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onMarkedForReview, inP
         <div className="dk-new-card-check">
           <input type="checkbox" id="ce_searchable" checked={form.is_searchable} onChange={(e) => set("is_searchable", e.target.checked)} />
           <label htmlFor="ce_searchable">Searchable</label>
-          <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas and ignore anything in parentheses." />
+          <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas or semicolons and ignore anything in parentheses." />
         </div>
         <div className="dk-new-card-check">
           <input type="checkbox" id="ce_paused" checked={form.is_paused} onChange={(e) => set("is_paused", e.target.checked)} />
@@ -642,7 +642,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
             <div className="dk-new-card-check">
               <input type="checkbox" id="nc_searchable" checked={form.is_searchable} onChange={(e) => set("is_searchable", e.target.checked)} />
               <label htmlFor="nc_searchable">Searchable</label>
-              <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas and ignore anything in parentheses." />
+              <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas or semicolons and ignore anything in parentheses." />
             </div>
             <div className="dk-new-card-check">
               <input type="checkbox" id="nc_priority" checked={priorityAdd} onChange={(e) => setPriorityAdd(e.target.checked)} />
