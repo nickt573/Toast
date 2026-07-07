@@ -151,6 +151,37 @@
 /* 18px is the standard for free-floating "← Back + title" headers (also .hp-session-header h2) */
 .hp-plan-back h2 { margin: 0; font-family: var(--t-font-head); font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--t-text); }
 
+/* ── Study timer ── */
+.hp-timer {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--t-surface);
+  border: 1px solid var(--t-border-2);
+  border-radius: var(--t-r-pill);
+  padding: 4px 5px 4px 14px;
+  box-shadow: var(--t-shadow-sm);
+}
+.hp-timer-display {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--t-text-3);
+  min-width: 42px;
+  text-align: right;
+  user-select: none;
+}
+.hp-timer-display.running { color: var(--t-text); }
+.hp-timer-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--t-r-pill); }
+/* Family-colored actions: green go, amber pause, red clear; hover deepens the fill */
+.hp-timer-btn--start { background: var(--t-green-bg); border-color: var(--t-green-bdr); color: var(--t-green); }
+.hp-timer-btn--start:hover { background: var(--t-green-bg); border-color: var(--t-green); color: var(--t-green); filter: brightness(0.95); }
+.hp-timer-btn--pause { background: var(--t-amber-bg); border-color: var(--t-amber-bdr); color: var(--t-amber); }
+.hp-timer-btn--pause:hover { background: var(--t-amber-bg); border-color: var(--t-amber); color: var(--t-amber); filter: brightness(0.95); }
+.hp-timer-btn--clear { background: var(--t-red-bg); border-color: var(--t-red-bdr); color: var(--t-red); }
+.hp-timer-btn--clear:hover { background: var(--t-red-bg-h); border-color: var(--t-red); color: var(--t-red); }
+
 .hp-section-panel {
   background: var(--t-surface);
   border: 1px solid var(--t-border-2);

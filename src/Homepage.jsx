@@ -36,10 +36,131 @@ function ResourcePill({ resource }) {
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
 
+// ─── Study Timer ──────────────────────────────────────────────────────────────
+// One stopwatch per plan. Module-level so timers keep running while navigating
+// the app. Elapsed time is mirrored to localStorage (never the database) every
+// few seconds while running, so closing the app pauses each timer and its time
+// is restored on the next launch.
+
+const TIMER_STORE_KEY = "toast-study-timers";
+
+function loadStudyTimers() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(TIMER_STORE_KEY)) || {};
+        const timers = {};
+        Object.entries(stored).forEach(([planId, ms]) => {
+            timers[planId] = { accumulatedMs: ms, runningSince: null };
+        });
+        return timers;
+    } catch { return {}; }
+}
+
+const studyTimers = loadStudyTimers();
+let timerPersistInterval = null;
+
+function getStudyTimer(planId) {
+    if (!studyTimers[planId]) studyTimers[planId] = { accumulatedMs: 0, runningSince: null };
+    return studyTimers[planId];
+}
+
+function timerElapsedMs(planId) {
+    const t = getStudyTimer(planId);
+    return t.accumulatedMs + (t.runningSince ? Date.now() - t.runningSince : 0);
+}
+
+function persistStudyTimers() {
+    const out = {};
+    Object.keys(studyTimers).forEach(planId => {
+        const ms = timerElapsedMs(planId);
+        if (ms > 0) out[planId] = ms;
+    });
+    try { localStorage.setItem(TIMER_STORE_KEY, JSON.stringify(out)); } catch { /* storage full/unavailable */ }
+}
+
+// Persist on every timer action, and on a heartbeat while any timer runs so a
+// closed app loses at most a few seconds.
+function syncTimerPersistence() {
+    persistStudyTimers();
+    const anyRunning = Object.values(studyTimers).some(t => t.runningSince !== null);
+    if (anyRunning && !timerPersistInterval) {
+        timerPersistInterval = setInterval(persistStudyTimers, 5000);
+    } else if (!anyRunning && timerPersistInterval) {
+        clearInterval(timerPersistInterval);
+        timerPersistInterval = null;
+    }
+}
+
+function startStudyTimer(planId) {
+    const t = getStudyTimer(planId);
+    if (!t.runningSince) t.runningSince = Date.now();
+    syncTimerPersistence();
+}
+
+function pauseStudyTimer(planId) {
+    const t = getStudyTimer(planId);
+    if (t.runningSince) {
+        t.accumulatedMs += Date.now() - t.runningSince;
+        t.runningSince = null;
+    }
+    syncTimerPersistence();
+}
+
+function resetStudyTimer(planId) {
+    studyTimers[planId] = { accumulatedMs: 0, runningSince: null };
+    syncTimerPersistence();
+}
+
+// Todo time is always whole minutes
+function timerMinutesRounded(planId) {
+    return Math.round(timerElapsedMs(planId) / 60000);
+}
+
+function StudyTimer({ planId }) {
+    const [, setTick] = useState(0);
+    const running = getStudyTimer(planId).runningSince !== null;
+
+    useEffect(() => {
+        if (!running) return;
+        const interval = setInterval(() => setTick(t => t + 1), 500);
+        return () => clearInterval(interval);
+    }, [running, planId]);
+
+    function toggle() {
+        if (running) pauseStudyTimer(planId);
+        else startStudyTimer(planId);
+        setTick(t => t + 1);
+    }
+
+    function clear() {
+        resetStudyTimer(planId);
+        setTick(t => t + 1);
+    }
+
+    const totalSec = Math.floor(timerElapsedMs(planId) / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const display = h > 0
+        ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+        : `${m}:${String(s).padStart(2, "0")}`;
+
+    return (
+        <div className="hp-timer">
+            <span className={`hp-timer-display${running ? " running" : ""}`}>{display}</span>
+            <button className={`hp-timer-btn ${running ? "hp-timer-btn--pause" : "hp-timer-btn--start"}`} onClick={toggle}>
+                {running ? "Pause" : "Start"}
+            </button>
+            <button className="hp-timer-btn hp-timer-btn--clear" onClick={clear}>Clear</button>
+        </div>
+    );
+}
+
 
 // ─── Grade Buttons ────────────────────────────────────────────────────────────
 
 function GradeButtons({ onGrade, card }) {
+    // Rendering without a card would throw and unmount the whole app
+    if (!card) return null;
     const gradeDeltas = card.tier > 0 ? [
         { label: "Nope",  tierDelta: -2, grade: 0, cls: "hp-grade-nope",  easeDelta: -0.12 },
         { label: "Rough", tierDelta: -1, grade: 1, cls: "hp-grade-rough", easeDelta: -0.05 },
@@ -132,8 +253,8 @@ function SimilarNavigator({ items, frontCount = 0, groupType }) {
 
 // ─── Todo Complete Popup ──────────────────────────────────────────────────────
 
-function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, allGroups, onConfirm, onCancel, onNavigateToGroup }) {
-    const [timeSpent, setTimeSpent] = useState(0);
+function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, allGroups, onConfirm, onCancel, onNavigateToGroup, initialTime = 0 }) {
+    const [timeSpent, setTimeSpent] = useState(initialTime);
     const [numUnit, setNumUnit] = useState("");
     const [details, setDetails] = useState("");
     const [categoryMap, setCategoryMap] = useState(() => maskToCategories(todo.category ?? 64));
@@ -234,9 +355,9 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
 
 // ─── Free Todo Popup ──────────────────────────────────────────────────────────
 
-function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, setToast }) {
+function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, setToast, initialTime = 0 }) {
     const [text, setText] = useState("");
-    const [timeSpent, setTimeSpent] = useState(0);
+    const [timeSpent, setTimeSpent] = useState(initialTime);
     const [numUnit, setNumUnit] = useState("");
     const [details, setDetails] = useState("");
     const [selectedGroupIds, setSelectedGroupIds] = useState([]);
@@ -585,6 +706,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                     loggedInvoke("get_todo_groups", { todoId: todo.id }),
                     loggedInvoke("get_todo_resources", { todoId: todo.id }),
                 ]);
+                pauseStudyTimer(plan.id);
                 setCompletingTodoLinks({ groups: g, resources: r });
                 setCompletingTodo(todo);
             } catch (e) { logError("catch", e); setToast("Failed to load todo links.", "error"); }
@@ -607,6 +729,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             });
             setCompletingTodo(null);
             setCompletingTodoLinks({ groups: [], resources: [] });
+            resetStudyTimer(plan.id);
             setToast("Done!");
             await loadData();
         } catch (e) { logError("catch", e); setToast("Failed to complete todo.", "error"); }
@@ -621,6 +744,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                 timeSpentMinutes: timeSpent, numUnit, groupIds, resourceIds,
             });
             setShowFreeTodo(false);
+            resetStudyTimer(plan.id);
             setToast("Activity logged.");
         } catch (e) { logError("catch", e); setToast("Failed to log activity.", "error"); }
     }
@@ -631,13 +755,14 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                 <div className="hp-plan-back">
                     <button className="quiet" onClick={onBack}>← Back to Plans</button>
                     <h2>{plan.name}</h2>
+                    <StudyTimer planId={plan.id} />
                 </div>
 
                 {/* Todos */}
                 <div className="hp-section-panel">
                     <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
                         <span className="hp-section-label hp-section-label--todos" style={{ marginBottom: 0, flex: 1 }}>Todos</span>
-                        <button onClick={() => setShowFreeTodo(true)} style={{ fontSize: 11 }}>Log Extra</button>
+                        <button onClick={() => { pauseStudyTimer(plan.id); setShowFreeTodo(true); }} style={{ fontSize: 11 }}>Log Extra</button>
                     </div>
                     {todos.length === 0 && (
                         <div className="empty-bubble">No todos today.</div>
@@ -722,6 +847,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         onConfirm={confirmComplete}
                         onCancel={() => { setCompletingTodo(null); setCompletingTodoLinks({ groups: [], resources: [] }); }}
                         onNavigateToGroup={navigateFromPlan}
+                        initialTime={timerMinutesRounded(plan.id)}
                     />
                 )}
 
@@ -733,6 +859,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         onConfirm={confirmFreeTodo}
                         onCancel={() => setShowFreeTodo(false)}
                         setToast={setToast}
+                        initialTime={timerMinutesRounded(plan.id)}
                     />
                 )}
             </div>
