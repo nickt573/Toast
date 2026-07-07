@@ -211,26 +211,28 @@ function DeckList({ setToast, onOpenDeck }) {
                 <Tip text="Support fields are shown after flipping a card but stay out of similar-card matching. Map example sentences, mnemonics, or notes here to keep the similar cards panel clean. Flipped copies keep the same support. Fields mapped here can't be edited after import, but you can always add your own notes alongside them." />
               </span>
             </div>
-            {ankiPending.fields.map((f, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", background: i % 2 === 1 ? "rgba(26,18,8,0.03)" : "transparent", borderRadius: 4, padding: "2px 0" }}>
-                <span style={{ flex: 1, fontSize: 13, color: "var(--t-text)" }}>
-                  <span style={{ color: "var(--t-text-3)", fontSize: 11, marginRight: 6, fontVariantNumeric: "tabular-nums" }}>{i + 1}.</span>
-                  {f}
-                </span>
-                <label style={{ width: 50, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
-                  <input type="checkbox" checked={ankiFrontIndices.includes(i)}
-                    onChange={() => setAnkiFrontIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
-                </label>
-                <label style={{ width: 50, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
-                  <input type="checkbox" checked={ankiBackIndices.includes(i)}
-                    onChange={() => setAnkiBackIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
-                </label>
-                <label style={{ width: 56, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
-                  <input type="checkbox" checked={ankiSupportIndices.includes(i)}
-                    onChange={() => setAnkiSupportIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
-                </label>
-              </div>
-            ))}
+            <div className="dk-anki-field-scroll">
+              {ankiPending.fields.map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", background: i % 2 === 1 ? "rgba(26,18,8,0.03)" : "transparent", borderRadius: 4, padding: "2px 0" }}>
+                  <span style={{ flex: 1, fontSize: 13, color: "var(--t-text)" }}>
+                    <span style={{ color: "var(--t-text-3)", fontSize: 11, marginRight: 6, fontVariantNumeric: "tabular-nums" }}>{i + 1}.</span>
+                    {f}
+                  </span>
+                  <label style={{ width: 50, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
+                    <input type="checkbox" checked={ankiFrontIndices.includes(i)}
+                      onChange={() => setAnkiFrontIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
+                  </label>
+                  <label style={{ width: 50, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
+                    <input type="checkbox" checked={ankiBackIndices.includes(i)}
+                      onChange={() => setAnkiBackIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
+                  </label>
+                  <label style={{ width: 56, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
+                    <input type="checkbox" checked={ankiSupportIndices.includes(i)}
+                      onChange={() => setAnkiSupportIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiMakeSearchable} onChange={(e) => setAnkiMakeSearchable(e.target.checked)} />

@@ -12,6 +12,10 @@
 
 /* Merge panel */
 .dk-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border-2); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+
+/* Anki field mapping — long decks scroll instead of pushing the panel offscreen;
+   the visible scrollbar comes from the app-wide rules in App.css */
+.dk-anki-field-scroll { max-height: 38vh; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; scrollbar-gutter: stable; border-bottom: 1px solid var(--t-border); }
 .dk-merge-row { display: flex; gap: 8px; align-items: center; }
 .dk-merge-row select { flex: 1; }
 
