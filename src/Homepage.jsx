@@ -479,6 +479,8 @@ function StudySession({ group, onBack, setToast }) {
     const [done, setDone] = useState(false);
     const lastShownId = useRef(null);
     const lastFlush = useRef(Date.now());
+    // Drops re-entrant grades so a double-press can't grade the same card twice
+    const grading = useRef(false);
     const isCard = group.group_type === "deck";
 
     async function fetchNext() {
@@ -502,9 +504,9 @@ function StudySession({ group, onBack, setToast }) {
 
     async function handleFlip() {
         if (!isCard) throw new Error("Attempted Notebook SRS");
-        setFlipped(true);
         const itemId = card?.id;
         if (!itemId) return;
+        setFlipped(true);
         try {
             const similar = await loggedInvoke("get_similar_cards", { itemId });
             setSimilarItems(similar);
@@ -514,11 +516,13 @@ function StudySession({ group, onBack, setToast }) {
     async function handleGrade(grade) {
         if (!isCard) throw new Error("Attempted Notebook SRS");
         const itemId = card?.id;
-        if (!itemId) return;
+        if (!itemId || grading.current) return;
+        grading.current = true;
         try {
             await loggedInvoke("grade_item", { itemId, grade });
             await fetchNext();
         } catch (e) { logError("catch", e); setToast("Failed to grade card", "error"); }
+        finally { grading.current = false; }
     }
 
     async function flushTime() {
@@ -549,6 +553,7 @@ function StudySession({ group, onBack, setToast }) {
 
     useEffect(() => {
         function onKey(e) {
+            if (e.repeat) return;
             if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
             if (e.key === " " && !flipped) { e.preventDefault(); handleFlip(); return; }
             if (flipped && card) {
