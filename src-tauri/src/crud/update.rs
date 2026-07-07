@@ -352,6 +352,8 @@ pub fn complete_todo(
             "time_spent must be >= 0".into(),
         ));
     }
+    // Todo time is stored as whole minutes (the column stays FLOAT)
+    let time_spent_minutes = time_spent_minutes.round();
 
     let category_str = category_mask_to_string(category);
     let plan_name: String = conn
@@ -414,6 +416,8 @@ pub fn log_free_todo(
             "time_spent must be >= 0".into(),
         ));
     }
+    // Todo time is stored as whole minutes (the column stays FLOAT)
+    let time_spent_minutes = time_spent_minutes.round();
 
     let today = get_date(&conn)?;
     let category_str = category_mask_to_string(category);
@@ -485,6 +489,8 @@ pub fn update_todo_stat(
             "time_spent must be >= 0".into(),
         ));
     }
+    // Todo time is stored as whole minutes (the column stays FLOAT)
+    let time_spent_minutes = time_spent_minutes.round();
     let category_str = category_mask_to_string(category);
     conn.execute(
         "UPDATE todo_stats SET text=?1, category=?2, details=?3, time_spent_minutes=?4, num_unit=?5 WHERE id=?6",

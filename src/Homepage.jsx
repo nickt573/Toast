@@ -193,7 +193,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
 
                 <div>
                     <div className="hp-popup-label">Time spent (minutes)</div>
-                    <input type="number" min={1} value={timeSpent}
+                    <input type="number" min={1} step={1} value={timeSpent}
                         onChange={(e) => setTimeSpent(e.target.value)} placeholder="0"
                         style={{ width: "100%" }} />
                 </div>
@@ -217,7 +217,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                     <button
                         className="primary"
                         onClick={() => onConfirm(
-                            parseFloat(timeSpent) || 0,
+                            Math.round(parseFloat(timeSpent) || 0),
                             numUnit !== "" ? numUnit : null,
                             details !== "" ? details : null,
                             selectedResourceIds,
@@ -260,7 +260,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
             text: text.trim(),
             category,
             details: details || null,
-            timeSpent: parseFloat(timeSpent) || 0,
+            timeSpent: Math.round(parseFloat(timeSpent) || 0),
             numUnit: numUnit || null,
             groupIds: selectedGroupIds,
             resourceIds: selectedResourceIds,
@@ -317,7 +317,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
 
                 <div>
                     <div className="hp-popup-label">Time spent (minutes)</div>
-                    <input type="number" min={1} value={timeSpent}
+                    <input type="number" min={1} step={1} value={timeSpent}
                         onChange={(e) => setTimeSpent(e.target.value)} placeholder="0"
                         style={{ width: "100%" }} />
                 </div>
