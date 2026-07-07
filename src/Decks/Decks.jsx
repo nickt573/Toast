@@ -817,7 +817,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
         {returnTo ? (
           <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
         ) : (
-          <button className="quiet" onClick={onBack}>← Decks</button>
+          <button className="quiet" onClick={onBack}>← Back</button>
         )}
         <h2>{deck.name}</h2>
         {planName && <span className="dk-cards-plan">{planName}</span>}

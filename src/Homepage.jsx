@@ -277,7 +277,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                 <div className="hp-popup-title">{todo.text}</div>
 
                 <div>
-                    <div className="hp-popup-label">Category</div>
+                    <div className="hp-popup-label">Categories</div>
                     <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                 </div>
 
@@ -401,7 +401,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
                 </div>
 
                 <div>
-                    <div className="hp-popup-label">Category</div>
+                    <div className="hp-popup-label">Categories</div>
                     <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                 </div>
 
@@ -758,7 +758,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         <div className="hp-root">
             <div className="hp-plan-page">
                 <div className="hp-plan-back">
-                    <button className="quiet" onClick={onBack}>← Back to Plans</button>
+                    <button className="quiet" onClick={onBack}>← Back</button>
                     <h2>{plan.name}</h2>
                     <StudyTimer planId={plan.id} />
                 </div>

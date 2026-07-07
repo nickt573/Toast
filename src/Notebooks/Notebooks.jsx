@@ -664,7 +664,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
                 {returnTo ? (
                     <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
                 ) : (
-                    <button className="quiet" onClick={onBack}>← Notebooks</button>
+                    <button className="quiet" onClick={onBack}>← Back</button>
                 )}
                 <h2>{notebook.name}</h2>
                 <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>{allPages.length} page{allPages.length !== 1 ? "s" : ""}</span>
