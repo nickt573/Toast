@@ -40,6 +40,9 @@
 
 .dk-date-filter { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-3); flex-wrap: nowrap; }
 .dk-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
+/* Windows (WebView2/Chromium) renders a wide calendar icon inside date inputs,
+   pushing the filter onto its own line; shrink it to fit the row. */
+.dk-date-filter input[type="date"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 12px; height: 12px; }
 .dk-date-clear { font-size: 13px; line-height: 1; padding: 0 2px; border: none; background: none; box-shadow: none; color: var(--t-text-3); cursor: pointer; }
 .dk-date-clear:hover { background: none; box-shadow: none; color: var(--t-text); }
 
