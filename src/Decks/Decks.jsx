@@ -890,8 +890,8 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
             )}
           </div>
 
-          <div className="dk-table-scroll">
-            {filtered.length === 0 ? (
+          {filtered.length === 0 ? (
+            <div className="dk-table-scroll">
               <div className="dk-table-empty">
                 {(filter === "due" || filter === "overdue") && !deck.plan_id
                   ? "This deck isn't linked to a plan."
@@ -899,13 +899,24 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                     ? "No cards match your filters."
                     : "No cards yet, create some below!"}
               </div>
-            ) : (
-              <table className="dk-card-table">
-                <thead>
-                  <tr><th>Front</th><th>Back</th><th>Due</th><th>Paused</th></tr>
-                </thead>
-                <tbody>
-                  {filtered.map((card) => {
+            </div>
+          ) : (
+            <>
+              {/* Header lives outside the scroll area so the scrollbar starts below it;
+                  both tables share fixed column widths to stay aligned */}
+              <div className="dk-table-head">
+                <table className="dk-card-table">
+                  <colgroup><col /><col /><col className="dk-col-due" /><col className="dk-col-paused" /></colgroup>
+                  <thead>
+                    <tr><th>Front</th><th>Back</th><th>Due</th><th>Paused</th></tr>
+                  </thead>
+                </table>
+              </div>
+              <div className="dk-table-scroll">
+                <table className="dk-card-table">
+                  <colgroup><col /><col /><col className="dk-col-due" /><col className="dk-col-paused" /></colgroup>
+                  <tbody>
+                    {filtered.map((card) => {
                     const front = card.is_uploaded ? stripHtml(card.front) : card.front;
                     const back = card.is_uploaded ? stripHtml(card.back) : card.back;
                     return (
@@ -927,11 +938,12 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                         <td>{card.is_paused ? "Yes" : "—"}</td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           <div className={`dk-creator-toggle-row${creatorOpen ? " open" : ""}`}>
             <button className="dk-filter-toggle" onClick={() => setCreatorOpen(o => !o)}>

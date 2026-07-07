@@ -56,10 +56,16 @@
 .dk-filter-btn.active,
 .dk-filter-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
 
-/* Card table */
-.dk-table-scroll { flex: 1; overflow-y: auto; }
-.dk-card-table { width: 100%; border-collapse: collapse; }
-.dk-card-table th { position: sticky; top: 0; background: var(--t-surface-3); text-align: center; padding: 5px 8px; border-bottom: 1px solid var(--t-border); font-size: 11px; color: var(--t-text-3); font-weight: 700; will-change: transform; }
+/* Card table — leftover space below the rows matches the editor pane's backdrop.
+   Excluded from the app-wide scrollbar styling (App.css), so it keeps the native
+   overlay scrollbar: no track, floating thumb, takes no layout space. The header
+   sits in its own container above the scroll area so the thumb never crosses it. */
+.dk-table-head { flex-shrink: 0; background: var(--t-surface-3); }
+.dk-table-scroll { flex: 1; overflow-y: auto; background: var(--t-surface-2); }
+.dk-card-table { width: 100%; border-collapse: collapse; background: var(--t-bg); table-layout: fixed; }
+.dk-card-table col.dk-col-due { width: 64px; }
+.dk-card-table col.dk-col-paused { width: 64px; }
+.dk-card-table th { background: var(--t-surface-3); text-align: center; padding: 5px 8px; border-bottom: 1px solid var(--t-border); font-size: 11px; color: var(--t-text-3); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: calc(2.9em + 10px); }
 .dk-card-table tr { cursor: pointer; }
 /* Fixed two-line cells — the row height lives on the td (below) so single-line
