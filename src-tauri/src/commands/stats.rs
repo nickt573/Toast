@@ -68,6 +68,8 @@ pub fn update_todo_stat(
     num_unit: Option<String>,
     remove_group_names: Vec<String>,
     remove_resource_names: Vec<String>,
+    add_group_ids: Vec<i64>,
+    add_resource_ids: Vec<i64>,
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
@@ -80,6 +82,8 @@ pub fn update_todo_stat(
         num_unit,
         remove_group_names,
         remove_resource_names,
+        add_group_ids,
+        add_resource_ids,
         &conn,
     )
     .map_err(|e| e.to_string())
