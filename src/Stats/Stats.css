@@ -62,8 +62,8 @@
 }
 .st-deck-name { font-weight: 600; font-size: 13px; color: var(--t-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Expand/collapse caret — matches .plan-col-label-caret / .hp-resources-caret */
-.st-caret { font-size: 10px; color: var(--t-text-3); flex-shrink: 0; }
-.st-deck-meta { display: flex; gap: 10px; font-size: 12px; color: var(--t-text-2); white-space: nowrap; flex-shrink: 0; }
+.st-caret { font-size: 10px; color: var(--t-text-3); flex-shrink: 0; user-select: none; }
+.st-deck-meta { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); white-space: nowrap; flex-shrink: 0; }
 .st-deck-meta > span { min-width: 0; }
 
 /* Data table */
@@ -117,11 +117,51 @@
 
 /* Todo list */
 .st-todo-list { display: flex; flex-direction: column; gap: 5px; }
+/* Day sections — a labeled rule replaces per-row dates */
+.st-day-group { display: flex; flex-direction: column; gap: 5px; }
+.st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 11px; font-weight: 700; color: var(--t-text-3); user-select: none; }
+.st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 1px; background: var(--t-border-2); }
+.st-day-group:first-child .st-day-divider { margin-top: 0; }
 .st-todo-row { background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); overflow: hidden; }
-.st-todo-collapsed { display: flex; align-items: center; gap: 10px; padding: 9px 14px; flex-wrap: wrap; background: var(--t-surface-3); cursor: pointer; }
-.st-todo-text { font-weight: 500; flex: 1; min-width: 120px; font-size: 13px; color: var(--t-text); }
+/* Collapsed row — name, unit, and time share the first line. The name wraps
+   inside its own column (a wall keeps it from pushing the pills below), and
+   the unit truncates with its full value shown on hover. Categories sit below. */
+.st-todo-collapsed { display: flex; flex-direction: column; gap: 6px; padding: 9px 14px; background: var(--t-surface-3); cursor: pointer; }
+.st-todo-line { display: flex; align-items: center; gap: 10px; }
+.st-todo-text { font-weight: 500; flex: 1; min-width: 0; font-size: 13px; color: var(--t-text); overflow-wrap: anywhere; }
+.st-todo-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+/* Unit and time sit at the right end of the category row */
+.st-todo-meta-right { display: inline-flex; gap: 5px; align-items: center; margin-left: auto; }
+/* Unit pill shares .st-meta-pill's neutral look; inline-block (not flex) so the
+   ellipsis applies, with the compound selector outranking .st-meta-pill's display */
+.st-meta-pill.st-todo-unit { display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Colored stat pills — shared by the todo rows (time) and deck session headers */
+.st-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  background: var(--t-surface);
+  color: var(--t-text-2);
+  border: 1px solid var(--t-border-2);
+  border-radius: var(--t-r-pill);
+  padding: 2px 9px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.st-meta-pill--new      { background: var(--t-blue-bg);   color: var(--t-blue);   border-color: var(--t-blue-bdr); }
+.st-meta-pill--promote  { background: var(--t-green-bg);  color: var(--t-green);  border-color: var(--t-green-bdr); }
+.st-meta-pill--demote   { background: var(--t-red-bg);    color: var(--t-red);    border-color: var(--t-red-bdr); }
+.st-meta-pill--time     { background: var(--t-yellow-bg); color: var(--t-yellow); border-color: var(--t-yellow-bdr); }
+.st-meta-pill--ret-good { background: var(--t-green-bg);  color: var(--t-green);  border-color: var(--t-green-bdr); }
+.st-meta-pill--ret-mid  { background: var(--t-amber-bg);  color: var(--t-amber);  border-color: var(--t-amber-bdr); }
+.st-meta-pill--ret-poor { background: var(--t-red-bg);    color: var(--t-red);    border-color: var(--t-red-bdr); }
 .st-todo-expanded { padding: 12px 14px 14px; background: var(--t-surface-2); border-top: 1px solid var(--t-border-2); }
-.st-todo-notes { margin: 0 0 8px; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; }
+/* White bubble sets the log's note apart from the linked-items sections below */
+.st-todo-notes { margin: 0 0 10px; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-xl); padding: 9px 12px; }
 
 /* Tag pills */
 .st-pill-tag { display: inline-block; padding: 2px 9px; border-radius: var(--t-r-pill); font-size: 11px; font-weight: 500; user-select: none; }

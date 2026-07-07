@@ -477,6 +477,8 @@ pub fn update_todo_stat(
     num_unit: Option<String>,
     remove_group_names: Vec<String>,
     remove_resource_names: Vec<String>,
+    add_group_ids: Vec<i64>,
+    add_resource_ids: Vec<i64>,
     conn: &Connection,
 ) -> Result<()> {
     if category == 0 {
@@ -506,6 +508,30 @@ pub fn update_todo_stat(
         conn.execute(
             "DELETE FROM todo_stat_resource WHERE stat_id=?1 AND resource_name=?2",
             rusqlite::params![id, name],
+        )?;
+    }
+    // Only live groups/resources can be added: the snapshot is pulled from the
+    // source row, and the SELECT matches nothing for deleted ids.
+    for group_id in &add_group_ids {
+        conn.execute(
+            r#"
+            INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type)
+            SELECT ?1, g.id, g.name, g.group_type FROM "group" g
+            WHERE g.id = ?2
+              AND NOT EXISTS (SELECT 1 FROM todo_stat_group WHERE stat_id = ?1 AND group_id = ?2)
+            "#,
+            rusqlite::params![id, group_id],
+        )?;
+    }
+    for resource_id in &add_resource_ids {
+        conn.execute(
+            r#"
+            INSERT INTO todo_stat_resource (stat_id, resource_id, resource_name, resource_url, resource_type, resource_notes)
+            SELECT ?1, r.id, r.name, r.url, r."type", r.notes FROM resource r
+            WHERE r.id = ?2
+              AND NOT EXISTS (SELECT 1 FROM todo_stat_resource WHERE stat_id = ?1 AND resource_id = ?2)
+            "#,
+            rusqlite::params![id, resource_id],
         )?;
     }
     Ok(())

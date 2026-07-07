@@ -48,6 +48,12 @@ function retentionColor(rate) {
   return RED;
 }
 
+function retentionPillClass(rate) {
+  if (rate >= 0.8) return "st-meta-pill--ret-good";
+  if (rate >= 0.5) return "st-meta-pill--ret-mid";
+  return "st-meta-pill--ret-poor";
+}
+
 function addDays(dateStr, n) {
   const d = new Date(dateStr + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
@@ -396,7 +402,7 @@ function ChartPanel({ groupStats, todoStats }) {
 
 // ─── Deck Sessions tab ────────────────────────────────────────────────────────
 
-function DeckSessionsTab({ groupStats, planId, onDeleted }) {
+function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
   const [deckFilter, setDeckFilter]   = useState("all");
   const [expanded, setExpanded]       = useState({});
 
@@ -417,13 +423,19 @@ function DeckSessionsTab({ groupStats, planId, onDeleted }) {
   const toggle = name => setExpanded(e => ({ ...e, [name]: !e[name] }));
 
   const deleteRow = async (id) => {
-    await loggedInvoke("delete_group_stat", { id });
-    onDeleted();
+    try {
+      await loggedInvoke("delete_group_stat", { id });
+      setToast("Session deleted.");
+      onDeleted();
+    } catch (e) { logError("catch", e); setToast("Failed to delete session.", "error"); }
   };
 
   const deleteAll = async (groupName) => {
-    await loggedInvoke("delete_group_stats_for_deck", { groupName, planId });
-    onDeleted();
+    try {
+      await loggedInvoke("delete_group_stats_for_deck", { groupName, planId });
+      setToast("Deck stats deleted.");
+      onDeleted();
+    } catch (e) { logError("catch", e); setToast("Failed to delete deck stats.", "error"); }
   };
 
   if (deckNames.length === 0) {
@@ -479,12 +491,12 @@ function DeckSessionsTab({ groupStats, planId, onDeleted }) {
                 {isDeleted && <span className="st-badge st-badge-deleted">Deleted</span>}
               </span>
               <span className="st-deck-meta">
-                <span>{rows.length} session{rows.length !== 1 ? "s" : ""}</span>
-                <span style={{ color: "var(--t-blue)" }}>{totalN} new</span>
-                <span style={{ color: "var(--t-green)" }}>+{totalP}</span>
-                <span style={{ color: "var(--t-red)" }}>−{totalD}</span>
-                {avgRet !== null && <span style={{ color: retentionColor(avgRet) }}>{Math.round(avgRet * 100)}% ret.</span>}
-                <span>{fmtTime(totalTime)}</span>
+                <span className="st-meta-pill">{rows.length} session{rows.length !== 1 ? "s" : ""}</span>
+                <span className="st-meta-pill st-meta-pill--new">{totalN} new</span>
+                <span className="st-meta-pill st-meta-pill--promote">+{totalP}</span>
+                <span className="st-meta-pill st-meta-pill--demote">−{totalD}</span>
+                {avgRet !== null && <span className={`st-meta-pill ${retentionPillClass(avgRet)}`}>{Math.round(avgRet * 100)}% ret.</span>}
+                <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
               </span>
               <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }} onClick={e => e.stopPropagation()}>
                 <ConfirmDelete label="Delete all" small onConfirm={() => deleteAll(name)} />
@@ -558,7 +570,14 @@ function DeckSessionsTab({ groupStats, planId, onDeleted }) {
 // Derived from PlanUtils so the filter pills match every category picker's order.
 const ALL_CATEGORIES = CATEGORIES.map(c => c.label);
 
-function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck }) {
+function fmtDayLabel(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
+  });
+}
+
+function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResources, onOpenDeck }) {
   const [catFilter, setCatFilter] = useState("all");
   const [expanded,  setExpanded]  = useState({});
   const [dateFrom,  setDateFrom]  = useState("");
@@ -582,8 +601,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
   const toggle = id => setExpanded(e => ({ ...e, [id]: !e[id] }));
 
   const deleteRow = async (id) => {
-    await loggedInvoke("delete_todo_stat", { id });
-    onDeleted();
+    try {
+      await loggedInvoke("delete_todo_stat", { id });
+      setToast("Todo entry deleted.");
+      onDeleted();
+    } catch (e) { logError("catch", e); setToast("Failed to delete todo entry.", "error"); }
   };
 
   const startEdit = (r) => {
@@ -596,6 +618,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
       numUnit: r.num_unit || "",
       groups: r.groups.map(x => x.name),
       resources: r.resources.map(x => x.name),
+      addGroupIds: [],
+      addResourceIds: [],
     });
   };
 
@@ -607,28 +631,40 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
     if (!trimmed) return;
     const category = computeCategory(editForm.categoryMap);
     if (category === 0) { setToast("Select at least one category.", "error"); return; }
-    const timeSpent = Math.max(0, parseFloat(editForm.timeSpent) || 0);
+    const timeSpent = Math.max(0, Math.round(parseFloat(editForm.timeSpent) || 0));
     if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "error"); return; }
     const removeGroups    = r.groups.map(x => x.name).filter(n => !editForm.groups.includes(n));
     const removeResources = r.resources.map(x => x.name).filter(n => !editForm.resources.includes(n));
-    await loggedInvoke("update_todo_stat", {
-      id: r.id,
-      text: trimmed,
-      category,
-      details: editForm.details.trim() || null,
-      timeSpentMinutes: timeSpent,
-      numUnit: editForm.numUnit.trim() || null,
-      removeGroupNames: removeGroups,
-      removeResourceNames: removeResources,
-    });
-    setEditingId(null);
-    setEditForm(null);
-    onDeleted();
+    try {
+      await loggedInvoke("update_todo_stat", {
+        id: r.id,
+        text: trimmed,
+        category,
+        details: editForm.details.trim() || null,
+        timeSpentMinutes: timeSpent,
+        numUnit: editForm.numUnit.trim() || null,
+        removeGroupNames: removeGroups,
+        removeResourceNames: removeResources,
+        addGroupIds: editForm.addGroupIds,
+        addResourceIds: editForm.addResourceIds,
+      });
+      setEditingId(null);
+      setEditForm(null);
+      setToast("Todo entry updated.");
+      onDeleted();
+    } catch (e) { logError("catch", e); setToast("Failed to update todo entry.", "error"); }
   };
 
   if (todoStats.length === 0) {
     return <div className="empty-bubble" style={{ marginTop: 16 }}>No todo history recorded yet.</div>;
   }
+
+  // Consecutive same-date rows become one labeled day section (rows arrive date-sorted)
+  const days = [];
+  visible.forEach(r => {
+    if (days.length === 0 || days[days.length - 1].date !== r.date) days.push({ date: r.date, rows: [] });
+    days[days.length - 1].rows.push(r);
+  });
 
   return (
     <div>
@@ -660,28 +696,29 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
       <div className="st-todo-list">
         {visible.length === 0
           ? <div className="empty-bubble">No todos match your filters.</div>
-          : visible.map(r => {
+          : days.map(day => (
+          <div key={day.date} className="st-day-group">
+            <div className="st-day-divider"><span>{fmtDayLabel(day.date)}</span></div>
+            {day.rows.map(r => {
           const isOpen    = !!expanded[r.id];
           const isEditing = editingId === r.id;
           const cats      = parseCategories(r.category);
           return (
             <div key={r.id} className="st-todo-row">
-              <div className="st-todo-collapsed" onClick={() => toggle(r.id)} style={{ cursor: "pointer" }}>
-                <span className="st-todo-text">{r.text}</span>
-                <span style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+              <div className="st-todo-collapsed" onClick={() => toggle(r.id)}>
+                <div className="st-todo-line">
+                  <span className="st-todo-text">{r.text}</span>
+                  <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
+                </div>
+                <div className="st-todo-tags">
                   {cats.map(c => (
                     <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
                   ))}
-                  {r.num_unit && <span className="st-pill-tag" style={{ background: "var(--t-surface-2)", color: "var(--t-text-2)" }}>{r.num_unit}</span>}
-                </span>
-                <span style={{ fontSize: 11, color: "var(--t-text-3)", fontVariantNumeric: "tabular-nums" }}>{r.date}</span>
-                <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>{fmtTime(r.time_spent_minutes)}</span>
-                <button
-                  className="st-btn-sm"
-                  onClick={e => { e.stopPropagation(); if (isEditing) cancelEdit(); else { setExpanded(ex => ({ ...ex, [r.id]: true })); startEdit(r); } }}
-                  style={{ marginLeft: "auto" }}
-                >{isEditing ? "Cancel" : "Edit"}</button>
-                <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
+                  <span className="st-todo-meta-right">
+                    {r.num_unit && <span className="st-meta-pill st-todo-unit" title={r.num_unit}>{r.num_unit}</span>}
+                    <span className="st-meta-pill st-meta-pill--time">{fmtTime(r.time_spent_minutes)}</span>
+                  </span>
+                </div>
               </div>
 
               {isOpen && !isEditing && (
@@ -727,7 +764,10 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
                       </div>
                     </div>
                   )}
-                  <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button className="st-btn-sm" onClick={() => startEdit(r)}>Edit</button>
+                    <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
+                  </div>
                 </div>
               )}
 
@@ -781,39 +821,88 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
                       style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
                     />
                   </div>
-                  {editForm.resources.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Resources</div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {editForm.resources.map((res, i) => (
-                          <span key={i} className="pill pill-clay">
-                            {res}
-                            <button onClick={() => setEditForm(f => ({ ...f, resources: f.resources.filter(n => n !== res) }))}
-                              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
-                          </span>
-                        ))}
+                  {(() => {
+                    const addableResources = planResources.filter(pr => !editForm.resources.includes(pr.name));
+                    if (editForm.resources.length === 0 && addableResources.length === 0) return null;
+                    return (
+                      <div>
+                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Resources</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {editForm.resources.map((res, i) => {
+                            const dead = !planResources.some(pr => pr.name === res);
+                            return (
+                              <span key={i} className={`pill pill-clay${dead ? " pill-dead" : ""}`}>
+                                {res}
+                                <button onClick={() => setEditForm(f => ({ ...f, resources: f.resources.filter(n => n !== res) }))}
+                                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
+                              </span>
+                            );
+                          })}
+                          {addableResources.map(pr => (
+                            <label key={pr.id} className={`picker-pill${editForm.addResourceIds.includes(pr.id) ? " active-resource" : ""}`}>
+                              <input type="checkbox" checked={editForm.addResourceIds.includes(pr.id)}
+                                onChange={() => setEditForm(f => ({
+                                  ...f,
+                                  addResourceIds: f.addResourceIds.includes(pr.id)
+                                    ? f.addResourceIds.filter(x => x !== pr.id)
+                                    : [...f.addResourceIds, pr.id],
+                                }))}
+                                style={{ margin: 0 }} />
+                              {pr.name}
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {editForm.groups.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Study Materials</div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {editForm.groups.map((g, i) => {
-                          const info = r.groups.find(x => x.name === g);
-                          const fam = info?.group_type === "notebook" ? "plum" : "blue";
-                          return (
-                            <span key={i} className={`pill pill-${fam}`}>
-                              {g}
-                              {info?.group_type && <GroupTypeBadge type={info.group_type} />}
-                              <button onClick={() => setEditForm(f => ({ ...f, groups: f.groups.filter(n => n !== g) }))}
-                                style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
-                            </span>
-                          );
-                        })}
+                    );
+                  })()}
+                  {(() => {
+                    const keptLiveIds = r.groups
+                      .filter(x => editForm.groups.includes(x.name) && x.group_id != null)
+                      .map(x => x.group_id);
+                    const addableGroups = allGroups.filter(g => !keptLiveIds.includes(g.id));
+                    if (editForm.groups.length === 0 && addableGroups.length === 0) return null;
+                    return (
+                      <div>
+                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Study Materials</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {editForm.groups.map((g, i) => {
+                            const info = r.groups.find(x => x.name === g);
+                            const dead = info?.group_id == null;
+                            const fam = info?.group_type === "notebook" ? "plum" : "blue";
+                            return (
+                              <span key={i} className={`pill pill-${fam}${dead ? " pill-dead" : ""}`}>
+                                {g}
+                                {info?.group_type && <GroupTypeBadge type={info.group_type} />}
+                                <button onClick={() => setEditForm(f => ({ ...f, groups: f.groups.filter(n => n !== g) }))}
+                                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
+                              </span>
+                            );
+                          })}
+                          {addableGroups.map(g => {
+                            const active = editForm.addGroupIds.includes(g.id);
+                            const fam = g.group_type === "notebook" ? " active-notebook" : " active-deck";
+                            return (
+                              <label key={g.id} className={`picker-pill${active ? fam : ""}`}>
+                                <input type="checkbox" checked={active}
+                                  onChange={() => setEditForm(f => ({
+                                    ...f,
+                                    addGroupIds: active
+                                      ? f.addGroupIds.filter(x => x !== g.id)
+                                      : [...f.addGroupIds, g.id],
+                                  }))}
+                                  style={{ margin: 0 }} />
+                                {g.name}
+                                <GroupTypeBadge type={g.group_type} />
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
+                  <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+                    Items deleted from the app can be removed here but not added back.
+                  </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="st-btn-sm" onClick={() => saveEdit(r)}
                       style={{ border: "1px solid var(--t-stat-bdr)", color: "var(--t-stat)", background: "var(--t-stat-bg)" }}
@@ -824,7 +913,9 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, onOpenDeck
               )}
             </div>
           );
-        })}
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -843,6 +934,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [today,          setToday]         = useState(null);
   const [loading,        setLoading]       = useState(true);
   const [allGroups,      setAllGroups]     = useState([]);
+  const [planResources,  setPlanResources] = useState([]);
 
   useEffect(() => {
     loggedInvoke("get_current_date").then(setToday).catch(e => logError("catch", e));
@@ -876,10 +968,12 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       loggedInvoke("get_group_stats",     { planId }),
       loggedInvoke("get_todo_stats", { planId }),
       loggedInvoke("get_plan_streak",     { planId }),
-    ]).then(([gs, ts, si]) => {
+      loggedInvoke("get_resources",       { planId }),
+    ]).then(([gs, ts, si, res]) => {
       setGroupStats(gs);
       setTodoStats(ts);
       setStreakInfo(si);
+      setPlanResources(res);
     }).catch(e => { logError("catch", e); setToast("Failed to load stats.", "error"); });
   };
 
@@ -905,6 +999,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       setGroupStats([]);
       setTodoStats([]);
       setStreakInfo({ streak: 0, studied_today: false });
+      setPlanResources([]);
       return;
     }
     loadStats(selectedPlanId);
@@ -983,6 +1078,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               groupStats={groupStats}
               planId={selectedPlanId}
               onDeleted={() => loadStats(selectedPlanId)}
+              setToast={setToast}
             />
           )}
           {contentTab === "todos" && (
@@ -992,6 +1088,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               onDeleted={() => loadStats(selectedPlanId)}
               setToast={setToast}
               allGroups={allGroups}
+              planResources={planResources}
               onOpenDeck={openDeck}
             />
           )}
