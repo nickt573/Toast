@@ -131,6 +131,8 @@ button {
   color: var(--t-btn-fg);
   cursor: pointer;
   white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
   transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease), box-shadow var(--t-ease);
 }
 /* Neutral hover DEEPENS the mauve — never switches to a page background */
