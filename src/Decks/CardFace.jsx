@@ -49,6 +49,19 @@ export function renderAnkiHtml(html) {
     return cleanAnkiHtml(rewriteAnkiSrcs(html));
 }
 
+// Canonical text form so search queries and card text always compare equal:
+// invisible characters removed, curly quotes straightened, all whitespace
+// (including decoded &nbsp;) collapsed to single plain spaces.
+export function normalizeSearchText(str) {
+    if (!str) return "";
+    return str
+        .replace(/[\u00AD\u200B-\u200D\uFEFF]/g, "")
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
 export function stripHtml(str) {
     if (!str) return "";
     const stripped = str
@@ -57,7 +70,7 @@ export function stripHtml(str) {
         .replace(/<[^>]*>/g, "");
     const txt = document.createElement("textarea");
     txt.innerHTML = stripped;
-    return txt.value
+    return normalizeSearchText(txt.value)
         .replace(/(\s*,\s*){2,}/g, ", ")
         .replace(/^\s*(,\s*)+/, "")
         .replace(/(,\s*)+$/, "")

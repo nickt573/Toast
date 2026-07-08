@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { open } from "@tauri-apps/plugin-dialog";
-import { CardFace, AudioPlayer, renderAnkiHtml, stripHtml } from "./CardFace";
+import { CardFace, AudioPlayer, renderAnkiHtml, stripHtml, normalizeSearchText } from "./CardFace";
 import { Tip, ConfirmDelete } from "../UIUtils";
 import "./Decks.css";
 
@@ -773,9 +773,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
 
   let filtered = cards.filter((c) => {
     if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    const front = c.is_uploaded ? stripHtml(c.front) : c.front;
-    const back = c.is_uploaded ? stripHtml(c.back) : c.back;
+    const q = normalizeSearchText(search).toLowerCase();
+    const front = c.is_uploaded ? stripHtml(c.front) : normalizeSearchText(c.front);
+    const back = c.is_uploaded ? stripHtml(c.back) : normalizeSearchText(c.back);
     return front.toLowerCase().includes(q) || back.toLowerCase().includes(q);
   });
 
