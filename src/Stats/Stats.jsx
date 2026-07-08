@@ -909,10 +909,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     Deleted items can be removed here, but they cannot be added back.
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button className="st-btn-sm" onClick={() => saveEdit(r)}
-                      style={{ border: "1px solid var(--t-stat-bdr)", color: "var(--t-stat)", background: "var(--t-stat-bg)" }}
-                    >Save</button>
-                    <button className="st-btn-sm" onClick={cancelEdit}>Cancel</button>
+                    <button className="primary" onClick={() => saveEdit(r)}>Save</button>
+                    <button onClick={cancelEdit}>Cancel</button>
                   </div>
                 </div>
               )}
