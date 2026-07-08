@@ -728,7 +728,12 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                             )}
                         </div>
                         <div className="landing-card-actions" onClick={e => e.stopPropagation()}>
-                            {editingId !== plan.id && (
+                            {editingId === plan.id ? (
+                                <>
+                                    <button className="primary" onMouseDown={(e) => e.preventDefault()} onClick={() => confirmEdit(plan.id)}>Save</button>
+                                    <button onMouseDown={(e) => e.preventDefault()} onClick={() => setEditingId(null)}>Cancel</button>
+                                </>
+                            ) : (
                                 <>
                                     <button onClick={(e) => { e.stopPropagation(); setEditingId(plan.id); setEditingName(plan.name); }}>Edit</button>
                                     <ConfirmDelete onConfirm={() => deletePlan(plan)} small />

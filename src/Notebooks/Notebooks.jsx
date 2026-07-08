@@ -168,8 +168,17 @@ function NotebookList({ setToast, onOpenNotebook }) {
                             )}
                         </div>
                         <div className="landing-card-actions" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={(e) => startEdit(nb, e)}>Edit</button>
-                            <ConfirmDelete onConfirm={() => deleteNotebook(nb.id)} small />
+                            {editingId === nb.id ? (
+                                <>
+                                    <button className="primary" onMouseDown={(e) => e.preventDefault()} onClick={() => confirmEdit(nb.id)}>Save</button>
+                                    <button onMouseDown={(e) => e.preventDefault()} onClick={() => setEditingId(null)}>Cancel</button>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={(e) => startEdit(nb, e)}>Edit</button>
+                                    <ConfirmDelete onConfirm={() => deleteNotebook(nb.id)} small />
+                                </>
+                            )}
                         </div>
                     </div>
                 ))}
