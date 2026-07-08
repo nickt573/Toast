@@ -120,7 +120,7 @@
   color: var(--t-text);
 }
 .hp-streak-chip {
-  font-size: 11px; font-weight: 700; padding: 3px 9px;
+  font-size: 10px; font-weight: 700; padding: 3px 8px;
   border-radius: var(--t-r); border: 1px solid var(--t-green-bdr);
   background: var(--t-green-bg); color: var(--t-green);
   white-space: nowrap; flex-shrink: 0; margin-top: 4px;
@@ -221,6 +221,9 @@
   font-weight: 600;
   color: var(--t-text);
   font-size: 15px;
+  /* Warm hairline separates the name from the supplementary pills below */
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--t-yellow-bdr);
 }
 .hp-todo-text.done {
   text-decoration: line-through;
@@ -247,8 +250,10 @@
   transform: translateY(-1px);
 }
 .hp-deck-row--empty { cursor: default !important; background: linear-gradient(280deg, var(--t-green-bg) 0%, var(--t-surface) 45%) !important; border-color: var(--t-green-bdr) !important; }
-.hp-deck-name { flex: 1; font-weight: 600; font-size: 14px; color: var(--t-text); }
-.hp-deck-new, .hp-deck-review { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hp-deck-name { flex: 1; font-weight: 600; font-size: 15px; color: var(--t-text); }
+/* Green check marks decks with nothing left due, mirroring the todo checkboxes */
+.hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
+.hp-deck-new, .hp-deck-review { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hp-deck-new { color: var(--t-blue); min-width: 62px; }
 .hp-deck-review { color: var(--t-green); min-width: 86px; }
 
