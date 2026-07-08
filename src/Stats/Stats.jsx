@@ -723,7 +723,12 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
 
               {isOpen && !isEditing && (
                 <div className="st-todo-expanded">
-                  {r.details && <p className="st-todo-notes">{r.details}</p>}
+                  {r.details && (
+                    <div className="st-todo-section">
+                      <div className="st-todo-section-label">Details</div>
+                      <p className="st-todo-notes">{r.details}</p>
+                    </div>
+                  )}
                   {r.resources.length > 0 && (
                     <div className="st-todo-section">
                       <div className="st-todo-section-label">Resources</div>
@@ -813,7 +818,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Notes</div>
+                    <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Details (optional)</div>
                     <textarea
                       value={editForm.details}
                       onChange={e => setEditForm(f => ({ ...f, details: e.target.value }))}
@@ -901,7 +906,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     );
                   })()}
                   <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-                    Items deleted from the app can be removed here but not added back.
+                    Deleted items can be removed here, but they cannot be added back.
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="st-btn-sm" onClick={() => saveEdit(r)}

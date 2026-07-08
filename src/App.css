@@ -366,7 +366,7 @@ input.input-readonly, textarea.input-readonly {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: var(--t-r);
@@ -540,7 +540,7 @@ input.input-readonly, textarea.input-readonly {
 .landing-card--notebook:hover { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 62%); }
 .landing-card-body { flex: 1; min-width: 0; }
 .landing-card-body > input { width: 100%; box-sizing: border-box; }
-.landing-card-name { font-size: 14px; font-weight: 600; color: var(--t-text); }
+.landing-card-name { font-size: 16px; font-weight: 600; color: var(--t-text); }
 .landing-card-meta { font-size: 11px; color: var(--t-text-3); margin-top: 2px; }
 .landing-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
@@ -553,7 +553,7 @@ input.input-readonly, textarea.input-readonly {
   --stat-bg: var(--t-surface);
   --stat-bdr: var(--t-border-2);
   display: inline-flex; align-items: baseline; gap: 4px;
-  font-size: 11px; font-weight: 500; line-height: 1;
+  font-size: 10px; font-weight: 500; line-height: 1;
   color: color-mix(in srgb, var(--stat-c) 60%, var(--t-text-3));
   background: var(--stat-bg);
   border: 1px solid var(--stat-bdr);
@@ -616,7 +616,8 @@ input.input-readonly, textarea.input-readonly {
   margin: 10px auto;
   border: 1px solid var(--t-border);
 }
-.nb-editor-scroll .ProseMirror table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+/* Fixed layout so text wraps at the cell width instead of widening the column */
+.nb-editor-scroll .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0.8em 0; }
 .nb-editor-scroll .ProseMirror th,
 .nb-editor-scroll .ProseMirror td {
   border: 1px solid var(--t-border);
@@ -626,6 +627,7 @@ input.input-readonly, textarea.input-readonly {
   vertical-align: top;
   background-color: var(--t-surface);
   font-weight: 400;
+  overflow-wrap: break-word;
 }
 .nb-editor-scroll .ProseMirror .selectedCell { background-color: var(--t-blue-bg) !important; }
 .nb-editor-scroll .ProseMirror a { color: var(--t-blue); text-decoration: underline; cursor: pointer; }
@@ -635,10 +637,10 @@ input.input-readonly, textarea.input-readonly {
 
 /* ── Resource card (name / type / url / notes) — shared by Stats + study page ── */
 .st-resource-cards { display: flex; flex-direction: column; gap: 6px; }
-.st-resource-card { border: 1px solid var(--t-clay-bdr); background: var(--t-clay-bg); border-radius: var(--t-r); padding: 7px 11px; }
+.st-resource-card { border: 1px solid var(--t-clay-bdr); background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 45%); border-radius: var(--t-r); padding: 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.st-resource-card-name { font-weight: 700; font-size: 13px; color: var(--t-clay); }
-.st-resource-card-type { font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-pill); padding: 1px 7px; user-select: none; }
+.st-resource-card-name { font-weight: 600; font-size: 15px; color: var(--t-text); }
+.st-resource-card-type { font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-clay); background: var(--t-clay-bg); border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r-pill); padding: 1px 7px; user-select: none; }
 .st-resource-card-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 3px; cursor: pointer; }
 .st-resource-card-url:hover { text-decoration: underline; }
 .st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }

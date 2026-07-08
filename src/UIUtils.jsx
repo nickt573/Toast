@@ -65,14 +65,19 @@ export function Tip({ text }) {
 }
 
 // Small deck/notebook type badge shown inside group pills (kin to the "?" Tip badge).
+// Always fully filled in its family colors, matching a selected pill's look.
 export function GroupTypeBadge({ type }) {
+  const nb = type === "notebook";
   return (
     <span style={{
       marginLeft: 4, fontSize: 9, fontWeight: 700, padding: "0 5px",
-      borderRadius: "var(--t-r-pill)", border: "1px solid currentColor",
-      opacity: 0.6, lineHeight: 1.8, letterSpacing: "0.03em",
+      borderRadius: "var(--t-r-pill)",
+      border: `1px solid ${nb ? "var(--t-plum-bdr)" : "var(--t-blue-bdr)"}`,
+      background: nb ? "var(--t-plum-bg)" : "var(--t-blue-bg)",
+      color: nb ? "var(--t-plum)" : "var(--t-blue)",
+      lineHeight: 1.8, letterSpacing: "0.03em",
     }}>
-      {type === "notebook" ? "nb" : "dk"}
+      {nb ? "nb" : "dk"}
     </span>
   );
 }

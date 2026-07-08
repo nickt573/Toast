@@ -3,7 +3,7 @@
 
 /* List */
 .nb-list { flex: 1; overflow-y: auto; padding: 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
-.nb-notebook-name { font-weight: 600; font-size: 14px; color: var(--t-text); }
+.nb-notebook-name { font-weight: 600; font-size: 16px; color: var(--t-text); }
 .nb-notebook-name-input { flex: 1; }
 .nb-new-notebook { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
 .nb-new-notebook input { flex: 1; }

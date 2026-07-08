@@ -3,7 +3,7 @@
 /* SRS Group Row */
 .plan-srs-row { border: 1px solid var(--t-border-2); border-radius: var(--t-r-xl); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 45%); }
 .plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.plan-srs-name { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
+.plan-srs-name { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
 .plan-srs-name.clickable { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .plan-srs-counts { font-size: 12px; color: var(--t-text-3); flex-shrink: 0; }
 .plan-srs-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px; }
@@ -27,7 +27,7 @@
 .plan-resource-edit-actions { display: flex; gap: 6px; }
 .plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
 .plan-resource-body { flex: 1; min-width: 0; }
-.plan-resource-name { font-weight: 600; font-size: 14px; color: var(--t-text); }
+.plan-resource-name { font-weight: 600; font-size: 15px; color: var(--t-text); }
 /* Raw URLs stay hidden — just a compact "Link ↗" hyperlink */
 .plan-resource-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 2px; }
 .plan-resource-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; }

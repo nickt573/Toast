@@ -816,6 +816,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 onClick={() => !isEmpty && onStartSession(group)}
                                 className={`hp-deck-row${isEmpty ? " hp-deck-row--empty" : ""}`}
                             >
+                                {isEmpty && <span className="hp-deck-check">✓</span>}
                                 <span className="hp-deck-name">{group.name}</span>
                                 {!isEmpty &&
                                     <span style={{ display: "flex", gap: 10 }}>
