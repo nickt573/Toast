@@ -279,8 +279,17 @@ function DeckList({ setToast, onOpenDeck }) {
               )}
             </div>
             <div className="landing-card-actions" onClick={(e) => e.stopPropagation()}>
-              <button onClick={(e) => startEdit(deck, e)}>Edit</button>
-              <ConfirmDelete onConfirm={() => deleteDeck(deck.id)} small />
+              {editingId === deck.id ? (
+                <>
+                  <button className="primary" onMouseDown={(e) => e.preventDefault()} onClick={() => confirmEdit(deck.id)}>Save</button>
+                  <button onMouseDown={(e) => e.preventDefault()} onClick={() => setEditingId(null)}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={(e) => startEdit(deck, e)}>Edit</button>
+                  <ConfirmDelete onConfirm={() => deleteDeck(deck.id)} small />
+                </>
+              )}
             </div>
           </div>
         ))}
