@@ -35,35 +35,17 @@ pub fn get_similar_cards(
         });
     }
 
-    let mut conditions: Vec<String> = Vec::new();
-    let mut like_patterns: Vec<String> = Vec::new();
-    for t in &front_tokens {
-        conditions.push("front LIKE ?".to_string());
-        like_patterns.push(format!("%{}%", t));
-    }
-    for t in &back_tokens {
-        conditions.push("back LIKE ?".to_string());
-        like_patterns.push(format!("%{}%", t));
-    }
-
-    let sql = format!(
-        "SELECT id, group_id, front, back, support, imported_support, \
+    // No SQL text prefilter: raw columns hold HTML with entities (&nbsp; etc.),
+    // so LIKE against decoded tokens drops valid matches. 
+    // Matching is done entirely on tokenized text below.
+    let sql = "SELECT id, group_id, front, back, support, imported_support, \
          front_image, back_image, front_audio, back_audio, \
          tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded, position \
-         FROM card WHERE is_searchable = TRUE AND id != ? AND group_id = ? AND ({})",
-        conditions.join(" OR ")
-    );
+         FROM card WHERE is_searchable = TRUE AND id != ?1 AND group_id = ?2";
 
-    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> =
-        vec![Box::new(item_id), Box::new(group_id)];
-    for p in like_patterns {
-        params.push(Box::new(p));
-    }
-    let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|b| b.as_ref()).collect();
-
-    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let results: Vec<Card> = stmt
-        .query_map(param_refs.as_slice(), |row| {
+        .query_map([item_id, group_id], |row| {
             Ok(Card {
                 id: row.get(0)?,
                 group_id: row.get(1)?,
@@ -109,7 +91,6 @@ pub fn get_similar_cards(
         } else if bm {
             back_only.push(card);
         }
-        // else: SQL LIKE false-positive (e.g. "you" inside "younger") — discard
     }
 
     Ok(SimilarResult {
@@ -199,13 +180,67 @@ fn replace_tag_with(s: &str, tag: &str, replacement: &str) -> String {
     result
 }
 
+// Decodes common named entities plus any numeric entity (&#39;, &#xa0;, ...).
+// Unrecognized entities pass through unchanged.
 fn decode_entities(s: &str) -> String {
-    s.replace("&nbsp;", " ")
-        .replace("&#160;", " ")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(start) = rest.find('&') {
+        out.push_str(&rest[..start]);
+        rest = &rest[start..];
+        // Entity names are short; a distant ';' means this '&' is literal text
+        let end = rest.find(';').filter(|&end| end <= 12);
+        let decoded = end.and_then(|end| {
+            let name = &rest[1..end];
+            match name {
+                "nbsp" => Some((' ', end)),
+                "amp" => Some(('&', end)),
+                "lt" => Some(('<', end)),
+                "gt" => Some(('>', end)),
+                "quot" => Some(('"', end)),
+                "apos" => Some(('\'', end)),
+                _ => name
+                    .strip_prefix('#')
+                    .and_then(|num| {
+                        if let Some(hex) = num.strip_prefix('x').or(num.strip_prefix('X')) {
+                            u32::from_str_radix(hex, 16).ok()
+                        } else {
+                            num.parse::<u32>().ok()
+                        }
+                    })
+                    .and_then(char::from_u32)
+                    .map(|ch| (ch, end)),
+            }
+        });
+        match decoded {
+            Some((ch, end)) => {
+                out.push(ch);
+                rest = &rest[end + 1..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+// Same canonical form as normalizeSearchText in CardFace.jsx: invisible
+// characters removed, curly quotes straightened, whitespace collapsed.
+fn normalize_text(s: &str) -> String {
+    let mapped: String = s
+        .chars()
+        .filter(|c| !matches!(c, '\u{00AD}' | '\u{200B}'..='\u{200D}' | '\u{FEFF}'))
+        .map(|c| match c {
+            '\u{2018}' | '\u{2019}' => '\'',
+            '\u{201C}' | '\u{201D}' => '"',
+            c if c.is_whitespace() => ' ',
+            c => c,
+        })
+        .collect();
+    mapped.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 // Splits a card field into comma- or semicolon-separated tokens: br/hr/div
@@ -219,7 +254,7 @@ fn extract_tokens(s: &str) -> Vec<String> {
     let s = strip_html(&s);
     let s = decode_entities(&s);
     s.split([',', ';'])
-        .map(|t| strip_parens(t).trim().to_lowercase())
+        .map(|t| normalize_text(&strip_parens(t)).to_lowercase())
         .filter(|t| !t.is_empty())
         .collect()
 }
