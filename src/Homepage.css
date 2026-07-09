@@ -105,11 +105,32 @@
 .hp-plan-card.has-due {
   border-color: var(--t-accent-bdr);
 }
+/* Nothing left due today — green outline + check, matching .hp-deck-check */
+.hp-plan-card.is-done {
+  border-color: var(--t-green-bdr);
+}
+.hp-plan-card.is-done:hover {
+  border-color: var(--t-green);
+}
+.hp-plan-check {
+  color: var(--t-green);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  user-select: none;
+}
 .hp-plan-card-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+.hp-plan-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 .hp-plan-name {
   font-family: var(--t-font-head);
