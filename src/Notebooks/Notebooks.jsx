@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { NewCardForm } from "../Decks/Decks";
 import { ConfirmDelete } from "../UIUtils";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -542,8 +542,10 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
 function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
     const [allPages, setAllPages] = useState([]);
     const [query, setQuery] = useState("");
-    const [filteredPages, setFilteredPages] = useState([]);
     const [pageIndex, setPageIndex] = useState(0);
+    // Set to the id of a page the view should land on once the list next settles
+    // (after a save, when the page may have moved or not existed before).
+    const [pendingPageId, setPendingPageId] = useState(null);
     const [editing, setEditing] = useState(false);
     const [dateOn, setDateOn] = useState("");
     const [today,  setToday] = useState(null);
@@ -565,7 +567,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
         } catch (e) { logError("catch", e); setToast("Failed to load pages.", "error"); }
     }
 
-    useEffect(() => {
+    const filteredPages = useMemo(() => {
         let pages = allPages;
         if (query.trim()) {
             const q = query.toLowerCase();
@@ -574,13 +576,24 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
             );
         }
         if (dateOn) pages = pages.filter(p => p.created_date === dateOn);
-        setFilteredPages(pages);
-        setPageIndex(0);
-    }, [query, dateOn, allPages]);
+        return pages;
+    }, [allPages, query, dateOn]);
+
+    // Changing a filter re-shuffles the list, so it starts over at page one.
+    // Editing a page must NOT reset the index — that's what keeps you on the page you saved.
+    useEffect(() => { setPageIndex(0); }, [query, dateOn]);
 
     useEffect(() => {
         setPageIndex((prev) => Math.min(prev, Math.max(0, filteredPages.length - 1)));
     }, [filteredPages.length]);
+
+    // Runs after the reset above, so landing on a saved page wins over the filter reset
+    useEffect(() => {
+        if (pendingPageId === null) return;
+        const idx = filteredPages.findIndex(p => p.id === pendingPageId);
+        if (idx !== -1) setPageIndex(idx);
+        setPendingPageId(null);
+    }, [filteredPages, pendingPageId]);
 
     const currentPage = filteredPages[pageIndex] ?? null;
 
@@ -613,7 +626,8 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
                     }
                 });
                 setAllPages((prev) => [...prev, newPage]);
-                setQuery(""); setPageIndex(allPages.length); setToast("Page created.");
+                // Clear both filters so the new page can't be filtered out from under us
+                setQuery(""); setDateOn(""); setPendingPageId(newPage.id); setToast("Page created.");
             } else {
                 await loggedInvoke("update_page", {
                     page: {
@@ -629,6 +643,8 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
                         ? { ...currentPage, title: editTitle.trim(), description: editDesc.trim() || null, content: contentStr, audio_file: editAudioFile }
                         : p
                 ));
+                // Follow the page if a retitle moved it within the current filter
+                setPendingPageId(currentPage.id);
                 setToast("Page saved.");
             }
             setEditing(false); setIsNew(false);
@@ -639,9 +655,10 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
         if (!currentPage) return;
         try {
             await loggedInvoke("delete_page", { id: currentPage.id });
-            const remaining = allPages.filter((p) => p.id !== currentPage.id);
-            setAllPages(remaining);
-            setPageIndex((prev) => Math.min(prev, Math.max(0, remaining.length - 1)));
+            setAllPages((prev) => prev.filter((p) => p.id !== currentPage.id));
+            // Land on the previous page; deleting the first one leaves index 0,
+            // which is now the page that followed it.
+            setPageIndex((prev) => Math.max(0, prev - 1));
             setToast("Page deleted.");
         } catch (e) { logError("catch", e); setToast("Failed to delete page.", "error"); }
     }
