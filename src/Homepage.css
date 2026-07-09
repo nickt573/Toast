@@ -174,9 +174,12 @@
 }
 .hp-timer-display.running { color: var(--t-text); }
 .hp-timer-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--t-r-pill); }
-/* Family-colored actions: green go, amber pause, red clear; hover deepens the fill */
+/* Family-colored actions: green go, blue resume, amber pause, red clear; hover deepens the fill */
 .hp-timer-btn--start { background: var(--t-green-bg); border-color: var(--t-green-bdr); color: var(--t-green); }
 .hp-timer-btn--start:hover { background: var(--t-green-bg); border-color: var(--t-green); color: var(--t-green); filter: brightness(0.95); }
+/* Resume — a paused timer holding time reads blue, distinct from a fresh green Start */
+.hp-timer-btn--resume { background: var(--t-blue-bg); border-color: var(--t-blue-bdr); color: var(--t-blue); }
+.hp-timer-btn--resume:hover { background: var(--t-blue-bg); border-color: var(--t-blue); color: var(--t-blue); filter: brightness(0.95); }
 .hp-timer-btn--pause { background: var(--t-amber-bg); border-color: var(--t-amber-bdr); color: var(--t-amber); }
 .hp-timer-btn--pause:hover { background: var(--t-amber-bg); border-color: var(--t-amber); color: var(--t-amber); filter: brightness(0.95); }
 .hp-timer-btn--clear { background: var(--t-red-bg); border-color: var(--t-red-bdr); color: var(--t-red); }
