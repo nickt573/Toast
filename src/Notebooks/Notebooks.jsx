@@ -15,14 +15,34 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Color } from "@tiptap/extension-color";
-import { TextStyle } from "@tiptap/extension-text-style";
+import { TextStyle, FontSize } from "@tiptap/extension-text-style";
 import { Highlight } from "@tiptap/extension-highlight";
 import { RevealBlock } from "./CustomExtentions";
-import { rewriteContentForDisplay, rewriteContentForSave } from "./NotebookUtils";
+import { rewriteContentForDisplay, rewriteContentForSave, stripPastedFonts } from "./NotebookUtils";
 import "./Notebooks.css";
 
 const VIEW_NOTEBOOKS = "notebooks";
 const VIEW_PAGES     = "pages";
+
+// Text sizes offered in the toolbar, in px. DEFAULT_FONT_SIZE matches the
+// .ProseMirror base size, so choosing it clears the mark rather than setting one.
+const FONT_SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32];
+const DEFAULT_FONT_SIZE = 13;
+
+// Text colors. The mark stores a concrete color, so these are hex literals
+// rather than design tokens — each mirrors a family color from App.css.
+const FONT_COLORS = [
+    { label: "Default",    value: null },
+    { label: "Red",        value: "#C0392B" },
+    { label: "Orange",     value: "#C2702A" },
+    { label: "Gold",       value: "#B08A1F" },
+    { label: "Green",      value: "#4A8C5E" },
+    { label: "Blue",       value: "#3E6E96" },
+    { label: "Purple",     value: "#7A5E8A" },
+    { label: "Brown",      value: "#8A6E55" },
+    { label: "Terracotta", value: "#C2705A" },
+    { label: "Grey",       value: "#6B5458" },
+];
 
 async function pickFile(extensions) {
     try {
@@ -293,6 +313,7 @@ function AudioControls({ audioFile, audio }) {
 export function PageEditor({ content, onChange, editable, audioFile, onAudioChange }) {
     const [linkPrompt, setLinkPrompt] = useState(false);
     const [linkInput, setLinkInput] = useState("");
+    const [colorPrompt, setColorPrompt] = useState(false);
     const audio = useAudioRecorder({ audioFile, onAudioChange: onAudioChange ?? (() => {}) });
 
     // Track toolbar overflow so we can fade the edges the user can still scroll to
@@ -308,9 +329,12 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
 
     const editor = useEditor({
         extensions: [
-            StarterKit.configure({ code: false, codeBlock: false, link: false }),
+            // heading is off: sizing is a numeric font size, not a document level.
+            // Legacy heading nodes are migrated on load (see NotebookUtils).
+            StarterKit.configure({ code: false, codeBlock: false, link: false, heading: false }),
             TextStyle,
             Color,
+            FontSize,
             Highlight.configure({ multicolor: true }),
             Link.configure({ openOnClick: false, inclusive: false, autolink: false }),
             Image.extend({
@@ -322,11 +346,12 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
             TableRow,
             TableCell,
             TableHeader,
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            TextAlign.configure({ types: ["paragraph"] }),
             RevealBlock,
         ],
         content: content ?? null,
         editable,
+        editorProps: { transformPastedHTML: stripPastedFonts },
         onUpdate: ({ editor }) => { onChange(editor.getJSON()); },
     }, [editable]);
 
@@ -384,7 +409,18 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         }
     }, [editable]);
 
+    const applyColor = useCallback((value) => {
+        setColorPrompt(false);
+        const chain = editor.chain().focus();
+        (value ? chain.setColor(value) : chain.unsetColor()).run();
+    }, [editor]);
+
     if (!editor) return null;
+
+    // Unmarked text inherits the .ProseMirror base size and color
+    const textStyle = editor.getAttributes("textStyle");
+    const activeFontSize = parseInt(textStyle.fontSize, 10) || DEFAULT_FONT_SIZE;
+    const activeColor = textStyle.color ?? null;
 
     return (
         <div className="nb-editor-wrap">
@@ -412,6 +448,21 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                             <button className="nb-tb-btn" onClick={() => { setLinkPrompt(false); setLinkInput(""); }}>Cancel</button>
                         </div>
                     )}
+                    {/* Swatches sit on their own row rather than in a popover — the
+                        toolbar scrolls horizontally and would clip an anchored menu */}
+                    {colorPrompt && (
+                        <div className="nb-inline-prompt nb-color-prompt">
+                            {FONT_COLORS.map(({ label, value }) => (
+                                <button key={label} title={label}
+                                    className={`nb-color-swatch${value === null ? " nb-color-swatch--default" : ""}${activeColor === value ? " active" : ""}`}
+                                    style={value ? { background: value } : undefined}
+                                    onClick={() => applyColor(value)}>
+                                    {value === null ? "Default" : ""}
+                                </button>
+                            ))}
+                            <button className="nb-tb-btn" onClick={() => setColorPrompt(false)}>Cancel</button>
+                        </div>
+                    )}
                     <div className={`nb-toolbar-wrap${tbScroll.l ? " scroll-l" : ""}${tbScroll.r ? " scroll-r" : ""}`}>
                     <div className="nb-toolbar" ref={toolbarRef} onScroll={updateTbScroll}>
                         <AudioControls audioFile={audioFile} audio={audio} />
@@ -422,18 +473,19 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                         <button className={`nb-tb-btn${editor.isActive("strike") ? " active" : ""}`} onClick={() => editor.chain().focus().toggleStrike().run()}><s>S</s></button>
                         <button className={`nb-tb-btn${editor.isActive("highlight") ? " active" : ""}`} onClick={() => editor.chain().focus().toggleHighlight().run()}><mark>H</mark></button>
                         <div className="nb-tb-sep" />
-                        <select style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)", background: "var(--t-surface)" }}
-                            value={[1,2,3].find((l) => editor.isActive("heading", { level: l })) || 0}
+                        <select className="nb-tb-select" title="Font size"
+                            value={activeFontSize}
                             onChange={(e) => {
-                                const v = parseInt(e.target.value);
-                                if (v === 0) editor.chain().focus().setParagraph().run();
-                                else editor.chain().focus().toggleHeading({ level: v }).run();
+                                const v = Number(e.target.value);
+                                if (v === DEFAULT_FONT_SIZE) editor.chain().focus().unsetFontSize().run();
+                                else editor.chain().focus().setFontSize(`${v}px`).run();
                             }}>
-                            <option value={0}>Paragraph</option>
-                            <option value={1}>H1</option>
-                            <option value={2}>H2</option>
-                            <option value={3}>H3</option>
+                            {FONT_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
+                        <button className={`nb-tb-btn nb-tb-color-btn${colorPrompt ? " active" : ""}`} title="Font color"
+                            onClick={() => setColorPrompt((p) => !p)}>
+                            A<span className="nb-tb-color-chip" style={{ background: activeColor ?? "var(--t-text)" }} />
+                        </button>
                         <div className="nb-tb-sep" />
                         <button className="nb-tb-btn" onClick={() => editor.chain().focus().setTextAlign("left").run()}>≡L</button>
                         <button className="nb-tb-btn" onClick={() => editor.chain().focus().setTextAlign("center").run()}>≡C</button>

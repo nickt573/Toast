@@ -582,6 +582,8 @@ input.input-readonly, textarea.input-readonly {
 .plan-col-label--srs       { color: var(--t-blue); }
 
 /* ── ProseMirror editor styles ── */
+/* 13px here is the editor's default size; it must stay in step with
+   DEFAULT_FONT_SIZE in Notebooks.jsx, which clears the font-size mark. */
 .nb-editor-scroll .ProseMirror {
   outline: none;
   min-height: 200px;
@@ -590,10 +592,11 @@ input.input-readonly, textarea.input-readonly {
   padding-bottom: 40px;
   color: var(--t-text);
 }
+/* One font page-wide. Pasted font-family declarations are stripped on the way in
+   (stripPastedFonts), and this is the backstop for anything that slips through. */
+.nb-editor-scroll .ProseMirror,
+.nb-editor-scroll .ProseMirror * { font-family: var(--t-font-body); }
 .nb-editor-scroll .ProseMirror p  { margin: 0; }
-.nb-editor-scroll .ProseMirror h1 { font-family: var(--t-font-head); font-size: 1.65em; font-weight: 700; margin: 1.1em 0 0.3em; color: var(--t-text); }
-.nb-editor-scroll .ProseMirror h2 { font-family: var(--t-font-head); font-size: 1.3em;  font-weight: 700; margin: 0.9em 0 0.3em; color: var(--t-text); }
-.nb-editor-scroll .ProseMirror h3 { font-family: var(--t-font-head); font-size: 1.1em;  font-weight: 600; margin: 0.8em 0 0.25em; color: var(--t-text); }
 .nb-editor-scroll .ProseMirror ul,
 .nb-editor-scroll .ProseMirror ol { padding-left: 1.5em; margin: 0.4em 0 0.8em; }
 .nb-editor-scroll .ProseMirror li { margin-bottom: 0.2em; }
