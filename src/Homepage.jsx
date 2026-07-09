@@ -557,6 +557,16 @@ function StudySession({ group, onBack, setToast }) {
         };
     }, []);
 
+    // WKWebView sometimes drops the repaint after a full card swap; force a flush.
+    useEffect(() => {
+        if (!card) return;
+        const el = document.querySelector(".hp-session");
+        if (!el) return;
+        el.style.opacity = "0.999";
+        const id = requestAnimationFrame(() => { el.style.opacity = ""; });
+        return () => cancelAnimationFrame(id);
+    }, [card?.id, flipped]);
+
     useEffect(() => {
         function onKey(e) {
             if (e.repeat) return;
