@@ -306,7 +306,7 @@ function DeckList({ setToast, onOpenDeck }) {
 
 // ─── Card Editor ──────────────────────────────────────────────────────────────
 
-function CardEditor({ setToast, card, onSaved, onDeleted, onMarkedForReview, inPlan }) {
+function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan }) {
   const [form, setForm] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewFlipped, setPreviewFlipped] = useState(false);
@@ -380,10 +380,18 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onMarkedForReview, inP
 
   const markForReview = async () => {
     try {
-      await loggedInvoke("mark_for_review", { cardId: form.id });
+      const updated = await loggedInvoke("mark_for_review", { cardId: form.id });
       setToast("Card marked for review.");
-      onMarkedForReview(form.id);
+      onRescheduled(updated);
     } catch (e) { logError("catch", e); setToast("Failed to mark card for review.", "error"); }
+  };
+
+  const givePriority = async () => {
+    try {
+      const updated = await loggedInvoke("prioritize_card", { cardId: form.id });
+      setToast("Card given priority.");
+      onRescheduled(updated);
+    } catch (e) { logError("catch", e); setToast("Failed to give card priority.", "error"); }
   };
 
   const handlePaneScroll = (e) => { scrollTopRef.current = e.currentTarget.scrollTop; };
@@ -540,11 +548,22 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onMarkedForReview, inP
       <div className="dk-editor-actions">
         <button className="primary" onClick={save}>Save</button>
         <ConfirmDelete onConfirm={deleteCard} />
-        {inPlan && (
-          <button className="btn-amber" onClick={markForReview} style={{ marginLeft: "auto" }}>
-            Mark for Review
-          </button>
-        )}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+          {inPlan && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <button className="btn-amber" onClick={markForReview}>
+                Mark for Review
+              </button>
+              <Tip text="Makes this card due right now, on top of your daily quota, and puts it ahead of every other card waiting in the queue. The most recently marked card comes first." />
+            </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <button className="btn-blue" onClick={givePriority}>
+              Give Priority
+            </button>
+            <Tip text="Gives this card priority for your next study session so it won't get buried behind existing cards in the queue. Priority follows a first-in-first-out structure." />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -582,8 +601,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
     try {
       const card = await loggedInvoke("create_card", { card: payload });
       if (priorityAdd) {
-        await loggedInvoke("prioritize_card", { cardId: card.id });
-        onCreated({ ...card, sequence: -9999 });
+        onCreated(await loggedInvoke("prioritize_card", { cardId: card.id }));
       } else {
         onCreated(card);
       }
@@ -600,8 +618,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
         };
         const flippedCard = await loggedInvoke("create_card", { card: flipped });
         if (flipPriorityAdd) {
-          await loggedInvoke("prioritize_card", { cardId: flippedCard.id });
-          onCreated({ ...flippedCard, sequence: -9999 });
+          onCreated(await loggedInvoke("prioritize_card", { cardId: flippedCard.id }));
         } else {
           onCreated(flippedCard);
         }
@@ -818,8 +835,8 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     setCards(fresh);
     setSelectedId(fresh.length > 0 ? fresh[0].id : null);
   };
-  const handleMarkedForReview = (id) => {
-    setCards((prev) => prev.map((c) => c.id === id ? { ...c, sequence: -9999, is_due: true, is_paused: false } : c));
+  const handleRescheduled = (updated) => {
+    setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
   };
 
   return (
@@ -972,7 +989,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
           card={selectedCard}
           onSaved={handleSaved}
           onDeleted={handleDeleted}
-          onMarkedForReview={handleMarkedForReview}
+          onRescheduled={handleRescheduled}
           inPlan={!!deck.plan_id}
         />
       </div>

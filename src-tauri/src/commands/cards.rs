@@ -38,16 +38,20 @@ pub fn set_all_searchable(
     update::set_all_searchable(group_id, searchable, &conn).map_err(|e| e.to_string())
 }
 
+// Both return the updated card: the new sequence is derived server-side, and
+// prioritize_card's fill_group may also have made the card due.
 #[tauri::command]
-pub fn mark_for_review(card_id: i64, state: tauri::State<AppState>) -> Result<(), String> {
+pub fn mark_for_review(card_id: i64, state: tauri::State<AppState>) -> Result<Card, String> {
     let conn = state.conn.lock().unwrap();
-    scheduling::mark_for_review(card_id, &conn).map_err(|e| e.to_string())
+    scheduling::mark_for_review(card_id, &conn).map_err(|e| e.to_string())?;
+    read::get_card(card_id, &conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn prioritize_card(card_id: i64, state: tauri::State<AppState>) -> Result<(), String> {
+pub fn prioritize_card(card_id: i64, state: tauri::State<AppState>) -> Result<Card, String> {
     let conn = state.conn.lock().unwrap();
-    scheduling::prioritize_card(card_id, &conn).map_err(|e| e.to_string())
+    scheduling::prioritize_card(card_id, &conn).map_err(|e| e.to_string())?;
+    read::get_card(card_id, &conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

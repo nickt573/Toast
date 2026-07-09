@@ -114,41 +114,55 @@ pub fn get_decks(conn: &Connection) -> Result<Vec<Group>> {
     .collect()
 }
 
+// Column order is load-bearing: card_from_row indexes into it.
+const CARD_COLUMNS: &str = r#"
+    id, group_id, front, back, is_searchable, support, imported_support,
+    front_image, back_image, front_audio, back_audio, is_uploaded,
+    tier, ease, sequence, is_due, is_overdue, is_paused, position
+"#;
+
+fn card_from_row(row: &rusqlite::Row) -> Result<Card> {
+    Ok(Card {
+        id: row.get(0)?,
+        group_id: row.get(1)?,
+        front: row.get(2)?,
+        back: row.get(3)?,
+        is_searchable: row.get(4)?,
+        support: row.get(5)?,
+        imported_support: row.get(6)?,
+        front_image: row.get(7)?,
+        back_image: row.get(8)?,
+        front_audio: row.get(9)?,
+        back_audio: row.get(10)?,
+        is_uploaded: row.get(11)?,
+        tier: row.get(12)?,
+        ease: row.get(13)?,
+        sequence: row.get(14)?,
+        is_due: row.get(15)?,
+        is_overdue: row.get(16)?,
+        is_paused: row.get(17)?,
+        position: row.get(18)?,
+    })
+}
+
+pub fn get_card(card_id: i64, conn: &Connection) -> Result<Card> {
+    conn.query_row(
+        &format!("SELECT {CARD_COLUMNS} FROM card WHERE id = ?1"),
+        [card_id],
+        card_from_row,
+    )
+}
+
 pub fn get_cards(deck_id: i64, conn: &Connection) -> Result<Vec<Card>> {
-    conn.prepare(
+    conn.prepare(&format!(
         r#"
-        SELECT
-            id, group_id, front, back, is_searchable, support, imported_support,
-            front_image, back_image, front_audio, back_audio, is_uploaded,
-            tier, ease, sequence, is_due, is_overdue, is_paused, position
+        SELECT {CARD_COLUMNS}
         FROM card
         WHERE group_id = ?1
         ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, id ASC
-        "#,
-    )?
-    .query_map([deck_id], |row| {
-        Ok(Card {
-            id: row.get(0)?,
-            group_id: row.get(1)?,
-            front: row.get(2)?,
-            back: row.get(3)?,
-            is_searchable: row.get(4)?,
-            support: row.get(5)?,
-            imported_support: row.get(6)?,
-            front_image: row.get(7)?,
-            back_image: row.get(8)?,
-            front_audio: row.get(9)?,
-            back_audio: row.get(10)?,
-            is_uploaded: row.get(11)?,
-            tier: row.get(12)?,
-            ease: row.get(13)?,
-            sequence: row.get(14)?,
-            is_due: row.get(15)?,
-            is_overdue: row.get(16)?,
-            is_paused: row.get(17)?,
-            position: row.get(18)?,
-        })
-    })?
+        "#
+    ))?
+    .query_map([deck_id], card_from_row)?
     .collect()
 }
 
