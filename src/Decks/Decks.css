@@ -127,8 +127,10 @@
 
 .dk-uploaded-badge { font-size: 11px; background: var(--t-blue-bg); color: var(--t-blue); border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r); padding: 2px 7px; font-weight: 600; user-select: none; }
 
-/* New card area — a tool tray that slid open, visibly distinct from the table above */
-.dk-new-card-dark { background: var(--t-surface-2); border-top: none; }
+/* New card area — a tool tray that slid open, visibly distinct from the table above.
+   Capped at half the pane and scrolls: the Front/Back textareas are user-resizable,
+   so a grown form would otherwise push its own Add Card button off the bottom. */
+.dk-new-card-dark { background: var(--t-surface-2); border-top: none; flex-shrink: 0; max-height: 50%; overflow-y: auto; }
 .dk-new-card-dark .dk-new-card { background: transparent; border-top: none; }
 .dk-new-card-dark input,
 .dk-new-card-dark textarea,
