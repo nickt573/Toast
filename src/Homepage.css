@@ -228,6 +228,7 @@
 .hp-todo-text.done {
   text-decoration: line-through;
   color: var(--t-text-3);
+  border-bottom-color: var(--t-green-bdr);
 }
 
 /* Deck row in study page */
