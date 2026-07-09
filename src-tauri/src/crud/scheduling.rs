@@ -244,31 +244,27 @@ fn fill_track(
     Ok(())
 }
 
+/// A group only has a scheduler row while it belongs to a plan, and fill_group
+/// errors without one. Anything that may run on an unplanned deck must check.
+fn has_scheduler(group_id: i64, conn: &Connection) -> bool {
+    conn.query_row(
+        "SELECT COUNT(*) FROM scheduler WHERE group_id = ?1",
+        [group_id],
+        |row| row.get::<_, i64>(0),
+    )
+    .unwrap_or(0)
+        > 0
+}
+
 pub fn on_item_added(group_id: i64, conn: &Connection) -> Result<()> {
-    let has_scheduler: bool = conn
-        .query_row(
-            "SELECT COUNT(*) FROM scheduler WHERE group_id = ?1",
-            [group_id],
-            |row| row.get::<_, i64>(0),
-        )
-        .unwrap_or(0)
-        > 0;
-    if !has_scheduler {
+    if !has_scheduler(group_id, conn) {
         return Ok(());
     }
     fill_group(group_id, conn)
 }
 
 pub fn on_item_removed(group_id: i64, was_due: bool, conn: &Connection) -> Result<()> {
-    let has_scheduler: bool = conn
-        .query_row(
-            "SELECT COUNT(*) FROM scheduler WHERE group_id = ?1",
-            [group_id],
-            |row| row.get::<_, i64>(0),
-        )
-        .unwrap_or(0)
-        > 0;
-    if !has_scheduler || !was_due {
+    if !has_scheduler(group_id, conn) || !was_due {
         return Ok(());
     }
 
@@ -289,15 +285,7 @@ pub fn on_pause_changed(
         )?;
     }
 
-    let has_scheduler: bool = conn
-        .query_row(
-            "SELECT COUNT(*) FROM scheduler WHERE group_id = ?1",
-            [group_id],
-            |row| row.get::<_, i64>(0),
-        )
-        .unwrap_or(0)
-        > 0;
-    if !has_scheduler {
+    if !has_scheduler(group_id, conn) {
         return Ok(());
     }
 
@@ -630,9 +618,49 @@ pub fn max_clamp_group(group_id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Cards below PRIORITY_CEIL sit in the priority range, unreachable by the
+/// 1/day tick (~137 years). Both entry points anchor an empty range at
+/// PRIORITY_ANCHOR and grow away from it, so `ORDER BY sequence ASC` yields:
+///
+///   marks (LIFO)                  anchor      priorities (FIFO)
+///   ...  -1,000,002  -1,000,001  [-1,000,000]  -999,999  -999,998  ...
+const PRIORITY_CEIL: i64 = -50_000;
+const PRIORITY_ANCHOR: i64 = -1_000_000;
+
+/// MIN/MAX sequence among a group's priority-range cards, None if empty.
+/// Per-group, since order is only ever compared within a group.
+fn priority_bound(group_id: i64, agg: &str, conn: &Connection) -> Result<Option<i64>> {
+    conn.query_row(
+        &format!("SELECT {agg}(sequence) FROM card WHERE group_id = ?1 AND sequence < ?2"),
+        rusqlite::params![group_id, PRIORITY_CEIL],
+        |row| row.get(0),
+    )
+}
+
 pub fn prioritize_card(card_id: i64, conn: &Connection) -> Result<()> {
-    conn.execute("UPDATE card SET sequence = -9999 WHERE id = ?1", [card_id])?;
-    Ok(())
+    let (group_id, sequence): (i64, i64) = conn.query_row(
+        "SELECT group_id, sequence FROM card WHERE id = ?1",
+        [card_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+
+    // Already queued: re-stamping at MAX + 1 would demote it to the back.
+    if sequence >= PRIORITY_CEIL {
+        let next = match priority_bound(group_id, "MAX", conn)? {
+            Some(max) => max + 1,
+            None => PRIORITY_ANCHOR,
+        };
+        conn.execute(
+            "UPDATE card SET sequence = ?1 WHERE id = ?2",
+            rusqlite::params![next, card_id],
+        )?;
+    }
+
+    // A queue jump, not a forced due: only fills if the quota has a free slot.
+    if !has_scheduler(group_id, conn) {
+        return Ok(());
+    }
+    fill_group(group_id, conn)
 }
 
 /// Returns (streak, studied_today) for a plan.
@@ -694,19 +722,32 @@ pub fn get_plan_streak(plan_id: i64, conn: &Connection) -> Result<(i64, bool)> {
 }
 
 pub fn mark_for_review(card_id: i64, conn: &Connection) -> Result<()> {
-    let is_due: bool =
-        conn.query_row("SELECT is_due FROM card WHERE id = ?1", [card_id], |row| {
-            row.get(0)
-        })?;
+    let (group_id, is_due): (i64, bool) = conn.query_row(
+        "SELECT group_id, is_due FROM card WHERE id = ?1",
+        [card_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+
+    // LIFO: newest mark lands ahead of everything queued. Re-stamped even when
+    // already due, so the mark survives an overflow-off tick's unscheduling.
+    let next = match priority_bound(group_id, "MIN", conn)? {
+        Some(min) => min - 1,
+        None => PRIORITY_ANCHOR,
+    };
 
     if is_due {
-        return Ok(());
+        // Flags left alone: rewriting them would turn a quota-free overflow
+        // carry-over (is_overdue = TRUE) into one that consumes quota.
+        conn.execute(
+            "UPDATE card SET sequence = ?1 WHERE id = ?2",
+            rusqlite::params![next, card_id],
+        )?;
+    } else {
+        conn.execute(
+            "UPDATE card SET sequence = ?1, is_due = TRUE, is_overdue = FALSE, is_paused = FALSE WHERE id = ?2",
+            rusqlite::params![next, card_id],
+        )?;
     }
-
-    conn.execute(
-        "UPDATE card SET sequence = -9999, is_due = TRUE, is_overdue = FALSE, is_paused = FALSE WHERE id = ?1",
-        [card_id],
-    )?;
 
     Ok(())
 }
