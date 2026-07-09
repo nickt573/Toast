@@ -1005,14 +1005,19 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                             const streakInfo = counts?.streakInfo;
                             const atRisk = streakInfo && streakInfo.streak > 0 && !streakInfo.studied_today;
                             const hasDue = counts && (counts.todos > 0 || counts.cards > 0);
+                            // Requires counts to have loaded, so a plan doesn't flash "done" mid-fetch
+                            const isDone = !!counts && !hasDue;
                             return (
                                 <div
                                     key={plan.id}
-                                    className={`hp-plan-card${hasDue ? " has-due" : ""}`}
+                                    className={`hp-plan-card${hasDue ? " has-due" : ""}${isDone ? " is-done" : ""}`}
                                     onClick={() => { setActivePlan(plan); setView(VIEW_PLAN); }}
                                 >
                                     <div className="hp-plan-card-top">
-                                        <div className="hp-plan-name">{plan.name}</div>
+                                        <div className="hp-plan-name-row">
+                                            {isDone && <span className="hp-plan-check">✓</span>}
+                                            <div className="hp-plan-name">{plan.name}</div>
+                                        </div>
                                         {streakInfo?.streak > 0 && (
                                             <span className={`hp-streak-chip${atRisk ? " at-risk" : ""}`}>
                                                 {streakInfo.streak}d streak{atRisk ? " !" : ""}
