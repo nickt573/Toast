@@ -18,14 +18,15 @@
 .nb-pages-header { display: flex; align-items: center; gap: 8px; padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: linear-gradient(280deg, var(--t-plum-bg) 0%, var(--t-surface) 72%); flex-shrink: 0; }
 .nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
 
-/* Search/filter bar — condensed single row */
+/* Search/filter bar — condensed single row. Deep peach so the chrome reads as a
+   band above the lighter page body rather than blending into it. */
 .nb-search {
   display: flex;
   gap: 10px;
   align-items: center;
   padding: 6px var(--t-page-pad);
   border-bottom: 1px solid var(--t-border-2);
-  background: var(--t-surface-2);
+  background: var(--t-surface-3);
   flex-shrink: 0;
 }
 .nb-search > input { flex: 1; min-width: 0; background: var(--t-surface); }
@@ -120,8 +121,8 @@
 .nb-inline-prompt { display: flex; gap: 6px; align-items: center; padding: 5px 0; margin-bottom: 4px; border-bottom: 1px solid var(--t-border); flex-wrap: wrap; }
 .nb-inline-prompt input { flex: 1; min-width: 140px; }
 
-/* Page nav */
-.nb-page-nav { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; font-size: 13px; color: var(--t-text-2); }
+/* Page nav — deep peach, matching the search band at the top of the page */
+.nb-page-nav { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--t-border-2); background: var(--t-surface-3); flex-shrink: 0; font-size: 13px; color: var(--t-text-2); }
 .nb-page-nav-indicator { display: inline-flex; align-items: center; gap: 5px; }
 .nb-page-jump { width: 48px; text-align: center; padding: 2px 4px; font-size: 12px; background: var(--t-surface); appearance: textfield; -moz-appearance: textfield; }
 .nb-page-jump::-webkit-outer-spin-button,
