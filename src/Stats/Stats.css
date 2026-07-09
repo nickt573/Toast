@@ -7,8 +7,9 @@
 /* Plan selector */
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
 
-/* Metric cards */
-.st-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-bottom: 16px; }
+/* Metric cards — auto-fit (not auto-fill) collapses the empty tracks, so the cards
+   always stretch to fill the row; below 130px each they wrap to the next line */
+.st-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 16px; }
 .st-metric {
   background: var(--t-surface);
   border: 1px solid var(--t-border-2);
