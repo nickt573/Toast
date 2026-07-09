@@ -117,6 +117,46 @@
 .nb-tb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .nb-tb-sep { width: 1px; background: var(--t-border); margin: 0 3px; align-self: stretch; flex-shrink: 0; }
 
+/* Font size picker */
+.nb-tb-select {
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid var(--t-border);
+  border-radius: var(--t-r);
+  background: var(--t-surface);
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+/* Font color — the chip under the A previews the color that would be applied */
+.nb-tb-color-btn { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2; }
+.nb-tb-color-chip { display: block; width: 13px; height: 3px; border-radius: 2px; }
+
+/* Swatch row — shares the link prompt's bar, so it scrolls with narrow editors */
+.nb-color-prompt { gap: 5px; }
+.nb-color-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid var(--t-btn-bdr);
+  border-radius: var(--t-r);
+  cursor: pointer;
+  box-shadow: none;
+}
+.nb-color-swatch:hover { filter: brightness(0.92); border-color: var(--t-text-2); box-shadow: none; }
+.nb-color-swatch.active { box-shadow: 0 0 0 2px var(--t-surface), 0 0 0 3px var(--t-text-2); }
+/* "Default" clears the mark, so it reads as a labeled button rather than a color */
+.nb-color-swatch--default {
+  width: auto;
+  padding: 0 8px;
+  font-size: 11px;
+  font-family: inherit;
+  background: var(--t-surface);
+  color: var(--t-text-2);
+}
+.nb-color-swatch--default:hover { background: var(--t-bg); color: var(--t-text); }
+
 /* Inline link prompt */
 .nb-inline-prompt { display: flex; gap: 6px; align-items: center; padding: 5px 0; margin-bottom: 4px; border-bottom: 1px solid var(--t-border); flex-wrap: wrap; }
 .nb-inline-prompt input { flex: 1; min-width: 140px; }
