@@ -136,7 +136,8 @@ function StudyTimer({ planId }) {
         setTick(t => t + 1);
     }
 
-    const totalSec = Math.floor(timerElapsedMs(planId) / 1000);
+    const elapsedMs = timerElapsedMs(planId);
+    const totalSec = Math.floor(elapsedMs / 1000);
     const h = Math.floor(totalSec / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
@@ -144,11 +145,16 @@ function StudyTimer({ planId }) {
         ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
         : `${m}:${String(s).padStart(2, "0")}`;
 
+    // A stopped timer that already holds time is paused, not fresh — it offers
+    // Resume so a half-finished session is obvious at a glance.
+    const paused = !running && elapsedMs > 0;
+    const toggleClass = running ? "hp-timer-btn--pause" : paused ? "hp-timer-btn--resume" : "hp-timer-btn--start";
+
     return (
         <div className="hp-timer">
             <span className={`hp-timer-display${running ? " running" : ""}`}>{display}</span>
-            <button className={`hp-timer-btn ${running ? "hp-timer-btn--pause" : "hp-timer-btn--start"}`} onClick={toggle}>
-                {running ? "Pause" : "Start"}
+            <button className={`hp-timer-btn ${toggleClass}`} onClick={toggle}>
+                {running ? "Pause" : paused ? "Resume" : "Start"}
             </button>
             <button className="hp-timer-btn hp-timer-btn--clear" onClick={clear}>Clear</button>
         </div>
