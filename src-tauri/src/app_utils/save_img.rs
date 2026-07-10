@@ -1,3 +1,4 @@
+use crate::app_utils::paths::{is_stored_media, to_relative};
 use rusqlite::{Error, Result};
 use std::{fs, path::Path, path::PathBuf};
 use uuid::Uuid;
@@ -13,11 +14,12 @@ pub fn save_card_image(src_path: Option<String>, app_dir: &Path) -> Result<Optio
     std::fs::create_dir_all(&dest_dir)
         .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
 
-    let src_path = PathBuf::from(&src);
-    if src_path.starts_with(&dest_dir) {
-        return Ok(Some(src));
+    // Already stored (relative or a legacy absolute form) — keep, normalized
+    if is_stored_media(&src, app_dir, "cards/images") {
+        return Ok(Some(to_relative(&src, app_dir)));
     }
 
+    let src_path = PathBuf::from(&src);
     let ext = src_path
         .extension()
         .and_then(|e| e.to_str())
@@ -28,13 +30,18 @@ pub fn save_card_image(src_path: Option<String>, app_dir: &Path) -> Result<Optio
     std::fs::copy(&src_path, &dest)
         .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
 
-    Ok(Some(dest.to_string_lossy().to_string()))
+    Ok(Some(format!("cards/images/{uuid_name}")))
 }
 
 pub fn save_page_image(image_path: Option<String>, app_dir: &Path) -> Result<Option<String>> {
     let Some(image_path) = image_path else {
         return Ok(None);
     };
+
+    // Already stored (relative or a legacy absolute form) — keep, normalized
+    if is_stored_media(&image_path, app_dir, "pages/images") {
+        return Ok(Some(to_relative(&image_path, app_dir)));
+    }
 
     let src = Path::new(&image_path);
 
@@ -49,5 +56,5 @@ pub fn save_page_image(image_path: Option<String>, app_dir: &Path) -> Result<Opt
 
     fs::copy(src, &dest).map_err(|e| Error::InvalidParameterName(e.to_string()))?;
 
-    Ok(Some(dest.to_string_lossy().to_string()))
+    Ok(Some(format!("pages/images/{filename}")))
 }

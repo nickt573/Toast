@@ -1,4 +1,5 @@
-use crate::app_utils::{delete_audio::*, delete_img::*, manage_audio::*, manage_img::*};
+use crate::app_utils::paths::to_relative;
+use crate::app_utils::{delete_img::*, manage_audio::*, manage_img::*};
 use crate::crud::scheduling::*;
 use rusqlite::{Connection, OptionalExtension, Result};
 use std::path::Path;
@@ -115,11 +116,11 @@ pub fn delete_card(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
 
     delete_media_file(app_dir, front_image);
     delete_media_file(app_dir, back_image);
-    delete_card_audio_file(front_audio);
-    delete_card_audio_file(back_audio);
+    delete_media_file(app_dir, front_audio);
+    delete_media_file(app_dir, back_audio);
 
     for path in html_images.iter().chain(html_audio.iter()) {
-        let _ = std::fs::remove_file(path);
+        delete_media_file(app_dir, Some(path.clone()));
     }
 
     let _ = on_item_removed(group_id, is_due, conn);
@@ -175,7 +176,7 @@ pub fn delete_deck(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
     html_audio.dedup();
 
     for path in html_images.iter().chain(html_audio.iter()) {
-        let _ = std::fs::remove_file(path);
+        delete_media_file(app_dir, Some(path.clone()));
     }
 
     conn.execute(
@@ -186,8 +187,8 @@ pub fn delete_deck(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
     for (fi, bi, fa, ba) in media {
         delete_media_file(app_dir, fi);
         delete_media_file(app_dir, bi);
-        delete_card_audio_file(fa);
-        delete_card_audio_file(ba);
+        delete_media_file(app_dir, fa);
+        delete_media_file(app_dir, ba);
     }
 
     Ok(())
@@ -205,9 +206,7 @@ pub fn delete_notebook(id: i64, conn: &Connection, app_dir: &Path) -> Result<()>
         for path in extract_image_paths(&content) {
             delete_media_file(app_dir, Some(path));
         }
-        if let Some(audio) = audio_file {
-            let _ = std::fs::remove_file(&audio);
-        }
+        delete_media_file(app_dir, audio_file);
     }
 
     conn.execute(
@@ -233,9 +232,7 @@ pub fn delete_page(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
         }
     }
 
-    if let Some(audio) = audio_file {
-        let _ = std::fs::remove_file(&audio);
-    }
+    delete_media_file(app_dir, audio_file);
 
     conn.execute("DELETE FROM page WHERE id = ?1", [id])?;
 
@@ -276,6 +273,9 @@ pub fn remove_group_from_plan(group_id: i64, reset: bool, conn: &mut Connection)
 
 use std::collections::HashSet;
 pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize> {
+    // All sets hold app-dir-relative keys ("cards/images/<file>"); stored
+    // paths are normalized through to_relative so legacy absolute rows still
+    // protect their files.
     let mut referenced_images: HashSet<String> = HashSet::new();
     let mut referenced_audio: HashSet<String> = HashSet::new();
     let mut referenced_page_audio: HashSet<String> = HashSet::new();
@@ -287,7 +287,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
             .query_map([], |row| row.get::<_, String>(0))?
             .filter_map(|r| r.ok());
         for p in rows {
-            referenced_images.insert(p);
+            referenced_images.insert(to_relative(&p, app_dir));
         }
     }
 
@@ -298,7 +298,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
             .query_map([], |row| row.get::<_, String>(0))?
             .filter_map(|r| r.ok());
         for p in rows {
-            referenced_audio.insert(p);
+            referenced_audio.insert(to_relative(&p, app_dir));
         }
     }
 
@@ -312,8 +312,8 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
             .collect();
         for (front, back, imported_support) in rows {
             let (images, audio) = html_media_paths(&front, &back, imported_support.as_deref());
-            referenced_images.extend(images);
-            referenced_audio.extend(audio);
+            referenced_images.extend(images.iter().map(|p| to_relative(p, app_dir)));
+            referenced_audio.extend(audio.iter().map(|p| to_relative(p, app_dir)));
         }
     }
 
@@ -326,7 +326,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
             .collect();
         for content in rows {
             for p in extract_image_paths(&content) {
-                referenced_images.insert(p);
+                referenced_images.insert(to_relative(&p, app_dir));
             }
         }
     }
@@ -338,59 +338,68 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
             .query_map([], |row| row.get::<_, String>(0))?
             .filter_map(|r| r.ok());
         for p in rows {
-            referenced_page_audio.insert(p);
+            referenced_page_audio.insert(to_relative(&p, app_dir));
         }
     }
 
     let mut deleted = 0;
 
-    // ── Delete orphaned card images ───────────────────────────────────────────
-    let img_dir = app_dir.join("cards").join("images");
-    if let Ok(entries) = std::fs::read_dir(&img_dir) {
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if !path.is_file() {
-                continue;
-            }
-            let path_str = path.to_string_lossy().to_string();
-            if !referenced_images.contains(&path_str) {
-                if std::fs::remove_file(&path).is_ok() {
-                    deleted += 1;
-                }
-            }
-        }
-    }
+    // Walked files are keyed as "{subdir}/{filename}" — the canonical stored
+    // form — so comparison never depends on the walk's absolute paths or the
+    // OS separator. pages/images is intentionally not walked: its orphans are
+    // removed by removed_image_paths/delete_page, same as before.
+    //
+    // Liveness is checked against the union of every referenced set: a file
+    // can land in one subdir but be referenced as another kind (an <audio>
+    // src with an extension the importer didn't classify as audio ends up in
+    // cards/images), and it must not be deleted for that.
+    let all_referenced: HashSet<&String> = referenced_images
+        .iter()
+        .chain(referenced_audio.iter())
+        .chain(referenced_page_audio.iter())
+        .collect();
+    let dirs = [
+        ("cards/images", &referenced_images),
+        ("cards/audio", &referenced_audio),
+        ("pages/audio", &referenced_page_audio),
+    ];
+    for (subdir, referenced) in dirs {
+        let dir = app_dir.join(subdir);
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        let files: Vec<std::path::PathBuf> = entries
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.is_file())
+            .collect();
 
-    // ── Delete orphaned card audio ────────────────────────────────────────────
-    let aud_dir = app_dir.join("cards").join("audio");
-    if let Ok(entries) = std::fs::read_dir(&aud_dir) {
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if !path.is_file() {
-                continue;
-            }
-            let path_str = path.to_string_lossy().to_string();
-            if !referenced_audio.contains(&path_str) {
-                if std::fs::remove_file(&path).is_ok() {
-                    deleted += 1;
-                }
-            }
-        }
-    }
+        let orphans: Vec<&std::path::PathBuf> = files
+            .iter()
+            .filter(|p| {
+                let key = format!(
+                    "{subdir}/{}",
+                    p.file_name().unwrap_or_default().to_string_lossy()
+                );
+                !all_referenced.contains(&key)
+            })
+            .collect();
 
-    // ── Delete orphaned page audio ────────────────────────────────────────────
-    let page_aud_dir = app_dir.join("pages").join("audio");
-    if let Ok(entries) = std::fs::read_dir(&page_aud_dir) {
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if !path.is_file() {
-                continue;
-            }
-            let path_str = path.to_string_lossy().to_string();
-            if !referenced_page_audio.contains(&path_str) {
-                if std::fs::remove_file(&path).is_ok() {
-                    deleted += 1;
-                }
+        // Safety valve: files exist AND references exist, yet not a single
+        // file matches a reference — that's a systematic key mismatch (a bug),
+        // not real orphans. Deleting here would wipe every media file.
+        if !referenced.is_empty() && !files.is_empty() && orphans.len() == files.len() {
+            log::error!(
+                "cleanup_orphaned_media: refusing to delete all {} files in {subdir} — \
+                 no stored reference matches any file, which indicates a path-format bug",
+                files.len()
+            );
+            continue;
+        }
+
+        for path in orphans {
+            if std::fs::remove_file(path).is_ok() {
+                deleted += 1;
             }
         }
     }
@@ -429,4 +438,112 @@ pub fn delete_deleted_plan_stats(plan_id: i64, conn: &Connection) -> Result<()> 
     conn.execute("DELETE FROM group_stats WHERE plan_id = ?1", [plan_id])?;
     conn.execute("DELETE FROM todo_stats WHERE plan_id = ?1", [plan_id])?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup(app_dir: &Path) -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_schema(&conn, app_dir).unwrap();
+        conn.execute(
+            "INSERT INTO \"group\" (id, name, group_type) VALUES (1, 'g', 'deck')",
+            [],
+        )
+        .unwrap();
+        conn
+    }
+
+    fn touch(dir: &Path, name: &str) {
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(dir.join(name), b"x").unwrap();
+    }
+
+    #[test]
+    fn cleanup_keeps_referenced_media_and_deletes_orphans() {
+        let tmp = tempfile::tempdir().unwrap();
+        let app_dir = tmp.path();
+        let conn = setup(app_dir);
+
+        let audio_dir = app_dir.join("cards/audio");
+        touch(&audio_dir, "kept-rel.mp3");
+        touch(&audio_dir, "kept-abs.mp3");
+        touch(&audio_dir, "orphan.mp3");
+
+        // one relative reference, one legacy absolute reference
+        let abs = app_dir.join("cards/audio/kept-abs.mp3");
+        conn.execute(
+            "INSERT INTO card (group_id, front, back, front_audio, back_audio)
+             VALUES (1, 'f', 'b', 'cards/audio/kept-rel.mp3', ?1)",
+            [abs.to_string_lossy()],
+        )
+        .unwrap();
+
+        let deleted = cleanup_orphaned_media(&conn, app_dir).unwrap();
+
+        assert_eq!(deleted, 1);
+        assert!(audio_dir.join("kept-rel.mp3").exists());
+        assert!(audio_dir.join("kept-abs.mp3").exists());
+        assert!(!audio_dir.join("orphan.mp3").exists());
+    }
+
+    #[test]
+    fn cleanup_keeps_media_referenced_as_another_kind() {
+        // An <audio> src can point into cards/images when the importer didn't
+        // classify the extension as audio; the images walk must not reap it
+        let tmp = tempfile::tempdir().unwrap();
+        let app_dir = tmp.path();
+        let conn = setup(app_dir);
+
+        touch(&app_dir.join("cards/images"), "clip.xyz");
+        conn.execute(
+            "INSERT INTO card (group_id, front, back, is_uploaded)
+             VALUES (1, '<audio controls src=\"cards/images/clip.xyz\"></audio>', 'b', TRUE)",
+            [],
+        )
+        .unwrap();
+
+        let deleted = cleanup_orphaned_media(&conn, app_dir).unwrap();
+
+        assert_eq!(deleted, 0);
+        assert!(app_dir.join("cards/images/clip.xyz").exists());
+    }
+
+    #[test]
+    fn cleanup_refuses_to_wipe_directory_on_systematic_mismatch() {
+        let tmp = tempfile::tempdir().unwrap();
+        let app_dir = tmp.path();
+        let conn = setup(app_dir);
+
+        let audio_dir = app_dir.join("cards/audio");
+        touch(&audio_dir, "a.mp3");
+        touch(&audio_dir, "b.mp3");
+
+        // references exist but match no file at all — must not delete anything
+        conn.execute(
+            "INSERT INTO card (group_id, front, back, front_audio)
+             VALUES (1, 'f', 'b', 'cards/audio/elsewhere.mp3')",
+            [],
+        )
+        .unwrap();
+
+        let deleted = cleanup_orphaned_media(&conn, app_dir).unwrap();
+
+        assert_eq!(deleted, 0);
+        assert!(audio_dir.join("a.mp3").exists());
+        assert!(audio_dir.join("b.mp3").exists());
+    }
+
+    #[test]
+    fn cleanup_deletes_everything_when_nothing_is_referenced() {
+        let tmp = tempfile::tempdir().unwrap();
+        let app_dir = tmp.path();
+        let conn = setup(app_dir);
+
+        touch(&app_dir.join("cards/audio"), "a.mp3");
+
+        let deleted = cleanup_orphaned_media(&conn, app_dir).unwrap();
+        assert_eq!(deleted, 1);
+    }
 }

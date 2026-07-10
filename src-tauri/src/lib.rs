@@ -64,7 +64,7 @@ pub fn run() {
 
             let conn = Connection::open(db_path).expect("failed to open database");
 
-            db::init_schema(&conn)?;
+            db::init_schema(&conn, &app_dir)?;
 
             log::info!("App started — db at {}", app_dir.display());
 
@@ -72,6 +72,11 @@ pub fn run() {
                 conn: Mutex::new(conn),
                 app_dir: app_dir,
             });
+
+            if let Some(window) = app.get_webview_window("main") {
+                app_utils::media_permissions::allow_media_permissions(&window);
+            }
+
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -125,7 +130,6 @@ pub fn run() {
             commands::pages::update_page,
             commands::pages::delete_page,
             commands::pages::save_page_audio,
-            commands::pages::delete_page_audio,
             commands::pages::read_audio_b64,
             commands::srs::add_group_to_plan,
             commands::srs::remove_group_from_plan,

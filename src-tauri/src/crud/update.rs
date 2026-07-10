@@ -162,18 +162,14 @@ pub fn update_card(card: Card, conn: &Connection, app_dir: &Path) -> Result<()> 
     };
 
     let new_front_audio = if card.front_audio != old_front_audio {
-        if let Some(ref p) = old_front_audio {
-            let _ = std::fs::remove_file(p);
-        }
+        delete_media_file(app_dir, old_front_audio);
         save_card_audio_file(card.front_audio.clone(), app_dir)?
     } else {
         card.front_audio.clone()
     };
 
     let new_back_audio = if card.back_audio != old_back_audio {
-        if let Some(ref p) = old_back_audio {
-            let _ = std::fs::remove_file(p);
-        }
+        delete_media_file(app_dir, old_back_audio);
         save_card_audio_file(card.back_audio.clone(), app_dir)?
     } else {
         card.back_audio.clone()
@@ -250,12 +246,10 @@ pub fn update_page(page: Page, conn: &Connection, app_dir: &Path) -> Result<()> 
     let new_content = rewrite_images_in_content(&page.content, app_dir)?;
 
     if old_audio != page.audio_file {
-        if let Some(old_path) = &old_audio {
-            let _ = std::fs::remove_file(old_path);
-        }
+        delete_media_file(app_dir, old_audio.clone());
     }
 
-    for path in removed_image_paths(&old_content, &new_content) {
+    for path in removed_image_paths(&old_content, &new_content, app_dir) {
         delete_media_file(app_dir, Some(path));
     }
 

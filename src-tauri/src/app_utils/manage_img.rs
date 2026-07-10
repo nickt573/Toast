@@ -1,3 +1,4 @@
+use crate::app_utils::paths::{is_stored_media, to_relative};
 use crate::app_utils::save_img::save_page_image;
 use rusqlite::Result;
 use serde_json::Value;
@@ -21,12 +22,18 @@ pub fn rewrite_image_nodes(node: &mut Value, app_dir: &Path) -> Result<()> {
                     .and_then(|s| s.as_str())
                     .map(|s| s.to_string())
                 {
-                    // Only process if not already inside the app dir
-                    let app_dir_str = app_dir.to_string_lossy();
-                    if !src.starts_with(app_dir_str.as_ref()) {
-                        if let Some(new_path) = save_page_image(Some(src), app_dir)? {
-                            attrs["src"] = Value::String(new_path);
-                        }
+                    if src.starts_with("http") || src.starts_with("asset:") || src.starts_with("data:") {
+                        // Not a local file — leave alone
+                    } else if is_stored_media(&src, app_dir, "pages/images") {
+                        // Already stored: normalize in place (legacy absolute → relative)
+                        let rel = to_relative(&src, app_dir);
+                        attrs["src"] = Value::String(rel.clone());
+                        attrs["rawPath"] = Value::String(rel);
+                    } else if let Some(new_path) = save_page_image(Some(src), app_dir)? {
+                        // rawPath must track the stored copy too — display prefers
+                        // it, and it would otherwise keep the picked file's path
+                        attrs["src"] = Value::String(new_path.clone());
+                        attrs["rawPath"] = Value::String(new_path);
                     }
                 }
             }
@@ -71,9 +78,18 @@ pub fn collect_image_paths(node: &Value, paths: &mut Vec<String>) {
     }
 }
 
-pub fn removed_image_paths(old_content: &str, new_content: &str) -> Vec<String> {
-    let old_paths = extract_image_paths(old_content);
-    let new_paths = extract_image_paths(new_content);
+/// Paths present in old_content but not new_content. Both sides are compared
+/// in relative form so a legacy absolute path never diffs against its own
+/// relative equivalent (which would delete a still-referenced file).
+pub fn removed_image_paths(old_content: &str, new_content: &str, app_dir: &Path) -> Vec<String> {
+    let old_paths: Vec<String> = extract_image_paths(old_content)
+        .iter()
+        .map(|p| to_relative(p, app_dir))
+        .collect();
+    let new_paths: Vec<String> = extract_image_paths(new_content)
+        .iter()
+        .map(|p| to_relative(p, app_dir))
+        .collect();
     old_paths
         .into_iter()
         .filter(|p| !new_paths.contains(p))

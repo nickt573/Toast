@@ -117,13 +117,10 @@ fn copy_media_file(src: &Path, filename: &str, app_dir: &Path) -> Option<String>
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "ogg" | "m4a" | "flac");
+    let is_audio = matches!(ext.as_str(), "mp3" | "wav" | "ogg" | "opus" | "m4a" | "mp4" | "flac" | "webm");
 
-    let dest_dir = if is_audio {
-        app_dir.join("cards").join("audio")
-    } else {
-        app_dir.join("cards").join("images")
-    };
+    let subdir = if is_audio { "cards/audio" } else { "cards/images" };
+    let dest_dir = app_dir.join(subdir);
     if std::fs::create_dir_all(&dest_dir).is_err() {
         return None;
     }
@@ -135,7 +132,7 @@ fn copy_media_file(src: &Path, filename: &str, app_dir: &Path) -> Option<String>
     };
     let dest = dest_dir.join(&safe_name);
     if std::fs::copy(src, &dest).is_ok() {
-        Some(dest.to_string_lossy().to_string())
+        Some(format!("{subdir}/{safe_name}"))
     } else {
         None
     }
