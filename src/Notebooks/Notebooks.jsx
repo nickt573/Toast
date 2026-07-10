@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { NewCardForm } from "../Decks/Decks";
 import { ConfirmDelete } from "../UIUtils";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { mediaSrc } from "../mediaPaths";
+import { AudioPlayer } from "../Decks/CardFace";
 import { loggedInvoke, logError } from "../logger";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -218,93 +219,144 @@ function NotebookList({ setToast, onOpenNotebook }) {
 // Recording lives in a hook so its compact controls can render inside the
 // toolbar while the (line-hungry) audio player renders on its own bar only when
 // a clip actually exists.
+// 16 kHz mono 16-bit is plenty for voice notes and keeps the WAV (and the
+// JSON-encoded IPC payload carrying it) ~3x smaller than the mic's native rate
+const WAV_RATE = 16000;
+
+function encodeWav(pcm, srcRate) {
+    let samples = pcm;
+    let rate = srcRate;
+    if (srcRate > WAV_RATE) {
+        const n = Math.floor(pcm.length * WAV_RATE / srcRate);
+        samples = new Float32Array(n);
+        const step = srcRate / WAV_RATE;
+        for (let i = 0; i < n; i++) {
+            const pos = i * step, j = Math.floor(pos), frac = pos - j;
+            samples[i] = pcm[j] + (pcm[Math.min(j + 1, pcm.length - 1)] - pcm[j]) * frac;
+        }
+        rate = WAV_RATE;
+    }
+    const buf = new ArrayBuffer(44 + samples.length * 2);
+    const v = new DataView(buf);
+    const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, "RIFF"); v.setUint32(4, 36 + samples.length * 2, true); ws(8, "WAVE");
+    ws(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, "data"); v.setUint32(40, samples.length * 2, true);
+    for (let i = 0; i < samples.length; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return new Uint8Array(buf);
+}
+
+// Records raw PCM via WebAudio and encodes a WAV file. MediaRecorder is
+// deliberately not used: WebKitGTK's implementation advertises only audio/mp4
+// and then emits zero bytes, so recordings on Linux were silently empty.
 function useAudioRecorder({ audioFile, onAudioChange }) {
     const [recording, setRecording] = useState(false);
     const [paused, setPaused] = useState(false);
-    const mediaRecorderRef = useRef(null);
+    const ctxRef = useRef(null);
+    const nodesRef = useRef([]);
     const chunksRef = useRef([]);
+    const pausedRef = useRef(false);
     const streamRef = useRef(null);
 
-    useEffect(() => {
-        return () => { streamRef.current?.getTracks().forEach(t => t.stop()); };
-    }, []);
+    function teardown() {
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+        nodesRef.current.forEach(n => { try { n.disconnect(); } catch { /* already gone */ } });
+        nodesRef.current = [];
+        ctxRef.current?.close().catch(() => {});
+        ctxRef.current = null;
+    }
+
+    useEffect(() => teardown, []);
 
     async function startRecording() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
-            const mr = new MediaRecorder(stream);
+            const ctx = new AudioContext();
+            ctxRef.current = ctx;
+            const source = ctx.createMediaStreamSource(stream);
+            const proc = ctx.createScriptProcessor(4096, 1, 1);
+            // The processor only runs while wired to the destination; the
+            // zero-gain sink keeps the mic from echoing out of the speakers
+            const sink = ctx.createGain();
+            sink.gain.value = 0;
             chunksRef.current = [];
-            mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-            mr.onstop = async () => {
-                const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-                stream.getTracks().forEach(t => t.stop());
-
-                // Save to pages/audio/ via Tauri
-                const arrayBuffer = await blob.arrayBuffer();
-                const uint8 = new Uint8Array(arrayBuffer);
-                try {
-                    const path = await loggedInvoke("save_page_audio", { data: Array.from(uint8) });
-                    onAudioChange(path);
-                } catch (e) { logError("save_page_audio", e); }
+            pausedRef.current = false;
+            proc.onaudioprocess = (e) => {
+                if (!pausedRef.current) chunksRef.current.push(new Float32Array(e.inputBuffer.getChannelData(0)));
             };
-            mediaRecorderRef.current = mr;
-            mr.start();
+            source.connect(proc);
+            proc.connect(sink);
+            sink.connect(ctx.destination);
+            nodesRef.current = [source, proc, sink];
             setRecording(true);
             setPaused(false);
-        } catch (e) { logError("microphone_access", e); }
+        } catch (e) { logError("microphone_access", e); teardown(); }
     }
 
-    function pauseRecording() {
-        if (mediaRecorderRef.current?.state === "recording") {
-            mediaRecorderRef.current.pause();
-            setPaused(true);
-        }
-    }
+    function pauseRecording() { pausedRef.current = true; setPaused(true); }
+    function resumeRecording() { pausedRef.current = false; setPaused(false); }
 
-    function resumeRecording() {
-        if (mediaRecorderRef.current?.state === "paused") {
-            mediaRecorderRef.current.resume();
-            setPaused(false);
-        }
-    }
-
-    function stopRecording() {
-        mediaRecorderRef.current?.stop();
+    async function stopRecording() {
+        const rate = ctxRef.current?.sampleRate ?? 44100;
+        teardown();
         setRecording(false);
         setPaused(false);
+        const chunks = chunksRef.current;
+        chunksRef.current = [];
+        const total = chunks.reduce((n, c) => n + c.length, 0);
+        if (total === 0) return;
+        const pcm = new Float32Array(total);
+        let off = 0;
+        for (const c of chunks) { pcm.set(c, off); off += c.length; }
+        try {
+            const path = await loggedInvoke("save_page_audio", {
+                data: Array.from(encodeWav(pcm, rate)),
+                mime: "audio/wav",
+            });
+            onAudioChange(path);
+        } catch (e) { logError("save_page_audio", e); }
     }
 
-    async function deleteAudio() {
-        await loggedInvoke("delete_page_audio", { path: audioFile });
-        onAudioChange(null);
-    }
+    // Only clears the reference. The file is reconciled when the edit ends:
+    // update_page deletes it on save, cleanup_orphaned_media on cancel.
+    // Deleting it from disk here broke Cancel — the DB kept pointing at a
+    // file that no longer existed.
+    function deleteAudio() { onAudioChange(null); }
 
     return { recording, paused, startRecording, pauseRecording, resumeRecording, stopRecording, deleteAudio };
 }
 
-// Compact recording controls that slot into the toolbar
+// Compact audio controls that slot into the toolbar. With a clip present the
+// play button takes the record button's slot — re-recording is Delete + Record.
 function AudioControls({ audioFile, audio }) {
-    return (
-        <>
-            {!audio.recording ? (
-                <button className="nb-tb-btn record" onClick={audio.startRecording}>
-                    ● {audioFile ? "Re-record" : "Record"}
-                </button>
-            ) : (
-                <>
-                    {!audio.paused ? (
-                        <button className="nb-tb-btn record recording" onClick={audio.pauseRecording}>⏸ Pause</button>
-                    ) : (
-                        <button className="nb-tb-btn record recording" onClick={audio.resumeRecording}>▶ Resume</button>
-                    )}
-                    <button className="nb-tb-btn" onClick={audio.stopRecording}>■ Stop</button>
-                </>
-            )}
-            {audioFile && !audio.recording && (
+    if (audio.recording) {
+        return (
+            <>
+                {!audio.paused ? (
+                    <button className="nb-tb-btn record recording" onClick={audio.pauseRecording}>⏸ Pause</button>
+                ) : (
+                    <button className="nb-tb-btn record recording" onClick={audio.resumeRecording}>▶ Resume</button>
+                )}
+                <button className="nb-tb-btn" onClick={audio.stopRecording}>■ Stop</button>
+            </>
+        );
+    }
+    if (audioFile) {
+        return (
+            <>
+                <AudioPlayer path={audioFile} buttonClassName="audio-btn sm" />
                 <button className="nb-tb-btn danger" onClick={audio.deleteAudio}>Delete Audio</button>
-            )}
-        </>
+            </>
+        );
+    }
+    return (
+        <button className="nb-tb-btn record" onClick={audio.startRecording}>● Record</button>
     );
 }
 
@@ -325,6 +377,16 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         const l = el.scrollLeft > 1;
         const r = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
         setTbScroll((prev) => (prev.l === l && prev.r === r ? prev : { l, r }));
+    }, []);
+    // A plain mouse wheel only ever sends vertical delta, but the toolbar has
+    // no vertical overflow to consume it — without this it's only scrollable
+    // via trackpad horizontal swipe or manual dragging.
+    const handleTbWheel = useCallback((e) => {
+        const el = toolbarRef.current;
+        if (!el || el.scrollWidth <= el.clientWidth) return;
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        el.scrollLeft += e.deltaY;
+        e.preventDefault();
     }, []);
 
     const editor = useEditor({
@@ -378,7 +440,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         if (!editor) return;
         const path = await pickFile(["png", "jpg", "jpeg", "gif", "webp"]);
         if (path) {
-            editor.chain().focus().setImage({ src: convertFileSrc(path), rawPath: path }).run();
+            editor.chain().focus().setImage({ src: mediaSrc(path), rawPath: path }).run();
         }
     }, [editor]);
 
@@ -424,14 +486,6 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
 
     return (
         <div className="nb-editor-wrap">
-            {/* Audio player gets its own bar only when a clip exists; the record
-                controls live in the toolbar so no line is wasted otherwise */}
-            {audioFile && (
-                <div className="nb-audio-bar">
-                    <audio controls src={convertFileSrc(audioFile)} />
-                </div>
-            )}
-
             {editable && (
                 <>
                     {linkPrompt && (
@@ -464,7 +518,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                         </div>
                     )}
                     <div className={`nb-toolbar-wrap${tbScroll.l ? " scroll-l" : ""}${tbScroll.r ? " scroll-r" : ""}`}>
-                    <div className="nb-toolbar" ref={toolbarRef} onScroll={updateTbScroll}>
+                    <div className="nb-toolbar" ref={toolbarRef} onScroll={updateTbScroll} onWheel={handleTbWheel}>
                         <AudioControls audioFile={audioFile} audio={audio} />
                         <div className="nb-tb-sep" />
                         <button className={`nb-tb-btn${editor.isActive("bold") ? " active" : ""}`} onClick={() => editor.chain().focus().toggleBold().run()}><b>B</b></button>
@@ -700,6 +754,9 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
                 setToast("Page saved.");
             }
             setEditing(false); setIsNew(false);
+            // Recordings replaced mid-edit stay on disk until now; the DB is
+            // authoritative at this point, so orphans are safe to sweep
+            loggedInvoke("cleanup_orphaned_media").catch(e => logError("cleanup_orphaned_media", e));
         } catch (e) { logError("catch", e); setToast("Failed to save page.", "error"); }
     }
 
@@ -798,6 +855,9 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
                                 <div className="nb-page-meta">
                                     <div className="nb-page-title-row">
                                         <div className="nb-page-title">{currentPage.title}</div>
+                                        {currentPage.audio_file && (
+                                            <AudioPlayer path={currentPage.audio_file} />
+                                        )}
                                         <button onClick={() => startEdit(currentPage)}>Edit</button>
                                         <ConfirmDelete onConfirm={deletePage} />
                                     </div>
