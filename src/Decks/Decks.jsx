@@ -1,7 +1,23 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { open } from "@tauri-apps/plugin-dialog";
-import { CardFace, AudioPlayer, renderAnkiHtml, stripHtml, normalizeSearchText } from "./CardFace";
+import { CardFace, AudioPlayer, renderAnkiHtml, stripHtml, normalizeSearchText, stripAudioTags, extractRawAudioSrcs } from "./CardFace";
+
+// Read-only preview of an uploaded (Anki) field. Audio tags must not reach
+// the DOM as native <audio controls> — asset:// audio never plays on Linux
+// WebKitGTK and its controls just render "Error" — so they're stripped and
+// replaced with the same backend-read AudioPlayer the study views use.
+function UploadedHtmlField({ html }) {
+  const srcs = extractRawAudioSrcs(html);
+  return (
+    <>
+      <div className="dk-field-uploaded" dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(html)) }} />
+      {srcs.map((src, i) => (
+        <AudioPlayer key={i} path={src} style={{ justifyContent: "flex-start", marginTop: 6 }} />
+      ))}
+    </>
+  );
+}
 import { Tip, ConfirmDelete } from "../UIUtils";
 import "./Decks.css";
 
@@ -445,7 +461,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
       <div className="dk-field">
         <label>Front {form.is_uploaded && <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span>}</label>
         {form.is_uploaded ? (
-          <div className="dk-field-uploaded" dangerouslySetInnerHTML={{ __html: renderAnkiHtml(form.front) }} />
+          <UploadedHtmlField html={form.front} />
         ) : (
           <textarea rows={3} value={form.front} onChange={(e) => set("front", e.target.value)} />
         )}
@@ -483,7 +499,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
       <div className="dk-field">
         <label>Back {form.is_uploaded && <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span>}</label>
         {form.is_uploaded ? (
-          <div className="dk-field-uploaded" dangerouslySetInnerHTML={{ __html: renderAnkiHtml(form.back) }} />
+          <UploadedHtmlField html={form.back} />
         ) : (
           <textarea rows={3} value={form.back} onChange={(e) => set("back", e.target.value)} />
         )}
@@ -521,7 +537,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
       {form.imported_support && (
         <div className="dk-field">
           <label>Anki Support <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span></label>
-          <div className="dk-field-uploaded" dangerouslySetInnerHTML={{ __html: renderAnkiHtml(form.imported_support) }} />
+          <UploadedHtmlField html={form.imported_support} />
         </div>
       )}
 

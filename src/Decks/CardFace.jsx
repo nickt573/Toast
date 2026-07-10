@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { mediaSrc } from "../mediaPaths";
 import { loggedInvoke, logError } from "../logger";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
@@ -10,7 +10,7 @@ export function rewriteAnkiSrcs(html) {
     return html
         .replace(/src=["']([^"']+)["']/g, (match, src) => {
             if (src.startsWith("http") || src.startsWith("asset://")) return match;
-            try { return `src="${convertFileSrc(src)}"`; } catch { return match; }
+            try { return `src="${mediaSrc(src)}"`; } catch { return match; }
         })
         .replace(/<img\b([^>]*?)>/gi, (_, attrs) => {
             const cleaned = attrs
@@ -98,7 +98,7 @@ export function LinkifiedText({ text }) {
 
 // ─── Audio helpers ────────────────────────────────────────────────────────────
 
-function extractRawAudioSrcs(html) {
+export function extractRawAudioSrcs(html) {
     if (!html) return [];
     const srcs = [];
     const re = /<audio\b([^>]*)>/gi;
@@ -119,21 +119,52 @@ export function stripAudioTags(html) {
 
 // ─── AudioPlayer ──────────────────────────────────────────────────────────────
 
-export function AudioPlayer({ path, style }) {
+// buttonClassName swaps the default audio-btn look for a host-provided class
+// so the player can blend into toolbars (e.g. nb-tb-btn)
+export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
     const [src, setSrc] = useState(null);
     const [playing, setPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [failed, setFailed] = useState(false);
     const audioRef = useRef(null);
 
     useEffect(() => {
         if (!path) return;
         const ext = (path.split(".").pop() ?? "").toLowerCase();
-        const mime = { mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", m4a: "audio/mp4", mp4: "audio/mp4" }[ext] ?? "audio/mpeg";
+        const mime = {
+            mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", opus: "audio/ogg",
+            m4a: "audio/mp4", mp4: "audio/mp4", webm: "audio/webm",
+        }[ext] ?? "audio/mpeg";
         setLoading(true);
+        setFailed(false);
+        // Played via a blob URL: data: URIs never reach webkit's media
+        // pipeline on Linux, and blob URLs work everywhere
+        let objectUrl = null;
+        let cancelled = false;
         loggedInvoke("read_audio_b64", { path })
-            .then(b64 => { setSrc(`data:${mime};base64,${b64}`); setLoading(false); })
-            .catch(e => { logError("read_audio_b64", e); setLoading(false); });
-        return () => { setSrc(null); setPlaying(false); };
+            .then(b64 => {
+                if (cancelled) return;
+                if (b64.length === 0) {
+                    // e.g. recordings from builds whose recorder emitted no data
+                    setFailed(true);
+                    setLoading(false);
+                    return;
+                }
+                const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+                objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+                setSrc(objectUrl);
+                setLoading(false);
+            })
+            .catch(e => {
+                logError("read_audio_b64", e);
+                if (!cancelled) { setFailed(true); setLoading(false); }
+            });
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            setSrc(null);
+            setPlaying(false);
+        };
     }, [path]);
 
     function handleToggle() {
@@ -142,10 +173,17 @@ export function AudioPlayer({ path, style }) {
         if (playing) {
             audio.pause();
         } else {
-            audio.play().catch(e => logError("catch", e));
+            audio.play().catch(e => { logError("audio_play", e); setFailed(true); });
         }
     }
 
+    if (failed) {
+        return (
+            <div style={{ fontSize: 12, color: "var(--t-text-3)", textAlign: "center", ...style }}>
+                Audio unavailable
+            </div>
+        );
+    }
     if (!src && !loading) return null;
 
     return (
@@ -157,20 +195,11 @@ export function AudioPlayer({ path, style }) {
                     onPlay={() => setPlaying(true)}
                     onPause={() => setPlaying(false)}
                     onEnded={() => setPlaying(false)}
+                    onError={() => setFailed(true)}
                 />
             )}
-            <button
-                onClick={handleToggle}
-                disabled={!src || loading}
-                style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    padding: "6px 14px", borderRadius: "var(--t-r-lg)",
-                    border: "1px solid var(--t-border)", background: "var(--t-surface)",
-                    cursor: src ? "pointer" : "default",
-                    fontSize: 13, color: "var(--t-text-2)", fontFamily: "inherit",
-                }}
-            >
-                <span style={{ fontSize: 14 }}>{playing ? "⏸" : "▶"}</span>
+            <button onClick={handleToggle} disabled={!src || loading} className={buttonClassName}>
+                <span style={{ fontSize: "1.1em" }}>{playing ? "⏸" : "▶"}</span>
                 <span>{loading ? "Loading..." : playing ? "Pause" : "Play"}</span>
             </button>
         </div>
@@ -226,7 +255,7 @@ export function CardFace({ card, showBack }) {
             </div>
 
             {!card.is_uploaded && card.front_image && (
-                <img src={convertFileSrc(card.front_image)} alt="" style={imgStyle} />
+                <img src={mediaSrc(card.front_image)} alt="" style={imgStyle} />
             )}
 
             {frontAudio.length > 0 && (
@@ -265,7 +294,7 @@ export function CardFace({ card, showBack }) {
                     </div>
 
                     {!card.is_uploaded && card.back_image && (
-                        <img src={convertFileSrc(card.back_image)} alt="" style={imgStyle} />
+                        <img src={mediaSrc(card.back_image)} alt="" style={imgStyle} />
                     )}
 
                     {backAudio.length > 0 && (
