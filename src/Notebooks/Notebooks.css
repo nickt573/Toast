@@ -65,10 +65,6 @@
 .nb-editor-scroll { flex: 1; overflow-y: auto; padding-bottom: 16px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; }
 .nb-view-content .nb-editor-scroll { border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
 
-/* Audio bar */
-.nb-audio-bar { display: flex; align-items: center; gap: 6px; padding: 5px 0 6px; border-bottom: 1px solid var(--t-border); margin-bottom: 6px; flex-shrink: 0; }
-.nb-audio-bar audio { flex: 1; height: 30px; }
-
 /* Toolbar — no-wrap so groups stay together */
 .nb-toolbar {
   display: flex;
