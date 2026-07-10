@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { mediaSrc } from "../mediaPaths";
 
 // ─── Legacy heading migration ────────────────────────────────────────────────
 // The editor used to offer H1/H2/H3; it now offers numeric font sizes instead,
@@ -44,7 +44,7 @@ export function rewriteContentForDisplay(json) {
 
     if (node.type === "image" && node.attrs) {
         const raw = node.attrs.rawPath || node.attrs.src;
-        node.attrs = { ...node.attrs, src: convertFileSrc(raw), rawPath: raw };
+        node.attrs = { ...node.attrs, src: mediaSrc(raw), rawPath: raw };
     }
 
     if (Array.isArray(node.content)) {
