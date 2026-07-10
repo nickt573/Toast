@@ -1,3 +1,4 @@
+use crate::app_utils::paths::{is_stored_media, to_relative};
 use rusqlite::Result;
 use std::path::{Path, PathBuf};
 
@@ -21,14 +22,13 @@ pub fn save_card_audio_files(src_paths: Vec<String>, app_dir: &Path) -> Result<V
             continue;
         }
 
-        let src_path = PathBuf::from(&src);
-
-        // Already in the right place
-        if src_path.starts_with(&dest_dir) {
-            result.push(src);
+        // Already stored (relative or a legacy absolute form) — keep, normalized
+        if is_stored_media(&src, app_dir, "cards/audio") {
+            result.push(to_relative(&src, app_dir));
             continue;
         }
 
+        let src_path = PathBuf::from(&src);
         if src_path.file_name().is_none() {
             continue;
         }
@@ -44,7 +44,7 @@ pub fn save_card_audio_files(src_paths: Vec<String>, app_dir: &Path) -> Result<V
         };
         let dest = dest_dir.join(&uuid_name);
         if std::fs::copy(&src_path, &dest).is_ok() {
-            result.push(dest.to_string_lossy().to_string());
+            result.push(format!("cards/audio/{uuid_name}"));
         }
     }
 

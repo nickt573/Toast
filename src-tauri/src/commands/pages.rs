@@ -29,25 +29,38 @@ pub fn delete_page(id: i64, state: tauri::State<AppState>) -> Result<(), String>
 }
 
 #[tauri::command]
-pub fn save_page_audio(data: Vec<u8>, state: tauri::State<AppState>) -> Result<String, String> {
+pub fn save_page_audio(
+    data: Vec<u8>,
+    mime: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<String, String> {
     let app_dir = &state.app_dir;
     let audio_dir = app_dir.join("pages").join("audio");
     std::fs::create_dir_all(&audio_dir).map_err(|e| e.to_string())?;
 
-    let filename = format!("{}.mp4", uuid::Uuid::new_v4());
+    // The extension must match the bytes so playback picks the right
+    // decoder. The recorder sends WAV; webm/ogg/mp4 cover files recorded by
+    // older MediaRecorder-based builds. ".mp4" matches the legacy behavior.
+    let mime = mime.unwrap_or_default();
+    let ext = if mime.contains("wav") {
+        "wav"
+    } else if mime.contains("webm") {
+        "webm"
+    } else if mime.contains("ogg") {
+        "ogg"
+    } else {
+        "mp4"
+    };
+    let filename = format!("{}.{ext}", uuid::Uuid::new_v4());
     let path = audio_dir.join(&filename);
     std::fs::write(&path, &data).map_err(|e| e.to_string())?;
 
-    Ok(path.to_string_lossy().to_string())
+    Ok(format!("pages/audio/{filename}"))
 }
 
 #[tauri::command]
-pub fn delete_page_audio(path: String) -> Result<(), String> {
-    std::fs::remove_file(&path).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn read_audio_b64(path: String) -> Result<String, String> {
-    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+pub fn read_audio_b64(path: String, state: tauri::State<AppState>) -> Result<String, String> {
+    let full = crate::app_utils::paths::resolve_media_path(&state.app_dir, &path);
+    let bytes = std::fs::read(full).map_err(|e| e.to_string())?;
     Ok(BASE64_STANDARD.encode(&bytes))
 }
