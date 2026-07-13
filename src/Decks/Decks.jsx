@@ -46,6 +46,62 @@ const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 
 // Mirrors PRIORITY_CEIL in scheduling.rs: sequences below this are prioritized
 const PRIORITY_CEIL = -50000;
 
+// Describes media a sample carries, since the field holds a sound file or a
+// picture rather than the words "audio" or "image".
+const mediaNote = (media) => `contains ${media.join(" and ")} content`;
+
+// One row of the Anki field-mapping screen. Field names lie often enough that the
+// samples, not the name, are what you map against — so they get arrows to page
+// through real values drawn from across the deck.
+function AnkiFieldRow({ field, index, totalNotes, front, back, support, onToggle }) {
+  const [at, setAt] = useState(0);
+  const samples = field.samples;
+  const sample = samples[at];
+  const step = (delta) => setAt((prev) => (prev + delta + samples.length) % samples.length);
+
+  return (
+    <div className={`dk-anki-row${index % 2 === 1 ? " dk-anki-row--alt" : ""}`}>
+      <div className="dk-anki-field-info">
+        <div className="dk-anki-field-name">
+          {field.name}
+          <span className="dk-anki-field-count">
+            {field.note_count === 0
+              ? "empty on every card"
+              : `on ${field.note_count} of ${totalNotes} cards`}
+          </span>
+        </div>
+        {sample && (
+          <div className="dk-anki-sample">
+            <span className="dk-anki-sample-label">preview:</span>
+            {samples.length > 1 && (
+              <span className="dk-anki-pager">
+                <button type="button" className="dk-anki-arrow" onClick={() => step(-1)} title="Previous example">‹</button>
+                <span className="dk-anki-sample-pos">{at + 1}/{samples.length}</span>
+                <button type="button" className="dk-anki-arrow" onClick={() => step(1)} title="Next example">›</button>
+              </span>
+            )}
+            <span className="dk-anki-sample-quote" title={sample.text || mediaNote(sample.media)}>
+              {sample.text && <span className="dk-anki-sample-text">{sample.text}</span>}
+              {sample.media.length > 0 && (
+                <em className="dk-anki-sample-media">{mediaNote(sample.media)}</em>
+              )}
+            </span>
+          </div>
+        )}
+      </div>
+      <label className="dk-anki-check">
+        <input type="checkbox" checked={front} onChange={() => onToggle("front")} />
+      </label>
+      <label className="dk-anki-check">
+        <input type="checkbox" checked={back} onChange={() => onToggle("back")} />
+      </label>
+      <label className="dk-anki-check dk-anki-check--support">
+        <input type="checkbox" checked={support} onChange={() => onToggle("support")} />
+      </label>
+    </div>
+  );
+}
+
 // ─── Deck List ────────────────────────────────────────────────────────────────
 
 function DeckList({ setToast, onOpenDeck }) {
@@ -58,9 +114,9 @@ function DeckList({ setToast, onOpenDeck }) {
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState("");
   const [ankiPending, setAnkiPending] = useState(null);
-  const [ankiFrontIndices, setAnkiFrontIndices] = useState([]);
-  const [ankiBackIndices, setAnkiBackIndices] = useState([]);
-  const [ankiSupportIndices, setAnkiSupportIndices] = useState([]);
+  const [ankiFrontFields, setAnkiFrontFields] = useState([]);
+  const [ankiBackFields, setAnkiBackFields] = useState([]);
+  const [ankiSupportFields, setAnkiSupportFields] = useState([]);
   const [ankiCreateFlipped, setAnkiCreateFlipped] = useState(false);
   const [ankiMakeSearchable, setAnkiMakeSearchable] = useState(false);
   const [merging, setMerging] = useState(false);
@@ -102,11 +158,11 @@ function DeckList({ setToast, onOpenDeck }) {
     const path = await pickFile(["apkg"]);
     if (!path) return;
     try {
-      const fields = await loggedInvoke("peek_anki_fields", { path });
-      setAnkiPending({ path, fields });
-      setAnkiFrontIndices(fields.length > 0 ? [0] : []);
-      setAnkiBackIndices(fields.length > 1 ? [1] : []);
-      setAnkiSupportIndices([]);
+      const { fields, total_notes } = await loggedInvoke("peek_anki_fields", { path });
+      setAnkiPending({ path, fields, noteCount: total_notes });
+      setAnkiFrontFields(fields.length > 0 ? [fields[0].name] : []);
+      setAnkiBackFields(fields.length > 1 ? [fields[1].name] : []);
+      setAnkiSupportFields([]);
       setAnkiCreateFlipped(false);
       setAnkiMakeSearchable(false);
     } catch (e) { logError("catch", e); setToast(`Failed to read deck: ${e}`, "error"); }
@@ -114,14 +170,16 @@ function DeckList({ setToast, onOpenDeck }) {
 
   const confirmAnkiImport = async () => {
     if (!ankiPending) return;
-    if (ankiFrontIndices.length === 0) { setToast("Please select at least one front field."); return; }
-    if (ankiBackIndices.length === 0) { setToast("Please select at least one back field."); return; }
+    if (ankiFrontFields.length === 0) { setToast("Please select at least one front field."); return; }
+    if (ankiBackFields.length === 0) { setToast("Please select at least one back field."); return; }
+    // Fields land on the card in the order they're listed here, not the order they were ticked.
+    const inListOrder = (picked) => ankiPending.fields.map((f) => f.name).filter((n) => picked.includes(n));
     try {
       const [, count] = await loggedInvoke("import_anki_deck", {
         path: ankiPending.path,
-        frontFieldIndices: ankiFrontIndices,
-        backFieldIndices: ankiBackIndices,
-        supportFieldIndices: ankiSupportIndices,
+        frontFields: inListOrder(ankiFrontFields),
+        backFields: inListOrder(ankiBackFields),
+        supportFields: inListOrder(ankiSupportFields),
         createFlipped: ankiCreateFlipped,
         isSearchable: ankiMakeSearchable,
       });
@@ -243,24 +301,19 @@ function DeckList({ setToast, onOpenDeck }) {
             </div>
             <div className="dk-anki-field-scroll">
               {ankiPending.fields.map((f, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", background: i % 2 === 1 ? "rgba(26,18,8,0.03)" : "transparent", borderRadius: 4, padding: "2px 0" }}>
-                  <span style={{ flex: 1, fontSize: 13, color: "var(--t-text)" }}>
-                    <span style={{ color: "var(--t-text-3)", fontSize: 11, marginRight: 6, fontVariantNumeric: "tabular-nums" }}>{i + 1}.</span>
-                    {f}
-                  </span>
-                  <label style={{ width: 50, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
-                    <input type="checkbox" checked={ankiFrontIndices.includes(i)}
-                      onChange={() => setAnkiFrontIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
-                  </label>
-                  <label style={{ width: 50, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
-                    <input type="checkbox" checked={ankiBackIndices.includes(i)}
-                      onChange={() => setAnkiBackIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
-                  </label>
-                  <label style={{ width: 56, display: "flex", justifyContent: "center", alignItems: "center", cursor: "pointer" }}>
-                    <input type="checkbox" checked={ankiSupportIndices.includes(i)}
-                      onChange={() => setAnkiSupportIndices(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} />
-                  </label>
-                </div>
+                <AnkiFieldRow
+                  key={f.name}
+                  field={f}
+                  index={i}
+                  totalNotes={ankiPending.noteCount}
+                  front={ankiFrontFields.includes(f.name)}
+                  back={ankiBackFields.includes(f.name)}
+                  support={ankiSupportFields.includes(f.name)}
+                  onToggle={(which) => {
+                    const setter = { front: setAnkiFrontFields, back: setAnkiBackFields, support: setAnkiSupportFields }[which];
+                    setter(prev => prev.includes(f.name) ? prev.filter(x => x !== f.name) : [...prev, f.name]);
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -466,7 +519,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
     return (
       <div className="dk-editor-pane" ref={paneRef} onScroll={handlePaneScroll}>
         <div className="dk-editor-topbar">
-          <button className="quiet" onClick={() => setPreviewing(false)}>← Back to Edit</button>
+          <button className="quiet" onClick={() => setPreviewing(false)}>Edit</button>
           {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
           <button style={{ marginLeft: "auto" }} onClick={() => setPreviewFlipped((f) => !f)}>
             {previewFlipped ? "Show Front" : "Show All"}

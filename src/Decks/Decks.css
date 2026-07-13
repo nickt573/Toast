@@ -16,6 +16,23 @@
 /* Anki field mapping — long decks scroll instead of pushing the panel offscreen;
    the visible scrollbar comes from the app-wide rules in App.css */
 .dk-anki-field-scroll { max-height: 38vh; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; scrollbar-gutter: stable; border-bottom: 1px solid var(--t-border); }
+.dk-anki-row { display: flex; align-items: center; border-radius: 4px; padding: 3px 0; }
+.dk-anki-row--alt { background: rgba(26, 18, 8, 0.03); }
+.dk-anki-field-info { flex: 1; min-width: 0; }
+.dk-anki-field-name { font-size: 13px; color: var(--t-text); }
+.dk-anki-field-num { color: var(--t-text-3); font-size: 11px; margin-right: 6px; font-variant-numeric: tabular-nums; }
+.dk-anki-field-count { color: var(--t-text-3); font-size: 11px; margin-left: 6px; }
+.dk-anki-sample { display: flex; align-items: center; gap: 6px; margin: 3px 0 1px; min-width: 0; }
+.dk-anki-pager { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; }
+/* Bare button: inherits the neutral mauve fill, matching the notebook page nav */
+.dk-anki-arrow { width: 17px; height: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; line-height: 1; }
+.dk-anki-sample-pos { min-width: 22px; text-align: center; font-size: 10px; color: var(--t-text-3); font-variant-numeric: tabular-nums; }
+.dk-anki-sample-quote { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 5px; overflow: hidden; }
+.dk-anki-sample-label { flex-shrink: 0; font-size: 11px; color: var(--t-text-3); }
+.dk-anki-sample-text { font-size: 11px; color: var(--t-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dk-anki-sample-media { flex-shrink: 0; font-size: 11px; font-style: italic; color: var(--t-text-3); white-space: nowrap; }
+.dk-anki-check { width: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
+.dk-anki-check--support { width: 56px; }
 .dk-merge-row { display: flex; gap: 8px; align-items: center; }
 .dk-merge-row select { flex: 1; }
 
