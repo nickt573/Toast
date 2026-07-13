@@ -31,6 +31,9 @@
   margin-bottom: 28px;
 }
 .hp-refresh-day { flex-shrink: 0; margin-top: 4px; }
+/* Golden when a refresh would actually advance the app day */
+.hp-refresh-day.stale { background: var(--t-yellow); border-color: var(--t-yellow); color: #FFFDF7; box-shadow: var(--t-shadow-sm); }
+.hp-refresh-day.stale:hover { background: #C9941F; border-color: #C9941F; color: #FFFDF7; }
 
 .hp-greeting {
   font-family: var(--t-font-head);
@@ -151,6 +154,8 @@
 .hp-plan-card-stats { display: flex; align-items: center; flex: 1; margin-top: 18px; }
 .hp-plan-stat-box { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .hp-stat-num { font-family: var(--t-font-head); font-size: 36px; font-weight: 800; letter-spacing: -0.03em; color: var(--t-text); line-height: 1; }
+.hp-stat-num--todos { color: var(--t-yellow); }
+.hp-stat-num--decks { color: var(--t-blue); }
 .hp-stat-lbl { font-size: 11px; color: var(--t-text-3); font-weight: 600; }
 .hp-plan-stat-divider { width: 1px; height: 44px; background: var(--t-border); margin: 0 20px; flex-shrink: 0; }
 .hp-plan-card-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
@@ -229,13 +234,33 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 12px;
   border: 1px solid var(--t-yellow-bdr);
   border-radius: var(--t-r-lg);
   margin-bottom: 8px;
   background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%);
 }
 .hp-todo-row:last-child { margin-bottom: 0; }
+
+/* Existing-todo options in the Log Extra prescreen — todo-family bars */
+.hp-free-todo-option {
+  text-align: left;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--t-yellow-bdr);
+  border-radius: var(--t-r-lg);
+  background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%);
+  color: var(--t-text);
+  /* Global button styling is nowrap; clamp long todo names instead of overflowing the popup */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hp-free-todo-option:hover {
+  background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 62%);
+  border-color: var(--t-yellow);
+  color: var(--t-text);
+}
 .hp-todo-row.done {
   border-color: var(--t-green-bdr);
   background: linear-gradient(280deg, var(--t-green-bg) 0%, var(--t-surface) 45%);
@@ -244,15 +269,11 @@
 .hp-todo-text {
   font-weight: 600;
   color: var(--t-text);
-  font-size: 15px;
-  /* Warm hairline separates the name from the supplementary pills below */
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--t-yellow-bdr);
+  font-size: 17px;
 }
 .hp-todo-text.done {
   text-decoration: line-through;
   color: var(--t-text-3);
-  border-bottom-color: var(--t-green-bdr);
 }
 
 /* Deck row in study page */

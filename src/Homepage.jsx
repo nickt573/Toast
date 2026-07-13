@@ -169,26 +169,28 @@ function GradeButtons({ onGrade, card }) {
     if (!card) return null;
     const gradeDeltas = card.tier > 0 ? [
         { label: "Nope",  tierDelta: -2, grade: 0, cls: "hp-grade-nope",  easeDelta: -0.12 },
-        { label: "Rough", tierDelta: -1, grade: 1, cls: "hp-grade-rough", easeDelta: -0.05 },
-        { label: "Fine",  tierDelta:  1, grade: 2, cls: "hp-grade-fine",  easeDelta:  0.04 },
+        { label: "Rough", tierDelta: -1, grade: 1, cls: "hp-grade-rough", easeDelta: -0.08 },
+        { label: "Fine",  tierDelta:  1, grade: 2, cls: "hp-grade-fine",  easeDelta: -0.08, easeFloorZero: true },
         { label: "Easy",  tierDelta:  1, grade: 3, cls: "hp-grade-easy",  easeDelta:  0.10 },
     ] : [
-        { label: "One More Time", tierDelta: -1, grade: 1, cls: "hp-grade-omt",   easeDelta: -0.05 },
-        { label: "Got It",        tierDelta:  1, grade: 2, cls: "hp-grade-gotit", easeDelta:  0.04 },
+        { label: "One More Time", tierDelta: -1, grade: 4, cls: "hp-grade-omt",   easeDelta: -0.05 },
+        { label: "Got It",        tierDelta:  1, grade: 5, cls: "hp-grade-gotit", easeDelta:  0.00 },
     ];
 
-    function calcNextSequence(grade, tierDelta, easeDelta) {
+    function calcNextSequence(tierDelta, easeDelta, easeFloorZero) {
         if (!card) return null;
         const newTier = Math.min(30, Math.max(card.tier === 0 ? 0 : 1, card.tier + tierDelta));
-        const newEase = Math.max(-0.35, Math.min(0.35, card.ease + easeDelta));
+        // Fine never pushes ease below 0 or deepens an already-negative ease.
+        const easeFloor = easeFloorZero ? Math.min(0, card.ease) : -0.35;
+        const newEase = Math.max(easeFloor, Math.min(0.35, card.ease + easeDelta));
         if (newTier === 0) return 0;
         return Math.round(Math.pow(2, newTier - 1) * (1 + newEase));
     }
 
     return (
         <div className="hp-grade-bar">
-            {gradeDeltas.map(({ label, tierDelta, grade, cls, easeDelta }) => {
-                const nextSeq = calcNextSequence(grade, tierDelta, easeDelta);
+            {gradeDeltas.map(({ label, tierDelta, grade, cls, easeDelta, easeFloorZero }) => {
+                const nextSeq = calcNextSequence(tierDelta, easeDelta, easeFloorZero);
                 return (
                     <button key={grade} onClick={() => onGrade(grade)} className={`hp-grade-btn ${cls}`}>
                         <span>{label}</span>
@@ -304,7 +306,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
 
                 {allGroups.length > 0 && (
                     <div>
-                        <div className="hp-popup-label">Study materials</div>
+                        <div className="hp-popup-label">Decks/Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {allGroups.map(g => (
                                 <label key={g.id} className={`picker-pill${selectedGroupIds.includes(g.id) ? (g.group_type === "notebook" ? " active-notebook" : " active-deck") : ""}`}>
@@ -361,7 +363,8 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
 
 // ─── Free Todo Popup ──────────────────────────────────────────────────────────
 
-function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, setToast, initialTime = 0 }) {
+function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm, onCancel, setToast, initialTime = 0 }) {
+    const [mode, setMode] = useState(todos.length > 0 ? "choose" : "form");
     const [text, setText] = useState("");
     const [timeSpent, setTimeSpent] = useState(initialTime);
     const [numUnit, setNumUnit] = useState("");
@@ -369,6 +372,14 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
     const [selectedGroupIds, setSelectedGroupIds] = useState([]);
     const [selectedResourceIds, setSelectedResourceIds] = useState([]);
     const [categoryMap, setCategoryMap] = useState(DEFAULT_CATEGORY());
+    const [today, setToday] = useState("");
+    const [date, setDate] = useState("");
+
+    useEffect(() => {
+        loggedInvoke("get_current_date")
+            .then(d => { setToday(d); setDate(d); })
+            .catch(e => logError("catch", e));
+    }, []);
 
     function toggleGroup(id) {
         setSelectedGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -378,6 +389,29 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
     }
     function toggleCategory(bit) {
         setCategoryMap(prev => ({ ...prev, [bit]: !prev[bit] }));
+    }
+
+    function startBlank() {
+        setText("");
+        setCategoryMap(DEFAULT_CATEGORY());
+        setSelectedGroupIds([]);
+        setSelectedResourceIds([]);
+        setMode("form");
+    }
+
+    // Autofill only; the logged stat never stores the todo's id
+    async function pickTodo(todo) {
+        setText(todo.text);
+        setCategoryMap(maskToCategories(todo.category ?? 64));
+        try {
+            const [g, r] = await Promise.all([
+                loggedInvoke("get_todo_groups", { todoId: todo.id }),
+                loggedInvoke("get_todo_resources", { todoId: todo.id }),
+            ]);
+            setSelectedGroupIds(g.map(x => x.id));
+            setSelectedResourceIds(r.map(x => x.id));
+        } catch (e) { logError("catch", e); }
+        setMode("form");
     }
 
     async function submit() {
@@ -391,13 +425,44 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
             numUnit: numUnit || null,
             groupIds: selectedGroupIds,
             resourceIds: selectedResourceIds,
+            date: date && date !== today ? date : null,
         });
+    }
+
+    if (mode === "choose") {
+        return (
+            <div className="hp-overlay">
+                {/* Keyed per mode: reusing the scrolled DOM node skews the short prescreen */}
+                <div className="hp-popup" key="choose">
+                    <div className="hp-popup-title">Log Extra Activity</div>
+                    <button className="primary" onClick={startBlank}>Create My Own</button>
+                    <div>
+                        <div className="hp-popup-label">Or choose an existing todo</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
+                            {todos.map(t => (
+                                <button key={t.id} className="hp-free-todo-option" title={t.text} onClick={() => pickTodo(t)}>{t.text}</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="hp-popup-actions">
+                        <button onClick={onCancel}>Cancel</button>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
         <div className="hp-overlay">
-            <div className="hp-popup">
+            <div className="hp-popup" key="form">
                 <div className="hp-popup-title">Log Extra Activity</div>
+
+                <div>
+                    <div className="hp-popup-label">Date</div>
+                    <input type="date" value={date} max={today}
+                        onChange={(e) => setDate(e.target.value > today ? today : e.target.value)}
+                        style={{ width: "100%" }} />
+                </div>
 
                 <div>
                     <div className="hp-popup-label">What did you do?</div>
@@ -428,7 +493,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
 
                 {allGroups.length > 0 && (
                     <div>
-                        <div className="hp-popup-label">Study materials</div>
+                        <div className="hp-popup-label">Decks/Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {allGroups.map(g => (
                                 <label key={g.id} className={`picker-pill${selectedGroupIds.includes(g.id) ? (g.group_type === "notebook" ? " active-notebook" : " active-deck") : ""}`}>
@@ -465,6 +530,9 @@ function FreeTodoPopup({ planId, planResources, allGroups, onConfirm, onCancel, 
                 </div>
 
                 <div className="hp-popup-actions">
+                    {todos.length > 0 && (
+                        <button style={{ marginRight: "auto" }} onClick={() => setMode("choose")}>← Back</button>
+                    )}
                     <button onClick={onCancel}>Cancel</button>
                     <button className="primary" onClick={submit}>Log</button>
                 </div>
@@ -575,7 +643,7 @@ function StudySession({ group, onBack, setToast }) {
             if (flipped && card) {
                 const gradeMap = card.tier > 0
                     ? { "1": 0, "2": 1, "3": 2, "4": 3 }
-                    : { "1": 1, "2": 1, "3": 2, "4": 2 };
+                    : { "1": 4, "2": 4, "3": 5, "4": 5 };
                 if (gradeMap[e.key] !== undefined) handleGrade(gradeMap[e.key]);
             }
         }
@@ -657,6 +725,7 @@ function StudySession({ group, onBack, setToast }) {
 
 function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToast }) {
     const [todos, setTodos] = useState([]);
+    const [allTodos, setAllTodos] = useState([]);
     const [srsGroups, setSrsGroups] = useState([]);
     const [completingTodo, setCompletingTodo] = useState(null);
     const [completingTodoLinks, setCompletingTodoLinks] = useState({ groups: [], resources: [] });
@@ -701,6 +770,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             ]);
             const enabled = t.filter(todo => !todo.is_disabled);
             setTodos(enabled);
+            setAllTodos(t);
             setSrsGroups(srs.filter(([group]) => group.group_type === "deck"));
             setPlanResources(r);
             setAllGroups(g);
@@ -756,18 +826,24 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         } catch (e) { logError("catch", e); setToast("Failed to complete todo.", "error"); }
     }
 
-    async function confirmFreeTodo({ text, category, details, timeSpent, numUnit, groupIds, resourceIds }) {
+    async function confirmFreeTodo({ text, category, details, timeSpent, numUnit, groupIds, resourceIds, date }) {
         if (!category || category === 0) { setToast("Select at least one category.", "error"); return; }
         if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "error"); return; }
         try {
             await loggedInvoke("log_free_todo", {
                 planId: plan.id, text, category, details,
-                timeSpentMinutes: timeSpent, numUnit, groupIds, resourceIds,
+                timeSpentMinutes: timeSpent, numUnit, groupIds, resourceIds, date,
             });
             setShowFreeTodo(false);
             resetStudyTimer(plan.id);
-            setToast("Activity logged.");
-        } catch (e) { logError("catch", e); setToast("Failed to log activity.", "error"); }
+            setToast("Done!");
+        } catch (e) {
+            logError("catch", e);
+            const msg = String(e).includes("future")
+                ? "Can't log activity for a future date."
+                : "Failed to log activity.";
+            setToast(msg, "error");
+        }
     }
 
     return (
@@ -781,7 +857,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
 
                 {/* Todos */}
                 <div className="hp-section-panel">
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
                         <span className="hp-section-label hp-section-label--todos" style={{ marginBottom: 0, flex: 1 }}>Todos</span>
                         <button onClick={() => { pauseStudyTimer(plan.id); setShowFreeTodo(true); }} style={{ fontSize: 11 }}>Log Extra</button>
                     </div>
@@ -795,13 +871,20 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 <input type="checkbox" checked={todo.is_done}
                                     onChange={() => handleTodoCheck(todo)}
                                     style={{ marginTop: 3, cursor: "pointer", flexShrink: 0 }} />
-                                <div style={{ flex: 1 }}>
-                                    <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
-                                        {todo.text}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
+                                    {todo.text}
+                                </div>
+                                <div className="todo-section">
+                                    <div className="todo-section-label">Categories</div>
+                                    <div className="todo-section-pills">
+                                        <CategoryPills mask={todo.category} />
                                     </div>
-                                    <CategoryPills mask={todo.category} style={{ marginTop: 5 }} />
-                                    {(links.groups.length > 0 || links.resources.length > 0) && (
-                                        <div style={{ marginTop: 5, display: "flex", gap: 5, flexWrap: "wrap" }}>
+                                </div>
+                                {(links.groups.length > 0 || links.resources.length > 0) && (
+                                    <div className="todo-section">
+                                        <div className="todo-section-label">Tagged Materials</div>
+                                        <div className="todo-section-pills">
                                             {links.resources.map(r => (
                                                 <ResourcePill key={r.id} resource={r} />
                                             ))}
@@ -809,7 +892,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                                 <GroupPill key={g.id} group={g} onClick={() => navigateFromPlan(g)} />
                                             ))}
                                         </div>
-                                    )}
+                                    </div>
+                                )}
                                 </div>
                             </div>
                         );
@@ -878,6 +962,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         planId={plan.id}
                         planResources={planResources}
                         allGroups={allGroups}
+                        todos={allTodos}
                         onConfirm={confirmFreeTodo}
                         onCancel={() => setShowFreeTodo(false)}
                         setToast={setToast}
@@ -903,6 +988,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
     const [planCounts, setPlanCounts] = useState({});
     const [displayDate, setDisplayDate] = useState("");
     const [version, setVersion] = useState("");
+    const [dayStale, setDayStale] = useState(false);
 
     function loadDisplayDate() {
         loggedInvoke("get_current_date").then(ds => {
@@ -911,6 +997,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                 weekday: "long", month: "long", day: "numeric"
             }));
         }).catch(e => logError("catch", e));
+        loggedInvoke("is_day_stale").then(setDayStale).catch(e => logError("catch", e));
     }
 
     useEffect(() => {
@@ -918,6 +1005,12 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
         loadPlans();
         getVersion().then(setVersion).catch(e => logError("getVersion", e));
     }, []);
+
+    useEffect(() => {
+        if (view === VIEW_HOME) {
+            loggedInvoke("is_day_stale").then(setDayStale).catch(e => logError("catch", e));
+        }
+    }, [view]);
 
     useEffect(() => {
         if (returnContext?.plan) {
@@ -993,7 +1086,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                         <div className="hp-date">{displayDate}</div>
                     </div>
                     {onRefreshDay && (
-                        <button className="hp-refresh-day" onClick={onRefreshDay}>Refresh Day</button>
+                        <button className={`hp-refresh-day${dayStale ? " stale" : ""}`} onClick={onRefreshDay}>Refresh Day</button>
                     )}
                 </div>
 
@@ -1036,12 +1129,12 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                     </div>
                                     <div className="hp-plan-card-stats">
                                         <div className="hp-plan-stat-box">
-                                            <span className="hp-stat-num">{counts?.todos ?? 0}</span>
+                                            <span className="hp-stat-num hp-stat-num--todos">{counts?.todos ?? 0}</span>
                                             <span className="hp-stat-lbl">{(counts?.todos ?? 0) == 1 ? "todo due" : "todos due"}</span>
                                         </div>
                                         <div className="hp-plan-stat-divider" />
                                         <div className="hp-plan-stat-box">
-                                            <span className="hp-stat-num">{counts?.cards ?? 0}</span>
+                                            <span className="hp-stat-num hp-stat-num--decks">{counts?.cards ?? 0}</span>
                                             <span className="hp-stat-lbl">{(counts?.cards ?? 0) == 1 ? "card due" : "cards due"}</span>
                                         </div>
                                     </div>
