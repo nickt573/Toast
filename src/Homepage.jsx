@@ -868,12 +868,13 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         const links = todoLinks[todo.id] ?? { groups: [], resources: [] };
                         return (
                             <div key={todo.id} className={`hp-todo-row${todo.is_done ? " done" : ""}`}>
-                                <input type="checkbox" checked={todo.is_done}
-                                    onChange={() => handleTodoCheck(todo)}
-                                    style={{ marginTop: 3, cursor: "pointer", flexShrink: 0 }} />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
-                                    {todo.text}
+                                <div style={{ overflow: "hidden" }}>
+                                    <input type="checkbox" checked={todo.is_done}
+                                        onChange={() => handleTodoCheck(todo)}
+                                        style={{ float: "left", marginRight: 10, marginTop: 3, cursor: "pointer" }} />
+                                    <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
+                                        {todo.text}
+                                    </div>
                                 </div>
                                 <div className="todo-section">
                                     <div className="todo-section-label">Categories</div>
@@ -894,7 +895,6 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                         </div>
                                     </div>
                                 )}
-                                </div>
                             </div>
                         );
                     })}
