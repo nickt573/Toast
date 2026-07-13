@@ -41,16 +41,18 @@
   margin-top: 0;
 }
 .nb-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
+.nb-date-clear { font-size: 13px; line-height: 1; padding: 0 2px; border: none; background: none; box-shadow: none; color: var(--t-text-3); cursor: pointer; }
+.nb-date-clear:hover { background: none; box-shadow: none; color: var(--t-text); }
 
 /* Page layout */
 .nb-page-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; background: var(--t-bg); }
 .nb-page-meta { padding: 10px 20px 0; max-width: 700px; margin: 0 auto; width: 100%; box-sizing: border-box; flex-shrink: 0; }
 .nb-page-title { font-family: var(--t-font-head); font-size: 21px; font-weight: 700; margin: 0 0 4px; color: var(--t-text); }
-.nb-page-meta-row { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+.nb-page-meta-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
 .nb-page-meta-row .nb-page-description { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
 .nb-page-meta-row .nb-page-date { flex-shrink: 0; margin: 0 0 0 auto; white-space: nowrap; }
 .nb-page-description { font-size: 13px; color: var(--t-text-2); margin: 0 0 6px; line-height: 1.5; }
-.nb-page-date { font-size: 11px; color: var(--t-text-3); margin: 0 0 12px; }
+.nb-page-date { font-size: 11px; line-height: 19.5px; color: var(--t-text-3); margin: 0 0 12px; }
 .nb-page-divider { border: none; border-top: 1px solid var(--t-border); margin: 0 0 6px; }
 /* Edit-mode title/description — plain single-line inputs, side by side, with the
    Save/Cancel actions inline on the same row (no separate action bar) */

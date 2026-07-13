@@ -851,7 +851,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                         <div className="nb-date-filter">
                             <span style={{ fontSize: 12, color: "var(--t-text-3)", fontWeight: 500 }}>Created:</span>
                             <input type="date" value={dateOn} onChange={e => setDateOn(e.target.value)} />
-                            {dateOn && <button style={{ fontSize: 11, padding: "1px 5px" }} onClick={() => setDateOn("")}>Clear</button>}
+                            {dateOn && <button className="nb-date-clear" title="Clear" onClick={() => setDateOn("")}>×</button>}
                         </div>
                     )}
                 </div>
@@ -894,7 +894,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                     <div className="nb-page-title-row">
                                         <div className="nb-page-title">{currentPage.title}</div>
                                         {currentPage.audio_file && (
-                                            <AudioPlayer path={currentPage.audio_file} />
+                                            <AudioPlayer path={currentPage.audio_file} buttonClassName="audio-btn sm" />
                                         )}
                                         <button onClick={() => startEdit(currentPage)}>Edit</button>
                                         <ConfirmDelete onConfirm={deletePage} />
