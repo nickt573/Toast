@@ -250,6 +250,8 @@
   border-radius: var(--t-r-lg);
   background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%);
   color: var(--t-text);
+  /* Keep full height so the list scrolls instead of squashing rows */
+  flex-shrink: 0;
   /* Global button styling is nowrap; clamp long todo names instead of overflowing the popup */
   min-width: 0;
   overflow: hidden;
