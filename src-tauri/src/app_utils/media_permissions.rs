@@ -39,7 +39,7 @@ pub fn allow_media_permissions(window: &WebviewWindow) {
                         Ok(())
                     },
                 ));
-                let mut token = windows::Win32::System::WinRT::EventRegistrationToken::default();
+                let mut token: i64 = 0;
                 unsafe {
                     let _ = core.add_PermissionRequested(&handler, &mut token);
                 }

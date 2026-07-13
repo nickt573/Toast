@@ -4679,7 +4679,6 @@ dependencies = [
  "uuid",
  "webkit2gtk",
  "webview2-com",
- "windows",
  "zip 2.4.2",
 ]
 

@@ -16,6 +16,9 @@
 /* Anki field mapping — long decks scroll instead of pushing the panel offscreen;
    the visible scrollbar comes from the app-wide rules in App.css */
 .dk-anki-field-scroll { max-height: 38vh; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; scrollbar-gutter: stable; border-bottom: 1px solid var(--t-border); }
+/* Header sits outside the scroll box, so it must reserve the same gutter width
+   (the 10px ::-webkit-scrollbar in App.css) or its columns drift off the checkboxes */
+.dk-anki-head { display: flex; align-items: center; padding-right: 10px; }
 .dk-anki-row { display: flex; align-items: center; border-radius: 4px; padding: 3px 0; }
 .dk-anki-row--alt { background: rgba(26, 18, 8, 0.03); }
 .dk-anki-field-info { flex: 1; min-width: 0; }
