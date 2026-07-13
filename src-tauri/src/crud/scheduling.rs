@@ -297,11 +297,14 @@ pub fn on_pause_changed(
 }
 
 pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> {
+    // Grades 0-3 are graduated-card ratings (Nope/Rough/Fine/Easy); 4-5 are new-card ratings (One More Time/Got It).
     let (tier_delta, ease_delta): (i32, f64) = match grade {
         0 => (-2, -0.12),
-        1 => (-1, -0.05),
-        2 => (1, 0.04),
+        1 => (-1, -0.08),
+        2 => (1, -0.08),
         3 => (1, 0.10),
+        4 => (-1, -0.05),
+        5 => (1, 0.00),
         _ => {
             return Err(rusqlite::Error::InvalidParameterName(format!(
                 "Invalid grade: {}",
@@ -335,7 +338,9 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     // Floor depends on graduation status: graduated cards clamp at tier 1, ungraduated at tier 0
     let floor = if old_tier > 0 { 1 } else { 0 };
     let new_tier = (old_tier + tier_delta).max(floor).min(30);
-    let new_ease = (old_ease + ease_delta).max(-0.35).min(0.35);
+    // Fine (grade 2) never pushes ease below 0 or deepens an already-negative ease.
+    let ease_floor = if grade == 2 { old_ease.min(0.0) } else { -0.35 };
+    let new_ease = (old_ease + ease_delta).max(ease_floor).min(0.35);
 
     let new_sequence: i32 = if new_tier == 0 {
         old_sequence
@@ -365,6 +370,7 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     )?;
 
     let today = get_date(&tx)?;
+    // Rows predating the new-card renumbering store One More Time/Got It as grades 1/2, not 4/5; any per-grade read of new-card history must handle both.
     tx.execute(
         "INSERT INTO card_grade_log (card_id, grade, graded_at, old_tier, new_tier) VALUES (?1, ?2, ?3, ?4, ?5)",
         rusqlite::params![item_id, grade, today, old_tier, new_tier],
