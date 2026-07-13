@@ -159,11 +159,11 @@
 }
 .st-meta-pill--new      { background: var(--t-blue-bg);   color: var(--t-blue);   border-color: var(--t-blue-bdr); }
 .st-meta-pill--promote  { background: var(--t-green-bg);  color: var(--t-green);  border-color: var(--t-green-bdr); }
-.st-meta-pill--demote   { background: var(--t-red-bg);    color: var(--t-red);    border-color: var(--t-red-bdr); }
+.st-meta-pill--demote   { background: var(--t-red-2-bg);  color: var(--t-red-2);  border-color: var(--t-red-2-bdr); }
 .st-meta-pill--time     { background: var(--t-yellow-bg); color: var(--t-yellow); border-color: var(--t-yellow-bdr); }
 .st-meta-pill--ret-good { background: var(--t-green-bg);  color: var(--t-green);  border-color: var(--t-green-bdr); }
 .st-meta-pill--ret-mid  { background: var(--t-amber-bg);  color: var(--t-amber);  border-color: var(--t-amber-bdr); }
-.st-meta-pill--ret-poor { background: var(--t-red-bg);    color: var(--t-red);    border-color: var(--t-red-bdr); }
+.st-meta-pill--ret-poor { background: var(--t-red-2-bg);  color: var(--t-red-2);  border-color: var(--t-red-2-bdr); }
 .st-todo-expanded { padding: 12px 14px 14px; background: var(--t-surface-2); border-top: 1px solid var(--t-stat-bdr); }
 /* White bubble sets the log's note apart from the linked-items sections below */
 .st-todo-notes { margin: 0; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-xl); padding: 9px 12px; }

@@ -38,6 +38,12 @@
   --t-red-bg-h:      #EFCBCB;   /* danger hover (deepened) */
   --t-red-bdr:       #D8AEAE;
 
+  /* Stat reds (demoted / poor retention) — truer, warmer red than the pinkish
+     danger fill above, so a metric never reads as a destructive button */
+  --t-red-2:         #B04A42;
+  --t-red-2-bg:      #F7D3C9;
+  --t-red-2-bdr:     #E0A99C;
+
   /* Decks / Cards — slate blue (softened to harmonize) */
   --t-blue:          #5A7A90;
   --t-blue-bg:       #DDE7EC;
