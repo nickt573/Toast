@@ -338,9 +338,12 @@ function ResourcesSection({ planId, setToast, onChanged }) {
                 <div key={r.id} className="plan-resource-row">
                     {editingId === r.id ? (
                         <div className="plan-resource-edit-form">
-                            <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" />
-                            <input value={editType} onChange={(e) => setEditType(e.target.value)} placeholder="Type (book, website, video…)" />
-                            <input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="URL (optional)" />
+                            <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name"
+                                onKeyDown={(e) => { if (e.key === "Enter") saveEdit(r); if (e.key === "Escape") setEditingId(null); }} />
+                            <input value={editType} onChange={(e) => setEditType(e.target.value)} placeholder="Type (book, website, video…)"
+                                onKeyDown={(e) => { if (e.key === "Enter") saveEdit(r); if (e.key === "Escape") setEditingId(null); }} />
+                            <input value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="URL (optional)"
+                                onKeyDown={(e) => { if (e.key === "Enter") saveEdit(r); if (e.key === "Escape") setEditingId(null); }} />
                             <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Notes (optional)" rows={2}
                                 style={{ fontFamily: "inherit", resize: "none" }} />
                             <div className="plan-resource-edit-actions">
