@@ -153,6 +153,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                 <div>
                     <div style={{ fontSize: 12, marginBottom: 4 }}>Description</div>
                     <input value={text} onChange={(e) => setText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") updateTodo(); if (e.key === "Escape") setEditing(false); }}
                         style={{ fontSize: 14, width: "100%", boxSizing: "border-box" }} />
                 </div>
 
