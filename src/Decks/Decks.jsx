@@ -43,6 +43,9 @@ const parseFile = (file) => {
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
+// Mirrors PRIORITY_CEIL in scheduling.rs: sequences below this are prioritized
+const PRIORITY_CEIL = -50000;
+
 // ─── Deck List ────────────────────────────────────────────────────────────────
 
 function DeckList({ setToast, onOpenDeck }) {
@@ -50,6 +53,7 @@ function DeckList({ setToast, onOpenDeck }) {
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState([]);
   const [cardCounts, setCardCounts] = useState({});
+  const [srsSummaries, setSrsSummaries] = useState({});
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState("");
@@ -65,12 +69,20 @@ function DeckList({ setToast, onOpenDeck }) {
   const [mergeName, setMergeName] = useState("");
   const [mergeReset, setMergeReset] = useState(false);
 
+  const loadSrsSummaries = () =>
+    loggedInvoke("get_deck_srs_summaries")
+      .then(rows => setSrsSummaries(Object.fromEntries(
+        rows.map(([id, newTotal, reviewTotal]) => [id, { newTotal, reviewTotal }])
+      )))
+      .catch(e => logError("catch", e));
+
   useEffect(() => {
     loggedInvoke("get_decks").then(setDecks).catch(e => logError("catch", e)).finally(() => setLoading(false));
     loggedInvoke("get_plans").then(setPlans).catch(e => logError("catch", e));
     loggedInvoke("get_deck_card_counts")
       .then(rows => setCardCounts(Object.fromEntries(rows)))
       .catch(e => logError("catch", e));
+    loadSrsSummaries();
   }, []);
 
   const getPlanName = (planId) => plans.find((p) => p.id === planId)?.name ?? null;
@@ -117,6 +129,7 @@ function DeckList({ setToast, onOpenDeck }) {
       const [updatedDecks, counts] = await Promise.all([
         loggedInvoke("get_decks"),
         loggedInvoke("get_deck_card_counts"),
+        loadSrsSummaries(),
       ]);
       setDecks(updatedDecks);
       setCardCounts(Object.fromEntries(counts));
@@ -169,6 +182,7 @@ function DeckList({ setToast, onOpenDeck }) {
       const [updatedDecks, counts] = await Promise.all([
         loggedInvoke("get_decks"),
         loggedInvoke("get_deck_card_counts"),
+        loadSrsSummaries(),
       ]);
       setDecks(updatedDecks);
       setCardCounts(Object.fromEntries(counts));
@@ -181,8 +195,8 @@ function DeckList({ setToast, onOpenDeck }) {
     <>
       <div className="landing-hdr landing-hdr--deck">
         <h2>Decks</h2>
-        <button onClick={startMerge} disabled={decks.length < 2}>Merge Decks</button>
         <button onClick={pickAnkiFile}>Import Anki</button>
+        <button onClick={startMerge} disabled={decks.length < 2}>Merge Decks</button>
       </div>
 
       {merging && (
@@ -285,10 +299,27 @@ function DeckList({ setToast, onOpenDeck }) {
                   <span className="dk-deck-name">{deck.name}</span>
                   <div className="landing-card-stats">
                     <span className="landing-stat landing-stat--card">
-                      <b>{cardCounts[deck.id] ?? 0}</b> {(cardCounts[deck.id] ?? 0) === 1 ? "card" : "cards"}
+                      <b>{cardCounts[deck.id] ?? 0}</b>
+                      <span>{(cardCounts[deck.id] ?? 0) === 1 ? "card" : "cards"}</span>
+                    </span>
+                    <span className="landing-stat-divider" />
+                    <span className="landing-stat landing-stat--new">
+                      <b>{srsSummaries[deck.id]?.newTotal ?? 0}</b>
+                      <span>new</span>
+                    </span>
+                    <span className="landing-stat-divider" />
+                    <span className="landing-stat landing-stat--review">
+                      <b>{srsSummaries[deck.id]?.reviewTotal ?? 0}</b>
+                      <span>review</span>
                     </span>
                     {deck.plan_id && getPlanName(deck.plan_id) && (
-                      <span className="landing-stat landing-stat--plan">{getPlanName(deck.plan_id)}</span>
+                      <>
+                        <span className="landing-stat-divider" />
+                        <span className="landing-stat landing-stat--plan landing-stat--text">
+                          <b>{getPlanName(deck.plan_id)}</b>
+                          <span>plan</span>
+                        </span>
+                      </>
                     )}
                   </div>
                 </>
@@ -421,14 +452,14 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
     const last = cardLog[0]?.graded_at;
     return (
       <div className="dk-card-log">
-        {form.tier === 0 ? "New" : "Review"}
+        {form.tier === 0 ? <span className="dk-log-new">New</span> : <span className="dk-log-review">Review</span>}
         {` · Review retention: ${isReview ? retention + "%" : "N/A"}`}
         {total === 1 ? ` · Seen ${total} time` : ` · Seen ${total} times`}
         {last && ` · Last seen: ${last}`}
       </div>
     );
   })() : (
-    <div className="dk-card-log">New · Unseen</div>
+    <div className="dk-card-log"><span className="dk-log-new">New</span> · Unseen</div>
   );
 
   if (previewing) {
@@ -976,7 +1007,12 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                         onClick={() => setSelectedId(card.id)}>
                         <td><div className="dk-cell-clamp">{front}</div></td>
                         <td><div className="dk-cell-clamp">{back}</div></td>
-                        <td>{card.sequence > 0 ? `${card.sequence}d` : card.is_due ? "Today" : "ASAP"}</td>
+                        <td>{card.sequence > 0 ? `${card.sequence}d` : (
+                          <>
+                            {card.is_due ? "Today" : "ASAP"}
+                            {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star" title="Prioritized">★</span>}
+                          </>
+                        )}</td>
                         <td>{card.is_paused ? "Yes" : "—"}</td>
                       </tr>
                     );
