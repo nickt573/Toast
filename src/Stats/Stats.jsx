@@ -975,7 +975,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     );
                   })()}
                   <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-                    Deleted items can be removed here, but they cannot be added back.
+                    Deleted materials can be removed here, but they cannot be added back.
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="primary" onClick={() => saveEdit(r)}>Save</button>
