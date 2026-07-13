@@ -50,5 +50,4 @@ webkit2gtk = "2.0"
 
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.38"
-windows = "0.61"
 

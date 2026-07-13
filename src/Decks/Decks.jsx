@@ -290,7 +290,7 @@ function DeckList({ setToast, onOpenDeck }) {
         <div className="dk-merge-panel">
           <div style={{ fontSize: 13, fontWeight: 500, color: "var(--t-text)" }}>Map fields</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <div style={{ display: "flex", alignItems: "center", fontSize: 11, color: "var(--t-text-3)", paddingBottom: 4, borderBottom: "1px solid var(--t-border)" }}>
+            <div className="dk-anki-head" style={{ fontSize: 11, color: "var(--t-text-3)", paddingBottom: 4, borderBottom: "1px solid var(--t-border)" }}>
               <span style={{ flex: 1 }}>Field</span>
               <span style={{ width: 50, textAlign: "center" }}>Front</span>
               <span style={{ width: 50, textAlign: "center" }}>Back</span>
