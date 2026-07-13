@@ -44,6 +44,14 @@ pub fn get_deck_card_counts(state: tauri::State<AppState>) -> Result<Vec<(i64, i
 }
 
 #[tauri::command]
+pub fn get_deck_srs_summaries(
+    state: tauri::State<AppState>,
+) -> Result<Vec<(i64, i64, i64)>, String> {
+    let conn = state.conn.lock().unwrap();
+    read::get_deck_srs_summaries(&conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn update_deck(deck: Group, state: tauri::State<AppState>) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
     update::update_deck(deck, &conn).map_err(|e| e.to_string())

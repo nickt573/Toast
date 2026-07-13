@@ -242,6 +242,23 @@ pub fn get_pages(notebook_id: i64, conn: &Connection) -> Result<Vec<Page>> {
     .collect()
 }
 
+/// (deck_id, new_total, review_total) for every deck.
+pub fn get_deck_srs_summaries(conn: &Connection) -> Result<Vec<(i64, i64, i64)>> {
+    conn.prepare(
+        r#"
+        SELECT g.id,
+            COUNT(c.id) FILTER (WHERE c.tier = 0),
+            COUNT(c.id) FILTER (WHERE c.tier > 0)
+        FROM "group" g
+        LEFT JOIN card c ON c.group_id = g.id
+        WHERE g.group_type = 'deck'
+        GROUP BY g.id
+        "#,
+    )?
+    .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+    .collect()
+}
+
 /// (notebook_id, page_count) for every notebook, including empty notebooks.
 pub fn get_notebook_page_counts(conn: &Connection) -> Result<Vec<(i64, i64)>> {
     conn.prepare(
