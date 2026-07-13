@@ -353,13 +353,13 @@ function ResourcesSection({ planId, setToast, onChanged }) {
                             <div className="plan-resource-body">
                                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                                     <div className="plan-resource-name">{r.name}</div>
+                                    {r.url &&
+                                        <a href={r.url} className="plan-resource-url"
+                                            onClick={(e) => { e.preventDefault(); openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`); }}>
+                                            ↗
+                                        </a>}
                                     {r.resource_type && <span className="st-resource-card-type">{r.resource_type}</span>}
                                 </div>
-                                {r.url &&
-                                    <a href={r.url} className="plan-resource-url"
-                                        onClick={(e) => { e.preventDefault(); openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`); }}>
-                                        Link<span style={{ marginLeft: 3, fontSize: 9 }}>↗</span>
-                                    </a>}
                                 {r.notes && <div className="plan-resource-notes">{r.notes}</div>}
                             </div>
                             <div className="plan-resource-actions">
@@ -481,10 +481,6 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
                         <div className="plan-form-sublabel">Categories</div>
                         <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                     </div>
-                    <div>
-                        <div className="plan-form-sublabel">Frequency</div>
-                        <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
-                    </div>
 
                     {planResources.length > 0 && (
                         <div>
@@ -503,7 +499,7 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
 
                     {groups.length > 0 && (
                         <div>
-                            <div className="plan-form-sublabel">Study Materials</div>
+                            <div className="plan-form-sublabel">Decks/Notebooks</div>
                             <div className="plan-pill-group">
                                 {groups.map(g => {
                                     const active = selectedGroupIds.includes(g.id);
@@ -520,6 +516,11 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
                             </div>
                         </div>
                     )}
+
+                    <div>
+                        <div className="plan-form-sublabel">Frequency</div>
+                        <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
+                    </div>
 
                     <div className="plan-form-actions">
                         <button className="primary" onClick={submit}>Add</button>
@@ -720,9 +721,11 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                 <>
                                     <div className="landing-card-name">{plan.name}</div>
                                     <div className="landing-card-stats">
-                                        <span className="landing-stat landing-stat--todos"><b>{summaries[plan.id]?.todos ?? 0}</b> {(summaries[plan.id]?.todos ?? 0) === 1 ? "todo" : "todos"}</span>
-                                        <span className="landing-stat landing-stat--resources"><b>{summaries[plan.id]?.resources ?? 0}</b> {(summaries[plan.id]?.resources ?? 0) === 1 ? "resource" : "resources"}</span>
-                                        <span className="landing-stat landing-stat--deck"><b>{summaries[plan.id]?.decks ?? 0}</b> {(summaries[plan.id]?.decks ?? 0) === 1 ? "deck" : "decks"}</span>
+                                        <span className="landing-stat landing-stat--todos"><b>{summaries[plan.id]?.todos ?? 0}</b><span>{(summaries[plan.id]?.todos ?? 0) === 1 ? "todo" : "todos"}</span></span>
+                                        <span className="landing-stat-divider" />
+                                        <span className="landing-stat landing-stat--resources"><b>{summaries[plan.id]?.resources ?? 0}</b><span>{(summaries[plan.id]?.resources ?? 0) === 1 ? "resource" : "resources"}</span></span>
+                                        <span className="landing-stat-divider" />
+                                        <span className="landing-stat landing-stat--deck"><b>{summaries[plan.id]?.decks ?? 0}</b><span>{(summaries[plan.id]?.decks ?? 0) === 1 ? "deck" : "decks"}</span></span>
                                     </div>
                                 </>
                             )}

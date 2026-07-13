@@ -75,7 +75,7 @@ export function GroupTypeBadge({ type }) {
       border: `1px solid ${nb ? "var(--t-plum-bdr)" : "var(--t-blue-bdr)"}`,
       background: nb ? "var(--t-plum-bg)" : "var(--t-blue-bg)",
       color: nb ? "var(--t-plum)" : "var(--t-blue)",
-      lineHeight: 1.8, letterSpacing: "0.03em",
+      lineHeight: 1.3, letterSpacing: "0.03em",
     }}>
       {nb ? "nb" : "dk"}
     </span>
@@ -89,13 +89,9 @@ export function ResourceCard({ res }) {
     <div className="st-resource-card">
       <div className="st-resource-card-head">
         <span className="st-resource-card-name">{res.name}</span>
+        {res.url && <span className="st-resource-card-url" onClick={openResource}>↗</span>}
         {res.resource_type && <span className="st-resource-card-type">{res.resource_type}</span>}
       </div>
-      {res.url && (
-        <span className="st-resource-card-url" onClick={openResource}>
-          Link<span style={{ marginLeft: 3, fontSize: 9 }}>↗</span>
-        </span>
-      )}
       {res.notes && <div className="st-resource-card-notes">{res.notes}</div>}
     </div>
   );
