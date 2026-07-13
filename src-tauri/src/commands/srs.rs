@@ -85,3 +85,10 @@ pub fn get_current_date(state: tauri::State<AppState>) -> Result<String, String>
     let conn = state.conn.lock().unwrap();
     scheduling::get_date(&conn).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn is_day_stale(state: tauri::State<AppState>) -> Result<bool, String> {
+    let conn = state.conn.lock().unwrap();
+    let stored = scheduling::get_date(&conn).map_err(|e| e.to_string())?;
+    Ok(stored != chrono::Local::now().date_naive().to_string())
+}

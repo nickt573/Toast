@@ -398,6 +398,7 @@ pub fn log_free_todo(
     num_unit: Option<String>,
     group_ids: Vec<i64>,
     resource_ids: Vec<i64>,
+    date: Option<String>,
     conn: &Connection,
 ) -> Result<()> {
     if category == 0 {
@@ -413,7 +414,20 @@ pub fn log_free_todo(
     // Todo time is stored as whole minutes (the column stays FLOAT)
     let time_spent_minutes = time_spent_minutes.round();
 
-    let today = get_date(&conn)?;
+    let app_today = get_date(&conn)?;
+    let today = match date {
+        Some(d) => {
+            chrono::NaiveDate::parse_from_str(&d, "%Y-%m-%d")
+                .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
+            if d > app_today {
+                return Err(rusqlite::Error::InvalidParameterName(
+                    "date cannot be in the future".into(),
+                ));
+            }
+            d
+        }
+        None => app_today,
+    };
     let category_str = category_mask_to_string(category);
     let plan_name: String = conn
         .query_row("SELECT name FROM plan WHERE id = ?1", [plan_id], |r| {

@@ -114,6 +114,7 @@ pub fn log_free_todo(
     num_unit: Option<String>,
     group_ids: Vec<i64>,
     resource_ids: Vec<i64>,
+    date: Option<String>,
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
@@ -126,6 +127,7 @@ pub fn log_free_todo(
         num_unit,
         group_ids,
         resource_ids,
+        date,
         &conn,
     )
     .map_err(|e| e.to_string())
