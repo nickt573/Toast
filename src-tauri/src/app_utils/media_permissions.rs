@@ -7,7 +7,7 @@
 use tauri::WebviewWindow;
 
 pub fn allow_media_permissions(window: &WebviewWindow) {
-    let _ = window.with_webview(|webview| {
+    let _ = window.with_webview(|_webview| {
         #[cfg(any(
             target_os = "linux",
             target_os = "dragonfly",
@@ -17,7 +17,7 @@ pub fn allow_media_permissions(window: &WebviewWindow) {
         ))]
         {
             use webkit2gtk::{PermissionRequestExt, WebViewExt};
-            webview.inner().connect_permission_request(|_, request| {
+            _webview.inner().connect_permission_request(|_, request| {
                 request.allow();
                 true
             });
@@ -30,7 +30,7 @@ pub fn allow_media_permissions(window: &WebviewWindow) {
             };
             use webview2_com::PermissionRequestedEventHandler;
 
-            if let Ok(core) = unsafe { webview.controller().CoreWebView2() } {
+            if let Ok(core) = unsafe { _webview.controller().CoreWebView2() } {
                 let handler = PermissionRequestedEventHandler::create(Box::new(
                     move |_sender, args: Option<ICoreWebView2PermissionRequestedEventArgs>| {
                         if let Some(args) = args {
