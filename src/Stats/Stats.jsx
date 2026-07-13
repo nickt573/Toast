@@ -26,9 +26,12 @@ const RED    = "#B85454";  // terracotta — demoted / poor retention
 const AMBER  = "#C49A44";  // amber — mid retention
 const GRAY   = "#9A8488";  // warm grey — neutral
 
+const YELLOW = "#E0A92E"; // yellow — todos
+
 const BLUE_BG   = "rgba(90,122,144,0.78)";
 const GREEN_BG  = "rgba(74,140,94,0.78)";
 const RED_BG    = "rgba(184,84,84,0.78)";
+const YELLOW_BG = "rgba(224,169,46,0.78)";
 
 // Category colors are defined once in PlanUtils and shared with Todos.
 const CATEGORY_COLORS = CATEGORY_COLOR_BY_LABEL;
@@ -77,14 +80,15 @@ function categoryStringToMap(catStr) {
 function computeMetrics(groupStats, todoStats) {
   const studyMins = groupStats.reduce((s, r) => s + r.time_spent_minutes, 0);
   const todoMins  = todoStats.reduce((s, r) => s + r.time_spent_minutes, 0);
-  const cardsReviewed = groupStats.reduce((s, r) => s + r.num_new + r.num_promote + r.num_demote, 0);
+  // Sum of num_new = unique cards studied
+  const cardsStudied = groupStats.reduce((s, r) => s + r.num_new, 0);
   const todosDone = todoStats.length;
 
   let totalP = 0, totalD = 0;
   groupStats.forEach(r => { totalP += r.num_promote; totalD += r.num_demote; });
   const avgRetention = (totalP + totalD) > 0 ? totalP / (totalP + totalD) : null;
 
-  return { studyMins, todoMins, cardsReviewed, todosDone, avgRetention };
+  return { studyMins, todoMins, cardsStudied, todosDone, avgRetention };
 }
 
 // ─── Chart data builders ──────────────────────────────────────────────────────
@@ -151,6 +155,28 @@ function buildOverTimeData(groupStats, unit = "day") {
   };
 
   return { barData, lineData };
+}
+
+function buildTimeSpentData(groupStats, todoStats, unit = "day") {
+  const byDate = {};
+  const add = (r, kind) => {
+    const key = bucketKey(r.date, unit);
+    if (!byDate[key]) byDate[key] = { todo: 0, deck: 0 };
+    byDate[key][kind] += r.time_spent_minutes;
+  };
+  todoStats.forEach(r => add(r, "todo"));
+  groupStats.forEach(r => add(r, "deck"));
+
+  const dates = Object.keys(byDate).sort();
+  const toHours = m => Math.round((m / 60) * 10) / 10;
+
+  return {
+    labels: dates,
+    datasets: [
+      { label: "Todos", data: dates.map(d => toHours(byDate[d].todo)), backgroundColor: YELLOW_BG, stack: "s" },
+      { label: "Decks", data: dates.map(d => toHours(byDate[d].deck)), backgroundColor: BLUE_BG,   stack: "s" },
+    ],
+  };
 }
 
 function buildByDeckData(groupStats) {
@@ -267,45 +293,55 @@ const RANGES = [
 ];
 
 function ChartPanel({ groupStats, todoStats }) {
-  const [tab, setTab] = useState("overtime");
+  const [tab, setTab] = useState("bytime");
   const [range,  setRange]  = useState(30);
   const [offset, setOffset] = useState(0);
 
   // Snap back to the most recent window when the underlying data changes (e.g. plan switch)
-  useEffect(() => setOffset(0), [groupStats]);
+  useEffect(() => setOffset(0), [groupStats, todoStats]);
 
-  const allDates = [...new Set(groupStats.map(r => r.date))].sort();
-  const minDate = allDates[0] ?? null;
-  const maxDate = allDates[allDates.length - 1] ?? null;
-
-  let windowStats = groupStats;
-  let windowStart = null, windowEnd = null;
-  if (range !== null && maxDate) {
-    windowEnd   = addDays(maxDate, -offset * range);
-    windowStart = addDays(windowEnd, -(range - 1));
-    windowStats = groupStats.filter(r => r.date >= windowStart && r.date <= windowEnd);
+  // Each chart windows over its own date domain
+  function computeWindow(allDates) {
+    const minDate = allDates[0] ?? null;
+    const maxDate = allDates[allDates.length - 1] ?? null;
+    let start = null, end = null;
+    if (range !== null && maxDate) {
+      end   = addDays(maxDate, -offset * range);
+      start = addDays(end, -(range - 1));
+    }
+    // "All" keeps every datapoint but widens the unit so a lifetime of history stays
+    // readable: raw days up to 90 days of span, weekly totals to ~18 months, then monthly.
+    let unit = "day";
+    if (range === null && minDate && maxDate) {
+      const spanDays = (new Date(maxDate) - new Date(minDate)) / 86400000 + 1;
+      if (spanDays > 548) unit = "month";
+      else if (spanDays > 90) unit = "week";
+    }
+    const canGoOlder = range !== null && minDate !== null && start > minDate;
+    return { start, end, unit, canGoOlder };
   }
+  const inWindow = (win) => (r) => win.start === null || (r.date >= win.start && r.date <= win.end);
 
-  // "All" keeps every datapoint but widens the unit so a lifetime of history stays
-  // readable: raw days up to 90 days of span, weekly totals to ~18 months, then monthly.
-  let unit = "day";
-  if (range === null && minDate && maxDate) {
-    const spanDays = (new Date(maxDate) - new Date(minDate)) / 86400000 + 1;
-    if (spanDays > 548) unit = "month";
-    else if (spanDays > 90) unit = "week";
-  }
+  const overWin = computeWindow([...new Set(groupStats.map(r => r.date))].sort());
+  const { barData, lineData } = buildOverTimeData(groupStats.filter(inWindow(overWin)), overWin.unit);
 
-  const { barData, lineData } = buildOverTimeData(windowStats, unit);
+  const timeWin = computeWindow([...new Set([...groupStats, ...todoStats].map(r => r.date))].sort());
+  const timeData = buildTimeSpentData(
+    groupStats.filter(inWindow(timeWin)),
+    todoStats.filter(inWindow(timeWin)),
+    timeWin.unit,
+  );
+
   const byDeckData    = buildByDeckData(groupStats);
   const byCatData     = buildByCategoryData(todoStats);
 
-  const canGoOlder = range !== null && minDate !== null && windowStart > minDate;
   const canGoNewer = offset > 0;
 
   const tabs = [
-    { key: "overtime", label: "Over Time" },
-    { key: "bydeck",   label: "By Deck"   },
-    { key: "bycat",    label: "By Category" },
+    { key: "bytime",  label: "By Time" },
+    { key: "bycards", label: "By Cards" },
+    { key: "bydeck",  label: "By Deck" },
+    { key: "bycat",   label: "By Category" },
   ];
 
   const legend = (
@@ -315,6 +351,52 @@ function ChartPanel({ groupStats, todoStats }) {
       <span className="st-legend-dot" style={{ background: RED   }} />Demoted
     </span>
   );
+
+  const timeLegend = (
+    <span className="st-legend">
+      <span className="st-legend-dot" style={{ background: YELLOW }} />Todos
+      <span className="st-legend-dot" style={{ background: BLUE   }} />Decks
+    </span>
+  );
+
+  const rangeControls = (win) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+      <div className="st-pills">
+        {RANGES.map(({ label, days }) => (
+          <button
+            key={label}
+            className={`st-pill${range === days ? " active" : ""}`}
+            onClick={() => { setRange(days); setOffset(0); }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {range === null ? (
+        win.unit !== "day" && (
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--t-text-3)" }}>
+            {win.unit === "week" ? "weekly" : "monthly"} totals
+          </span>
+        )
+      ) : (
+        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+          <button className="st-btn-sm" disabled={!win.canGoOlder} style={!win.canGoOlder ? { opacity: 0.4 } : {}}
+            onClick={() => setOffset(o => o + 1)}>‹</button>
+          <span style={{ fontSize: 11, color: "var(--t-text-3)", fontVariantNumeric: "tabular-nums" }}>
+            {win.start} – {win.end}
+          </span>
+          <button className="st-btn-sm" disabled={!canGoNewer} style={!canGoNewer ? { opacity: 0.4 } : {}}
+            onClick={() => setOffset(o => o - 1)}>›</button>
+        </span>
+      )}
+    </div>
+  );
+
+  // Hours are fractional, drop the whole-number tick step
+  const timeOpts = (() => {
+    const o = barOpts(true, "Hours", DATE_TICKS);
+    delete o.scales.y.ticks.stepSize;
+    return o;
+  })();
 
   return (
     <div className="st-chart-panel">
@@ -326,42 +408,29 @@ function ChartPanel({ groupStats, todoStats }) {
             </button>
           ))}
         </div>
-        {tab !== "bycat" && legend}
+        {(tab === "bycards" || tab === "bydeck") && legend}
+        {tab === "bytime" && timeLegend}
       </div>
 
-      {tab === "overtime" && (
+      {tab === "bytime" && (
+        groupStats.length === 0 && todoStats.length === 0
+          ? <div className="empty-bubble">No study time recorded yet.</div>
+          : <div>
+              {rangeControls(timeWin)}
+              {timeData.labels.length === 0
+                ? <div className="empty-bubble">No time recorded in this period.</div>
+                : <div style={{ height: 200 }}>
+                    <Bar data={timeData} options={timeOpts} />
+                  </div>
+              }
+            </div>
+      )}
+
+      {tab === "bycards" && (
         groupStats.length === 0
           ? <div className="empty-bubble">No deck study data yet.</div>
           : <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-                <div className="st-pills">
-                  {RANGES.map(({ label, days }) => (
-                    <button
-                      key={label}
-                      className={`st-pill${range === days ? " active" : ""}`}
-                      onClick={() => { setRange(days); setOffset(0); }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                {range === null ? (
-                  unit !== "day" && (
-                    <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--t-text-3)" }}>
-                      {unit === "week" ? "weekly" : "monthly"} totals
-                    </span>
-                  )
-                ) : (
-                  <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                    <button className="st-btn-sm" disabled={!canGoOlder} style={!canGoOlder ? { opacity: 0.4 } : {}}
-                      onClick={() => setOffset(o => o + 1)}>‹</button>
-                    <span style={{ fontSize: 11, color: "var(--t-text-3)", fontVariantNumeric: "tabular-nums" }}>
-                      {windowStart} – {windowEnd}
-                    </span>
-                    <button className="st-btn-sm" disabled={!canGoNewer} style={!canGoNewer ? { opacity: 0.4 } : {}}
-                      onClick={() => setOffset(o => o - 1)}>›</button>
-                  </span>
-                )}
-              </div>
+              {rangeControls(overWin)}
               {barData.labels.length === 0
                 ? <div className="empty-bubble">No study recorded in this period.</div>
                 : <>
@@ -731,7 +800,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                   )}
                   {r.resources.length > 0 && (
                     <div className="st-todo-section">
-                      <div className="st-todo-section-label">Resources</div>
+                      <div className="st-todo-section-label">Tagged Resources</div>
                       <div className="st-resource-cards">
                         {r.resources.map((res, i) => <ResourceCard key={i} res={res} />)}
                       </div>
@@ -739,7 +808,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                   )}
                   {r.groups.length > 0 && (
                     <div className="st-todo-section">
-                      <div className="st-todo-section-label">Study Materials</div>
+                      <div className="st-todo-section-label">Tagged Decks/Notebooks</div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {r.groups.map((g, i) => {
                           const live = g.group_id != null ? allGroups.find(x => x.id === g.group_id) : null;
@@ -831,7 +900,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     if (editForm.resources.length === 0 && addableResources.length === 0) return null;
                     return (
                       <div>
-                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Resources</div>
+                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Tagged Resources</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {editForm.resources.map((res, i) => {
                             const dead = !planResources.some(pr => pr.name === res);
@@ -868,7 +937,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     if (editForm.groups.length === 0 && addableGroups.length === 0) return null;
                     return (
                       <div>
-                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Study Materials</div>
+                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Tagged Decks/Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {editForm.groups.map((g, i) => {
                             const info = r.groups.find(x => x.name === g);
@@ -1056,7 +1125,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={metrics.avgRetention !== null ? `${Math.round(metrics.avgRetention * 100)}%` : "—"}
               color={metrics.avgRetention !== null ? retColor : GRAY}
             />
-            <MetricCard label="Cards Studied" value={metrics.cardsReviewed} color="var(--t-blue)" />
+            <MetricCard label="Cards Studied" value={metrics.cardsStudied} color="var(--t-blue)" />
             <MetricCard label="Todos Done"    value={metrics.todosDone}     color="var(--t-yellow)" />
             <MetricCard
               label="Study Streak"
