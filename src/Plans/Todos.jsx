@@ -84,39 +84,46 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
             <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", opacity: todo.is_disabled ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, paddingBottom: 6, borderBottom: "1px solid var(--t-yellow-bdr)" }}>
+                        <div style={{ fontSize: 17, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
                             {todo.text}
                         </div>
 
-                        <div style={{ marginTop: "6px", fontSize: 12, color: "var(--t-text-3)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                            <CategoryPills mask={todo.category} />
-                            {(() => {
-                                const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
-                                    .filter((_, i) => (todo.frequency & (1 << i)) !== 0)
-                                    .join(" · ");
-                                return days && <><span style={{ opacity: 0.5 }}>|</span><span>{days}</span></>;
-                            })()}
+                        <div className="todo-section">
+                            <div className="todo-section-label">Categories</div>
+                            <div className="todo-section-pills">
+                                <CategoryPills mask={todo.category} />
+                            </div>
                         </div>
 
                         {(linkedGroups.length > 0 || linkedResources.length > 0) && (
-                            <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                {linkedResources.map(r => (
-                                    <span key={r.id}
-                                        onClick={() => r.url && openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`)}
-                                        className={`pill pill-clay${r.url ? " pill-clickable" : ""}`}>
-                                        {r.name}{r.url && <span style={{ opacity: 0.55, marginLeft: 2, fontSize: 9 }}>↗</span>}
-                                    </span>
-                                ))}
-                                {linkedGroups.map(g => (
-                                    <span key={g.id}
-                                        onClick={() => onNavigateToGroup(g, { menu: "plans", label: "Plans" })}
-                                        className={`pill ${g.group_type === "notebook" ? "pill-plum" : "pill-blue"} pill-clickable`}>
-                                        {g.name}
-                                        <GroupTypeBadge type={g.group_type} />
-                                    </span>
-                                ))}
+                            <div className="todo-section">
+                                <div className="todo-section-label">Tagged Materials</div>
+                                <div className="todo-section-pills">
+                                    {linkedResources.map(r => (
+                                        <span key={r.id}
+                                            onClick={() => r.url && openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`)}
+                                            className={`pill pill-clay${r.url ? " pill-clickable" : ""}`}>
+                                            {r.name}{r.url && <span style={{ opacity: 0.55, marginLeft: 2, fontSize: 9 }}>↗</span>}
+                                        </span>
+                                    ))}
+                                    {linkedGroups.map(g => (
+                                        <span key={g.id}
+                                            onClick={() => onNavigateToGroup(g, { menu: "plans", label: "Plans" })}
+                                            className={`pill ${g.group_type === "notebook" ? "pill-plum" : "pill-blue"} pill-clickable`}>
+                                            {g.name}
+                                            <GroupTypeBadge type={g.group_type} />
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         )}
+
+                        {(() => {
+                            const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+                                .filter((_, i) => (todo.frequency & (1 << i)) !== 0)
+                                .join(" · ");
+                            return days && <div style={{ marginTop: 8, fontSize: 10, color: "var(--t-text-3)" }}>{days}</div>;
+                        })()}
                     </div>
 
                     <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
@@ -154,11 +161,6 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                     <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                 </div>
 
-                <div>
-                    <div style={{ fontSize: 12, marginBottom: 4 }}>Frequency</div>
-                    <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
-                </div>
-
                 {planResources && planResources.length > 0 && (
                     <div>
                         <div style={{ fontSize: 12, marginBottom: 4 }}>Resources</div>
@@ -176,7 +178,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
                 {allGroups && allGroups.length > 0 && (
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4 }}>Study Materials</div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>Decks/Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {allGroups.map(g => {
                                 const active = selectedGroupIds.includes(g.id);
@@ -193,6 +195,11 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                         </div>
                     </div>
                 )}
+
+                <div>
+                    <div style={{ fontSize: 12, marginBottom: 4 }}>Frequency</div>
+                    <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
+                </div>
 
                 <div style={{ display: "flex", gap: "8px" }}>
                     <button className="primary" onClick={updateTodo}>Save</button>

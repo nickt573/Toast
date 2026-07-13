@@ -27,9 +27,9 @@
 .plan-resource-edit-actions { display: flex; gap: 6px; }
 .plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
 .plan-resource-body { flex: 1; min-width: 0; }
-.plan-resource-name { font-weight: 600; font-size: 15px; color: var(--t-text); }
-/* Raw URLs stay hidden — just a compact "Link ↗" hyperlink */
-.plan-resource-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 2px; }
+.plan-resource-name { font-weight: 600; font-size: 17px; color: var(--t-text); }
+/* Raw URLs stay hidden behind a compact arrow */
+.plan-resource-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 2px; text-decoration: none; }
 .plan-resource-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; }
 .plan-resource-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .plan-resource-add { border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r-lg); padding: 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); }
