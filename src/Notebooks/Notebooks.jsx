@@ -55,6 +55,17 @@ async function pickFile(extensions) {
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
+// Empty paragraphs don't count; any other node type does
+function isContentEmpty(json) {
+    const hasContent = (node) => {
+        if (!node) return false;
+        if (node.type === "text") return (node.text ?? "").trim().length > 0;
+        if (node.type !== "paragraph" && node.type !== "doc") return true;
+        return (node.content ?? []).some(hasContent);
+    };
+    return !json || !hasContent(json);
+}
+
 // ─── Notebook List ────────────────────────────────────────────────────────────
 
 function NotebookList({ setToast, onOpenNotebook }) {
@@ -182,8 +193,11 @@ function NotebookList({ setToast, onOpenNotebook }) {
                                     <span className="nb-notebook-name">{nb.name}</span>
                                     <div className="landing-card-stats">
                                         <span className="landing-stat landing-stat--page">
-                                            <b>{pageCounts[nb.id] ?? 0}</b> {(pageCounts[nb.id] ?? 0) === 1 ? "page" : "pages"}
+                                            <b>{pageCounts[nb.id] ?? 0}</b>
+                                            <span>{(pageCounts[nb.id] ?? 0) === 1 ? "page" : "pages"}</span>
                                         </span>
+                                        <span className="landing-stat-divider" />
+                                        <button style={{ alignSelf: "center" }} onClick={(e) => { e.stopPropagation(); onOpenNotebook(nb, true); }}>+ New Page</button>
                                     </div>
                                 </>
                             )}
@@ -623,7 +637,7 @@ function CardCreatorPanel({ setToast }) {
 
 // ─── Editable page wrapper ────────────────────────────────────────────────────
 
-function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioChange }) {
+function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioChange, onDraft }) {
     const [contentJson, setContentJson] = useState(initialContent ?? null);
 
     useEffect(() => {
@@ -635,7 +649,7 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
     return (
         <PageEditor
             content={initialContent ?? null}
-            onChange={setContentJson}
+            onChange={(json) => { setContentJson(json); onDraft?.(json); }}
             editable={true}
             audioFile={initialAudioFile}
             onAudioChange={onAudioChange}
@@ -645,7 +659,7 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
 
 // ─── Page Viewer / Editor ─────────────────────────────────────────────────────
 
-function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
+function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, startNewOnOpen }) {
     const [allPages, setAllPages] = useState([]);
     const [query, setQuery] = useState("");
     const [pageIndex, setPageIndex] = useState(0);
@@ -660,11 +674,14 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
     const [editDesc, setEditDesc] = useState("");
     const [editContent, setEditContent] = useState(null);
     const [editAudioFile, setEditAudioFile] = useState(null);
+    const liveContentRef = useRef(null);
 
     useEffect(() => {
         loadPages();
         loggedInvoke("get_current_date").then(setToday).catch(e => logError("catch", e));
     }, [notebook.id]);
+
+    useEffect(() => { if (startNewOnOpen) startNew(); }, []);
 
     async function loadPages() {
         try {
@@ -707,18 +724,22 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
         setEditTitle(page.title);
         setEditDesc(page.description ?? "");
         setEditAudioFile(page.audio_file ?? null);
-        try { setEditContent(rewriteContentForDisplay(JSON.parse(page.content))); }
-        catch { setEditContent(null); }
+        let parsed = null;
+        try { parsed = rewriteContentForDisplay(JSON.parse(page.content)); }
+        catch { /* unreadable content edits as blank */ }
+        setEditContent(parsed);
+        liveContentRef.current = parsed;
         setIsNew(false); setEditing(true);
     }
 
     function startNew() {
         setEditTitle(""); setEditDesc(""); setEditContent(null); setEditAudioFile(null);
+        liveContentRef.current = null;
         setIsNew(true); setEditing(true);
     }
 
     async function savePage(contentJson) {
-        if (!editTitle.trim()) { setToast("Title is required."); return; }
+        if (!editTitle.trim()) { setToast("Title is required."); return false; }
         const contentStr = JSON.stringify(rewriteContentForSave(contentJson));
         try {
             if (isNew) {
@@ -757,7 +778,23 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
             // Recordings replaced mid-edit stay on disk until now; the DB is
             // authoritative at this point, so orphans are safe to sweep
             loggedInvoke("cleanup_orphaned_media").catch(e => logError("cleanup_orphaned_media", e));
-        } catch (e) { logError("catch", e); setToast("Failed to save page.", "error"); }
+            return true;
+        } catch (e) { logError("catch", e); setToast("Failed to save page.", "error"); return false; }
+    }
+
+    // Back autosaves; an untitled page blocks unless it is entirely empty
+    async function handleBack(navigate) {
+        if (editing) {
+            const draft = liveContentRef.current;
+            const hasContent = !isContentEmpty(draft) || editDesc.trim() || editAudioFile;
+            if (!editTitle.trim()) {
+                if (hasContent) { setToast("Title is required."); return; }
+                await onCancel();
+            } else if (!(await savePage(draft))) {
+                return;
+            }
+        }
+        navigate();
     }
 
     async function deletePage() {
@@ -797,9 +834,9 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
         <div className="nb-pages-root">
             <div className="nb-pages-header">
                 {returnTo ? (
-                    <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
+                    <button className="quiet" onClick={() => handleBack(onReturnToOrigin)}>← Back to {returnTo.label}</button>
                 ) : (
-                    <button className="quiet" onClick={onBack}>← Back</button>
+                    <button className="quiet" onClick={() => handleBack(onBack)}>← Back</button>
                 )}
                 <h2>{notebook.name}</h2>
                 <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>{allPages.length} page{allPages.length !== 1 ? "s" : ""}</span>
@@ -840,6 +877,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
                                 initialAudioFile={editAudioFile}
                                 onSave={savePage}
                                 onAudioChange={setEditAudioFile}
+                                onDraft={(json) => { liveContentRef.current = json; }}
                             />
                             <CardCreatorPanel setToast={setToast} />
                         </div>
@@ -932,6 +970,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin }) {
 export default function Notebooks({ setToast, initialNotebook, onClearInitial, returnTo, onReturnToOrigin }) {
     const [view, setView] = useState(initialNotebook ? VIEW_PAGES : VIEW_NOTEBOOKS);
     const [activeNotebook, setActiveNotebook] = useState(initialNotebook ?? null);
+    const [startNewOnOpen, setStartNewOnOpen] = useState(false);
 
     useEffect(() => {
         if (initialNotebook) onClearInitial?.();
@@ -941,15 +980,16 @@ export default function Notebooks({ setToast, initialNotebook, onClearInitial, r
         <>
             <div className="nb-root">
                 {view === VIEW_NOTEBOOKS && (
-                    <NotebookList setToast={setToast} onOpenNotebook={(nb) => { setActiveNotebook(nb); setView(VIEW_PAGES); }} />
+                    <NotebookList setToast={setToast} onOpenNotebook={(nb, startNew = false) => { setActiveNotebook(nb); setStartNewOnOpen(startNew); setView(VIEW_PAGES); }} />
                 )}
                 {view === VIEW_PAGES && activeNotebook && (
                     <PageView
                         setToast={setToast}
                         notebook={activeNotebook}
-                        onBack={() => { setActiveNotebook(null); setView(VIEW_NOTEBOOKS); }}
+                        onBack={() => { setActiveNotebook(null); setStartNewOnOpen(false); setView(VIEW_NOTEBOOKS); }}
                         returnTo={returnTo}
                         onReturnToOrigin={onReturnToOrigin}
+                        startNewOnOpen={startNewOnOpen}
                     />
                 )}
             </div>
