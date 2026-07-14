@@ -1001,7 +1001,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     const q = normalizeSearchText(search).toLowerCase();
     const front = c.is_uploaded ? stripHtml(c.front) : normalizeSearchText(c.front);
     const back = c.is_uploaded ? stripHtml(c.back) : normalizeSearchText(c.back);
-    return front.toLowerCase().includes(q) || back.toLowerCase().includes(q);
+    const support = normalizeSearchText(c.support ?? "");
+    const importedSupport = stripHtml(c.imported_support ?? "");
+    return [front, back, support, importedSupport].some((t) => t.toLowerCase().includes(q));
   });
 
   if (filter === "paused") filtered = filtered.filter(c => c.is_paused);
