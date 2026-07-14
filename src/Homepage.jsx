@@ -438,7 +438,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                     <button className="primary" onClick={startBlank}>Create My Own</button>
                     <div>
                         <div className="hp-popup-label">Or choose an existing todo</div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "auto", scrollbarGutter: "stable" }}>
                             {todos.map(t => (
                                 <button key={t.id} className="hp-free-todo-option" title={t.text} onClick={() => pickTodo(t)}>{t.text}</button>
                             ))}
