@@ -234,15 +234,36 @@ function buildByCategoryData(todoStats) {
 // Caps how many date labels render as history grows; the bars themselves are unaffected.
 const DATE_TICKS = { autoSkip: true, maxTicksLimit: 12, maxRotation: 30, font: { size: 10 } };
 
+// Wraps a label onto word-boundary lines; only truncates past the line limit.
+function wrapTickLabel(label, width = 14, maxLines = 2) {
+  const lines = [];
+  let line = "";
+  for (let word of label.split(" ")) {
+    while (word.length > width) {
+      if (line) { lines.push(line); line = ""; }
+      lines.push(word.slice(0, width));
+      word = word.slice(width);
+    }
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > width) { lines.push(line); line = word; }
+    else line = next;
+  }
+  if (line) lines.push(line);
+  if (lines.length > maxLines) {
+    lines.length = maxLines;
+    lines[maxLines - 1] = lines[maxLines - 1].slice(0, width - 1) + "…";
+  }
+  return lines.length === 1 ? lines[0] : lines;
+}
+
 // Deck names are categorical: never skip a label (every bar stays identified), never
-// rotate, truncate long names instead — tooltips still show the full name.
+// rotate, wrap long names instead — tooltips still show the full name.
 const DECK_TICKS = {
   autoSkip: false,
   maxRotation: 0,
   font: { size: 10 },
   callback(value) {
-    const label = this.getLabelForValue(value);
-    return label.length > 14 ? label.slice(0, 13) + "…" : label;
+    return wrapTickLabel(this.getLabelForValue(value));
   },
 };
 
