@@ -23,10 +23,8 @@ const TABS = [
   { key: "decks",     label: "Decks",     subtitle: "SRS Flashcard Decks",     color: "var(--t-blue)"   },
   { key: "notebooks", label: "Notebooks", subtitle: "Notes & Journals",       color: "var(--t-plum)"   },
   { key: "stats",     label: "Stats",     subtitle: "Progress & Streaks",  color: "var(--t-stat)"   },
+  { key: "togo",      label: "Toast to Go", subtitle: "Study Anywhere",    color: "var(--t-silver)" },
 ];
-
-// Right-justified: a utility tab, not a feature family.
-const TOGO_TAB = { key: "togo", label: "Toast to Go", subtitle: "Study on the Go", color: "var(--t-silver)" };
 
 export default function App() {
   const [menu, setMenu] = useState("home");
@@ -241,6 +239,18 @@ export default function App() {
       menuComp = <div style={{ padding: 16 }}>Error</div>;
   }
 
+  const navTab = ({ key, label, subtitle, color }) => (
+    <button
+      key={key}
+      className={`app-nav-tab${key === "home" ? " app-nav-tab--home" : ""}${menu === key ? " active" : ""}`}
+      style={{ "--tab-underline": color }}
+      onClick={() => navigate(key)}
+    >
+      <span className="app-nav-tab-label">{label}</span>
+      <span className="app-nav-tab-sub">{subtitle}</span>
+    </button>
+  );
+
   return (
     <div className="app-shell">
       <nav className="app-nav">
@@ -248,28 +258,10 @@ export default function App() {
           <img src="/toast-icon.png" alt="Toast" draggable={false} />
         </div>
 
-        {TABS.map(({ key, label, subtitle, color }) => (
-          <button
-            key={key}
-            className={`app-nav-tab${key === "home" ? " app-nav-tab--home" : ""}${menu === key ? " active" : ""}`}
-            style={{ "--tab-underline": color }}
-            onClick={() => navigate(key)}
-          >
-            <span className="app-nav-tab-label">{label}</span>
-            <span className="app-nav-tab-sub">{subtitle}</span>
-          </button>
-        ))}
-
+        {navTab(TABS[0])}
         <div className="app-nav-spacer" />
-
-        <button
-          className={`app-nav-tab app-nav-tab--togo${menu === TOGO_TAB.key ? " active" : ""}`}
-          style={{ "--tab-underline": TOGO_TAB.color }}
-          onClick={() => navigate(TOGO_TAB.key)}
-        >
-          <span className="app-nav-tab-label">{TOGO_TAB.label}</span>
-          <span className="app-nav-tab-sub">{TOGO_TAB.subtitle}</span>
-        </button>
+        <div className="app-nav-center">{TABS.slice(1).map(navTab)}</div>
+        <div className="app-nav-spacer app-nav-spacer--right" />
       </nav>
 
       <div className="app-content">{dateReady ? menuComp : null}</div>
