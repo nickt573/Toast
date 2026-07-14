@@ -1,10 +1,10 @@
 /* ── Homepage ── */
 .hp-root {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;
   min-height: 0;
-  /* Both edges so the centered content stays centered when the scrollbar appears */
-  scrollbar-gutter: stable both-edges;
+  /* Left padding mirrors the 10px scrollbar so the centered content stays centered */
+  padding-left: 10px;
 }
 
 .hp-home {
@@ -309,11 +309,11 @@
 /* ── Study session ── */
 .hp-session {
   height: 100%;
-  overflow-y: auto;
+  overflow-y: scroll;
   padding: 20px var(--t-page-pad);
+  /* Extra left padding mirrors the 10px scrollbar so the centered card stays centered */
+  padding-left: calc(var(--t-page-pad) + 10px);
   box-sizing: border-box;
-  /* Both edges so flipping a long card doesn't shift the centered card sideways */
-  scrollbar-gutter: stable both-edges;
 }
 
 .hp-session-inner { max-width: 580px; margin: 0 auto; }
@@ -471,8 +471,7 @@
   gap: 14px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   max-height: 90vh;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 .hp-popup-title { font-family: var(--t-font-head); font-weight: 700; font-size: 15px; color: var(--t-text); letter-spacing: -0.01em; }
 .hp-popup-label { font-size: 12px; color: var(--t-text-2); margin-bottom: 4px; }
