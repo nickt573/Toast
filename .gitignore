@@ -26,3 +26,7 @@ dist-ssr
 # Claude Code
 CLAUDE.md
 .claude/
+
+# Cloudflare Worker (Toast to Go)
+worker/.wrangler
+worker/node_modules

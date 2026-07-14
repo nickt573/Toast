@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { ask } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { loggedInvoke, logError } from "./logger";
 import "./App.css";
 
@@ -12,6 +13,7 @@ import Decks from "./Decks/Decks";
 import Notebooks from "./Notebooks/Notebooks";
 import Homepage from "./Homepage";
 import Stats from "./Stats/Stats";
+import ToGo from "./ToGo/ToGo";
 
 const TABS = [
   { key: "home",      label: "Home",      subtitle: "Today's Dashboard",   color: "var(--t-pink)"   },
@@ -20,6 +22,9 @@ const TABS = [
   { key: "notebooks", label: "Notebooks", subtitle: "Notes & Journals",       color: "var(--t-plum)"   },
   { key: "stats",     label: "Stats",     subtitle: "Progress & Streaks",  color: "var(--t-stat)"   },
 ];
+
+// Right-justified: a utility tab, not a feature family.
+const TOGO_TAB = { key: "togo", label: "Toast to Go", subtitle: "Study on the Go", color: "var(--t-silver)" };
 
 export default function App() {
   const [menu, setMenu] = useState("home");
@@ -101,6 +106,47 @@ export default function App() {
     })();
   }, []);
 
+  // Toast to Go: push on close, per the user's setting. A failed push must never
+  // trap the user in a window that won't shut — log it and close anyway.
+  useEffect(() => {
+    let unlisten;
+    let gone = false;
+    (async () => {
+      const win = getCurrentWindow();
+      const fn = await win.onCloseRequested(async (event) => {
+        let behavior = "ask";
+        try {
+          ({ close_behavior: behavior } = await loggedInvoke("get_togo_config"));
+        } catch (e) {
+          logError("get_togo_config on close", e);
+          return;
+        }
+        if (behavior === "never") return;
+
+        event.preventDefault();
+        try {
+          if (behavior === "ask") {
+            const yes = await ask("Push your changes to Toast to Go before closing?", {
+              title: "Toast to Go",
+              kind: "info",
+              okLabel: "Push",
+              cancelLabel: "Close without pushing",
+            });
+            if (!yes) return await win.destroy();
+          }
+          await loggedInvoke("push_package", { force: true });
+        } catch (e) {
+          logError("push on close", e);
+        }
+        await win.destroy(); // not close() — that re-fires this handler
+      });
+      // registration is async; cleanup may have already run
+      if (gone) fn();
+      else unlisten = fn;
+    })();
+    return () => { gone = true; unlisten?.(); };
+  }, []);
+
   // Roll the day over before anything renders: child effects run before parent
   // effects, so a page mounted alongside this one would read the pre-rollover date.
   useEffect(() => {
@@ -174,6 +220,9 @@ export default function App() {
         />
       );
       break;
+    case "togo":
+      menuComp = <ToGo setToast={showToast} />;
+      break;
     default:
       menuComp = <div style={{ padding: 16 }}>Error</div>;
   }
@@ -198,6 +247,15 @@ export default function App() {
         ))}
 
         <div className="app-nav-spacer" />
+
+        <button
+          className={`app-nav-tab app-nav-tab--togo${menu === TOGO_TAB.key ? " active" : ""}`}
+          style={{ "--tab-underline": TOGO_TAB.color }}
+          onClick={() => navigate(TOGO_TAB.key)}
+        >
+          <span className="app-nav-tab-label">{TOGO_TAB.label}</span>
+          <span className="app-nav-tab-sub">{TOGO_TAB.subtitle}</span>
+        </button>
       </nav>
 
       <div className="app-content">{dateReady ? menuComp : null}</div>

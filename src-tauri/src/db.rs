@@ -2,6 +2,10 @@ use crate::app_utils::paths::{relativize_html_media, relativize_image_nodes, to_
 use rusqlite::{params, Connection};
 use std::path::Path;
 
+/// Stamped into Toast to Go packages; a pull rejects a mismatch. Bump on any
+/// schema change.
+pub const SCHEMA_VERSION: u32 = 1;
+
 /// Adds a column to an existing table if it doesn't already have it.
 /// CREATE TABLE IF NOT EXISTS won't alter tables that predate a new column,
 /// so databases from released versions are migrated here.

@@ -42,7 +42,7 @@ const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: fa
 // few seconds while running, so closing the app pauses each timer and its time
 // is restored on the next launch.
 
-const TIMER_STORE_KEY = "toast-study-timers";
+export const TIMER_STORE_KEY = "toast-study-timers";
 
 function loadStudyTimers() {
     try {
