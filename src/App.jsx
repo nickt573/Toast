@@ -5,6 +5,8 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { loggedInvoke, logError } from "./logger";
+import { togoLock } from "./togoLock";
+import { BusyOverlay } from "./UIUtils";
 import "./App.css";
 
 import Toast from "./Toast";
@@ -37,6 +39,7 @@ export default function App() {
   const [statsReturnContext, setStatsReturnContext] = useState(null);
   const [refreshDayCount, setRefreshDayCount] = useState(0);
   const [dateReady, setDateReady] = useState(false);
+  const [closePush, setClosePush] = useState(false);
   const dateChecked = useRef(false);
 
   function showToast(msg, type = "info") {
@@ -114,6 +117,10 @@ export default function App() {
     (async () => {
       const win = getCurrentWindow();
       const fn = await win.onCloseRequested(async (event) => {
+        // A push or pull is already in flight (here or in the ToGo tab):
+        // swallow the repeat close so it can't stack dialogs or double-push.
+        if (togoLock.active) return event.preventDefault();
+
         let behavior = "ask";
         try {
           ({ close_behavior: behavior } = await loggedInvoke("get_togo_config"));
@@ -124,6 +131,7 @@ export default function App() {
         if (behavior === "never") return;
 
         event.preventDefault();
+        togoLock.active = true;
         try {
           if (behavior === "ask") {
             const yes = await ask("Push your changes to Toast to Go before closing?", {
@@ -134,11 +142,17 @@ export default function App() {
             });
             if (!yes) return await win.destroy();
           }
-          await loggedInvoke("push_package", { force: true });
-        } catch (e) {
-          logError("push on close", e);
+          setClosePush(true);
+          try {
+            await loggedInvoke("push_package", { force: true });
+          } catch (e) {
+            logError("push on close", e);
+          }
+          await win.destroy(); // not close() — that re-fires this handler
+        } finally {
+          togoLock.active = false;
+          setClosePush(false);
         }
-        await win.destroy(); // not close() — that re-fires this handler
       });
       // registration is async; cleanup may have already run
       if (gone) fn();
@@ -259,6 +273,12 @@ export default function App() {
       </nav>
 
       <div className="app-content">{dateReady ? menuComp : null}</div>
+      {closePush && (
+        <BusyOverlay
+          title="Pushing to Toast to Go…"
+          note="Toast will close when this finishes. Please don't shut down your computer."
+        />
+      )}
       <Toast message={toast.message} type={toast.type} />
     </div>
   );

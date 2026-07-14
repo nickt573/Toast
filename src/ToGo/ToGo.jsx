@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { loggedInvoke, logError } from "../logger";
+import { togoLock } from "../togoLock";
+import { BusyOverlay } from "../UIUtils";
 import { TIMER_STORE_KEY } from "../Homepage";
 import "./ToGo.css";
 
@@ -10,7 +12,7 @@ const DOTS = "••••••••-••••-••••-••••-�
 const CLOSE_OPTIONS = [
   { value: "always", label: "Always push",   hint: "Push automatically when Toast closes" },
   { value: "ask",    label: "Ask me",        hint: "Offer a push each time Toast closes" },
-  { value: "never",  label: "Never",         hint: "Only push when I press the button" },
+  { value: "never",  label: "Never push",         hint: "Only push when I press the button" },
 ];
 
 // Clipboard API is unreliable in WebKitGTK; fall back to a scratch textarea.
@@ -113,6 +115,7 @@ export default function ToGo({ setToast }) {
   async function push() {
     if (busy) return;
     setBusy("Pushing…");
+    togoLock.active = true;
     try {
       await loggedInvoke("push_package");
       await load();
@@ -121,6 +124,7 @@ export default function ToGo({ setToast }) {
       logError("push_package", e);
       setToast(String(e), "error");
     } finally {
+      togoLock.active = false;
       setBusy("");
     }
   }
@@ -134,6 +138,7 @@ export default function ToGo({ setToast }) {
     }
 
     setBusy("Pulling…");
+    togoLock.active = true;
     try {
       const slot = await loggedInvoke("slot_exists", { id });
       if (!slot) {
@@ -160,6 +165,7 @@ export default function ToGo({ setToast }) {
       logError("pull_package", e);
       setToast(String(e), "error");
     } finally {
+      togoLock.active = false;
       setBusy("");
     }
   }
@@ -201,6 +207,12 @@ export default function ToGo({ setToast }) {
 
   return (
     <div className="togo-root">
+      {busy && (
+        <BusyOverlay
+          title={busy === "Pulling…" ? "Pulling from Toast to Go…" : "Pushing to Toast to Go…"}
+          note="This can take a bit, hang tight. Please don't shut down your computer."
+        />
+      )}
       <header className="togo-header">
         <h2>Toast to Go</h2>
       </header>
@@ -210,9 +222,8 @@ export default function ToGo({ setToast }) {
           <section className="togo-card">
             <h3>Push</h3>
             <p className="togo-blurb">
-              Push saves everything (decks, notebooks, plans, and stats) under the ID below. 
-              There's no account, just the ID, so keep it safe and share it only with your other machines! Pushing can
-              take a bit, so hang tight.
+              Push saves everything (decks, notebooks, plans, and stats) to the ID below. 
+              Keep it safe!
             </p>
             <MaskedId id={cfg.instance_id} onCopied={copied} />
             <div className="togo-row">
@@ -254,7 +265,7 @@ export default function ToGo({ setToast }) {
               </button>
             </div>
             <p className="togo-note togo-warn">
-              Pulling replaces everything in this copy of Toast. It is suggested to push before pulling.
+              Pulling replaces everything in this copy of Toast, so is highly suggested that you push before pulling.
             </p>
           </section>
 

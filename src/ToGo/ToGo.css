@@ -146,7 +146,13 @@ button.togo-choice {
 }
 button.togo-choice:hover { background: var(--t-surface-2); border-color: var(--t-accent-bdr); filter: brightness(0.98); }
 button.togo-choice.active,
-button.togo-choice.active:hover { background: var(--t-accent-bg); border-color: var(--t-accent-bdr); filter: none; }
+button.togo-choice.active:hover {
+  background: var(--t-accent-bg);
+  border-color: var(--t-accent);
+  box-shadow: inset 0 0 0 1px var(--t-accent);
+  filter: none;
+}
+button.togo-choice.active .togo-choice-label { color: var(--t-accent-h); }
 
 .togo-choice-label { font-size: 13px; font-weight: 600; color: var(--t-text); }
 .togo-choice-hint  { font-size: 11px; color: var(--t-text-2); }
