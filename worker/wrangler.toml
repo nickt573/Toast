@@ -1,0 +1,37 @@
+name = "toast-to-go"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Packages are stored one-per-instance-UUID. See src/index.js.
+# The bucket's default lifecycle rule aborts incomplete multipart uploads
+# after 7 days, so a crashed client can't leak storage.
+[[r2_buckets]]
+binding = "PACKAGES"
+bucket_name = "toast-to-go"
+
+# Every request from one IP.
+[[ratelimits]]
+name = "IP_LIMIT"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 60
+  period = 60
+
+# Starting an upload — the only op that consumes storage.
+[[ratelimits]]
+name = "UPLOAD_IP_LIMIT"
+namespace_id = "1002"
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+[[durable_objects.bindings]]
+name = "LIMITER"
+class_name = "Limiter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Limiter"]
+
+[observability]
+enabled = true

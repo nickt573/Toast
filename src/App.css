@@ -70,6 +70,11 @@
   --t-stat-bg:       #F7DDC9;
   --t-stat-bdr:      #E5B091;
 
+  /* Toast to Go — silver; a utility tab, not a feature family */
+  --t-silver:        #9EA7AD;
+  --t-silver-bg:     #E8ECEE;
+  --t-silver-bdr:    #C3CBD0;
+
   /* Strawberry pink — homepage identity + decorative accent */
   --t-pink:          #F6A7B8;
   --t-pink-2:        #F8C1C9;
@@ -342,6 +347,9 @@ textarea { overflow-y: scroll; }
 .app-nav-tab.active .app-nav-tab-sub { opacity: 0.65; }
 
 .app-nav-spacer { flex: 1; }
+
+/* Flush to the right edge — cancels the nav's 14px side padding */
+.app-nav-tab--togo { margin-right: -14px; }
 
 .app-content {
   flex: 1;

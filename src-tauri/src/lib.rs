@@ -60,6 +60,8 @@ pub fn run() {
 
             std::fs::create_dir_all(&app_dir).expect("failed to create app dir");
 
+            app_utils::togo::recover_interrupted_swap(&app_dir);
+
             let db_path = app_dir.join("database.db");
 
             let conn = Connection::open(db_path).expect("failed to open database");
@@ -161,6 +163,13 @@ pub fn run() {
             commands::import::peek_anki_fields,
             commands::import::import_anki_deck,
             commands::import::cleanup_orphaned_media,
+            commands::togo::get_togo_config,
+            commands::togo::set_close_behavior,
+            commands::togo::label_recent_pull,
+            commands::togo::forget_recent_pull,
+            commands::togo::slot_exists,
+            commands::togo::push_package,
+            commands::togo::pull_package,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

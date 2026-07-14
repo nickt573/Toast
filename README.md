@@ -1,6 +1,6 @@
 # Toast
 
-Learning a language is an intense process, and there is an overwhelming amount of tools and resources available online. Toast is a desktop app for learning foreign languages and keeping your study life organized. Toast itself is not an all-in-one study tool, but instead a hub where you can keep track of all of your favorite language-learning resources. Toast offers a few optional lightweight study features, like SRS flashcard decks and rich text notebooks, and combines them with daily planning and external resource tracking, so the things you need to review show up on the right day and the rest stays out of your way. Everything lives on your computer. There are no accounts, no servers, and no data leaving your machine.
+Learning a language is an intense process, and there is an overwhelming amount of tools and resources available online. Toast is a desktop app for learning foreign languages and keeping your study life organized. Toast itself is not an all-in-one study tool, but instead a hub where you can keep track of all of your favorite language-learning resources. Toast offers a few optional lightweight study features, like SRS flashcard decks and rich text notebooks, and combines them with daily planning and external resource tracking, so the things you need to review show up on the right day and the rest stays out of your way. Everything lives on your computer. There are no accounts, and no data leaves your machine unless you choose to sync it with Toast to Go.
 
 ## What's Inside
 
@@ -8,6 +8,7 @@ Learning a language is an intense process, and there is an overwhelming amount o
 - **Notebooks**: Take rich notes with formatting like tables, images, and audio recordings to do things like practice writing, keep a journal, or answer practice questions.
 - **Plans**: Bring it all together and build daily study plans with todo-list items separated by core language skill (reading, speaking, grammar, etc.), track external resources, and link decks for SRS study. Each morning you get a dashboard of what's due today.
 - **Stats**: View retention rates, study streaks, time spent, and charts of your progress over time. Stats persist even when the content it refers to is deleted, so you as the user get to decide what is included in your stats.
+- **Toast to Go**: Carry your whole Toast (decks, notebooks, plans, and stats) between machines with one push and one pull. No account needed.
 
 The point of Toast is to not force any features on you. Prefer another flashcard resource over Toast's decks? Skip our decks and tag it as an external resource instead. Toast is designed to keep track of all of your favorite language tools and doesn't require that you use ours.
 
@@ -20,6 +21,19 @@ Two deck features work together to keep study sessions clean: searchable cards a
 **Support** is an optional extra field shown after you flip a card, below the back. It's the place for example sentences, mnemonics, pronunciation guides, and context notes. The similar cards panel only ever matches against a card's front and back, so anything in the support field stays out of it and an example sentence full of common words adds context to its own card without bringing unrelated cards into the panel. If you create a flipped copy of a card, both copies keep the same support.
 
 When importing an Anki deck, you can map any of its fields to support. All fields mapped this way can't be edited after import, but you can always add additional support.
+
+## Toast to Go
+
+Toast to Go moves your whole Toast between machines without an account. Each install has its own ID. **Push** uploads everything, like decks, notebooks, plans, stats, and media, under your ID, overwriting your previous push. **Pull** takes an ID from another machine and replaces everything on this one with that machine's last push, so it's for moving in, not merging: whatever was on the pulling machine is erased. Toast warns you before it does this and tells you exactly what it found at that ID.
+
+A few rules keep this safe:
+
+- **Your ID is the key.** Anyone who has it can read and overwrite your data, which is why the app masks IDs like passwords and lets you copy without revealing. Share it only with your other machines.
+- **Both machines must run the same version of Toast.** A package from a different version is refused.
+- **You can't pull from the future.** If a package's study date is ahead of this machine's, the pull is refused.
+- You can choose what happens when Toast closes: always push, ask, or never.
+
+Packages are stored in Cloudflare R2 behind a small Worker (see `worker/`), capped at 1 GB each, with rate limits on uploads. If you're building from source you can point the app at your own Worker with the `TOAST_TOGO_ENDPOINT` environment variable at build time, and deploy your own from the `worker/` directory with `npx wrangler deploy`.
 
 ## Download and Updates
 

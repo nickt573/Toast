@@ -7,4 +7,5 @@ pub mod resources;
 pub mod similar;
 pub mod srs;
 pub mod stats;
+pub mod togo;
 pub mod todos;
