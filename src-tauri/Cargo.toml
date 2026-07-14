@@ -1,7 +1,7 @@
 [package]
 name = "toast"
 # Must match tauri.conf.json — Toast to Go packages are keyed to this version.
-version = "1.3.2"
+version = "1.4.0"
 description = "An all-in-one language learning resource hub"
 authors = ["you"]
 edition = "2021"
