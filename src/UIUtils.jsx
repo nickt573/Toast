@@ -97,6 +97,20 @@ export function ResourceCard({ res }) {
   );
 }
 
+// Full-screen blocker for operations that must not be interrupted (Toast to Go
+// transfers). Sits under .toast (z 1000) so error toasts stay readable.
+export function BusyOverlay({ title, note }) {
+  return (
+    <div className="busy-overlay">
+      <div className="busy-overlay-card">
+        <div className="busy-spinner" />
+        <div className="busy-overlay-title">{title}</div>
+        {note && <div className="busy-overlay-note">{note}</div>}
+      </div>
+    </div>
+  );
+}
+
 export function ConfirmDelete({ onConfirm, label = "Delete", small = false }) {
   const [confirming, setConfirming] = useState(false);
   const s = small ? { fontSize: 12, padding: "2px 7px" } : {};

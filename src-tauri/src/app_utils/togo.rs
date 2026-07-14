@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 pub const MANIFEST_FORMAT: u32 = 1;
 const MAX_RECENT_PULLS: usize = 3;
 pub const MIN_PUSH_SECS: i64 = 60;
+const TEMP_PREFIX: &str = "toast-togo-";
 
 pub fn endpoint() -> &'static str {
     option_env!("TOAST_TOGO_ENDPOINT").unwrap_or("https://toast-to-go.njt112233.workers.dev")
@@ -66,7 +67,7 @@ pub fn load_config(app_dir: &Path) -> Result<ToGoConfig, String> {
 
     let cfg = ToGoConfig {
         instance_id: uuid::Uuid::new_v4().to_string(),
-        close_behavior: CloseBehavior::Ask,
+        close_behavior: CloseBehavior::Never,
         last_push: None,
         last_pull: None,
         recent_pulls: Vec::new(),
@@ -117,6 +118,37 @@ pub fn record_pull(cfg: &mut ToGoConfig, id: &str) {
     );
     cfg.recent_pulls.truncate(MAX_RECENT_PULLS);
     cfg.last_pull = Some(now);
+}
+
+/// Push/pull scratch space. Prefixed so sweep_stale_temp can find dirs whose
+/// TempDir cleanup never ran (force-kill, power loss).
+fn togo_tempdir() -> Result<tempfile::TempDir, String> {
+    tempfile::Builder::new()
+        .prefix(TEMP_PREFIX)
+        .tempdir()
+        .map_err(|e| e.to_string())
+}
+
+/// Startup guard: a killed transfer strands its scratch dir (up to 1 GB).
+/// Age-gated so a second running instance mid-transfer keeps its files.
+pub fn sweep_stale_temp() {
+    let Ok(entries) = fs::read_dir(std::env::temp_dir()) else {
+        return;
+    };
+    for e in entries.flatten() {
+        if !e.file_name().to_string_lossy().starts_with(TEMP_PREFIX) {
+            continue;
+        }
+        let stale = e
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.elapsed().ok())
+            .is_some_and(|age| age.as_secs() > 24 * 60 * 60);
+        if stale {
+            let _ = fs::remove_dir_all(e.path());
+        }
+    }
 }
 
 // ── Transport ────────────────────────────────────────────────────────────────
@@ -275,7 +307,7 @@ pub async fn download(id: &str) -> Result<(tempfile::TempDir, PathBuf), String> 
         return Err(format!("Pull failed ({}).", res.status()));
     }
 
-    let tmp = tempfile::tempdir().map_err(|e| e.to_string())?;
+    let tmp = togo_tempdir()?;
     let zip_path = tmp.path().join("package.zip");
     let mut file = fs::File::create(&zip_path).map_err(|e| e.to_string())?;
     let mut written: u64 = 0;
@@ -347,7 +379,7 @@ pub fn bundle(
     conn: &Connection,
     instance_id: &str,
 ) -> Result<(tempfile::TempDir, PathBuf), String> {
-    let tmp = tempfile::tempdir().map_err(|e| e.to_string())?;
+    let tmp = togo_tempdir()?;
 
     // VACUUM INTO, not a byte copy: the live connection may be mid-write.
     let snapshot = tmp.path().join("database.db");

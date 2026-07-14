@@ -61,6 +61,7 @@ pub fn run() {
             std::fs::create_dir_all(&app_dir).expect("failed to create app dir");
 
             app_utils::togo::recover_interrupted_swap(&app_dir);
+            app_utils::togo::sweep_stale_temp();
 
             let db_path = app_dir.join("database.db");
 
