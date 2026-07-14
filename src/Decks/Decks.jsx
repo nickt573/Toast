@@ -414,6 +414,38 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
   const paneRef = useRef(null);
   const scrollTopRef = useRef(0);
   const prevCardIdRef = useRef(null);
+  const formRef = useRef(null);
+  const baselineRef = useRef(null);
+  const skipAutoSaveRef = useRef(false);
+  formRef.current = form;
+
+  // The content fields update_card persists, normalized like the form
+  const snapshotCard = (c) => ({
+    front: c.front,
+    back: c.back,
+    support: c.support ?? "",
+    front_image: c.front_image ?? null,
+    back_image: c.back_image ?? null,
+    front_audio: c.front_audio ?? null,
+    back_audio: c.back_audio ?? null,
+    is_searchable: c.is_searchable,
+    is_paused: c.is_paused,
+  });
+
+  // Silently persists unsaved edits when the selection changes or the editor goes away
+  const autoSave = async (target) => {
+    const f = formRef.current;
+    const base = baselineRef.current;
+    if (!f || !base || !target || f.id !== target.id || skipAutoSaveRef.current) return;
+    const snap = snapshotCard(f);
+    if (Object.keys(base).every((k) => snap[k] === base[k])) return;
+    // Emptied fronts or backs are silently dropped and the stored card stays intact
+    if (!f.is_uploaded && (!f.front.trim() || !f.back.trim())) return;
+    try {
+      await loggedInvoke("update_card", { card: { ...f, support: f.support || null, front_image: f.front_image || null, back_image: f.back_image || null, front_audio: f.front_audio || null, back_audio: f.back_audio || null } });
+      onSaved({ ...target, ...snap, support: f.support });
+    } catch (e) { logError("catch", e); setToast("Failed to save card changes.", "error"); }
+  };
 
   useEffect(() => {
     if (!card) { setForm(null); setPreviewing(false); setPreviewFlipped(false); setCardLog([]); return; }
@@ -425,11 +457,13 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
       front_audio: card.front_audio ?? null,
       back_audio: card.back_audio ?? null,
     });
+    baselineRef.current = snapshotCard(card);
+    skipAutoSaveRef.current = false;
     let cancelled = false;
     loggedInvoke("get_card_grade_log", { cardId: card.id })
       .then((log) => { if (!cancelled) setCardLog(log); })
       .catch((e) => { logError("get_card_grade_log", e); if (!cancelled) setCardLog([]); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; autoSave(card); };
   }, [card?.id]);
 
   useEffect(() => {
@@ -466,16 +500,18 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
     try {
       await loggedInvoke("update_card", { card: { ...form, support: form.support || null, front_image: form.front_image || null, back_image: form.back_image || null, front_audio: form.front_audio || null, back_audio: form.back_audio || null } });
       setToast("Card successfully updated.");
+      baselineRef.current = snapshotCard(form);
       onSaved({ ...form });
     } catch (e) { logError("catch", e); setToast("Failed to update card.", "error"); }
   };
 
   const deleteCard = async () => {
+    skipAutoSaveRef.current = true;
     try {
       await loggedInvoke("delete_card", { id: form.id });
       onDeleted(form.id);
       setToast("Card successfully deleted.");
-    } catch (e) { logError("catch", e); setToast("Failed to delete card.", "error"); }
+    } catch (e) { skipAutoSaveRef.current = false; logError("catch", e); setToast("Failed to delete card.", "error"); }
   };
 
   const markForReview = async () => {
