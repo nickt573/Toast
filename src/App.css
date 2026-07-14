@@ -259,7 +259,9 @@ input.input-readonly, textarea.input-readonly {
 ::-webkit-scrollbar-corner { background: transparent; }
 /* Scroll regions use overflow-y: scroll instead of auto so the track space is
    always reserved; WebKit ignores scrollbar-gutter on flex and capped layouts,
-   and the transparent track keeps the reserved strip invisible until needed. */
+   and the transparent track keeps the reserved strip invisible until needed.
+   Page scroll bodies shave the 10px track off their right padding so the
+   visible right gap matches the left. */
 textarea { overflow-y: scroll; }
 
 /* ── App shell ── */
@@ -513,7 +515,7 @@ textarea { overflow-y: scroll; }
 
 /* ── Plans containers ── */
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-page-pad); }
+.plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
 /* ── Unified landing pages (Plans / Decks / Notebooks) ── */
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: var(--t-surface); flex-shrink: 0; }
@@ -521,7 +523,7 @@ textarea { overflow-y: scroll; }
 .landing-hdr--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 72%); }
 .landing-hdr--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 72%); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
-.landing-body { flex: 1; overflow-y: scroll; padding: 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
+.landing-body { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
 .landing-footer { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
 .landing-footer input { flex: 1; }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }

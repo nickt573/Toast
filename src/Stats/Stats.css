@@ -2,7 +2,7 @@
 .st-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .st-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: linear-gradient(280deg, #F4BF95 0%, var(--t-surface) 72%); flex-shrink: 0; } /* deeper orange than --t-stat-bg so it doesn't blend into the peach page */
 .st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
-.st-body { flex: 1; overflow-y: scroll; padding: 20px var(--t-page-pad); }
+.st-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
 /* Plan selector */
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }

@@ -14,7 +14,7 @@
 .togo-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
 .togo-header-sub { margin-left: auto; font-size: 11px; color: var(--t-text-3); }
 
-.togo-body { flex: 1; overflow-y: scroll; padding: 20px var(--t-page-pad); }
+.togo-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 .togo-inner { max-width: 700px; margin: 0 auto; }
 
 .togo-card {
