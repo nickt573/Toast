@@ -31,6 +31,7 @@ export default function App() {
   const [plansReturnContext, setPlansReturnContext] = useState(null);
   const [statsReturnContext, setStatsReturnContext] = useState(null);
   const [refreshDayCount, setRefreshDayCount] = useState(0);
+  const [dateReady, setDateReady] = useState(false);
   const dateChecked = useRef(false);
 
   function showToast(msg, type = "info") {
@@ -100,12 +101,21 @@ export default function App() {
     })();
   }, []);
 
+  // Roll the day over before anything renders: child effects run before parent
+  // effects, so a page mounted alongside this one would read the pre-rollover date.
   useEffect(() => {
     loggedInvoke("cleanup_orphaned_media").catch(e => logError("cleanup_orphaned_media", e));
-    if (!dateChecked.current) {
-      dateChecked.current = true;
-      loggedInvoke("update_date").catch(e => logError("update_date", e));
-    }
+    if (dateChecked.current) return;
+    dateChecked.current = true;
+    (async () => {
+      try {
+        await loggedInvoke("update_date");
+      } catch (e) {
+        logError("update_date", e);
+      } finally {
+        setDateReady(true);
+      }
+    })();
   }, []);
 
   let menuComp;
@@ -190,7 +200,7 @@ export default function App() {
         <div className="app-nav-spacer" />
       </nav>
 
-      <div className="app-content">{menuComp}</div>
+      <div className="app-content">{dateReady ? menuComp : null}</div>
       <Toast message={toast.message} type={toast.type} />
     </div>
   );
