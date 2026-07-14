@@ -883,6 +883,69 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [lastSeenMap, setLastSeenMap] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
+  // Dragged panel height, remembered while this deck view stays open; null means the CSS default
+  const [creatorHeight, setCreatorHeight] = useState(null);
+  const tablePaneRef = useRef(null);
+  const toggleRowRef = useRef(null);
+  const dragMovedRef = useRef(false);
+
+  // Below this height a released drag snaps the panel closed
+  const CREATOR_CLOSE_PX = 60;
+
+  // The toggle row doubles as a drag handle: clicks still toggle, drags resize
+  const startCreatorDrag = (e) => {
+    if (e.button !== 0) return;
+    const pane = tablePaneRef.current;
+    const toggle = toggleRowRef.current;
+    if (!pane || !toggle) return;
+    // Top limit sits just under the Front/Back header, or the search bar when the table is empty
+    const topEdge = (pane.querySelector(".dk-table-head") ?? pane.querySelector(".dk-table-search")).getBoundingClientRect().bottom;
+    const maxHeight = pane.getBoundingClientRect().bottom - topEdge - toggle.offsetHeight;
+    const startHeight = pane.querySelector(".dk-new-card-dark")?.offsetHeight ?? 0;
+    const startY = e.clientY;
+    let moved = false;
+    dragMovedRef.current = false;
+
+    const heightAt = (ev) => Math.min(maxHeight, Math.max(0, startHeight + (startY - ev.clientY)));
+    const onMove = (ev) => {
+      if (!moved && Math.abs(ev.clientY - startY) < 4) return;
+      moved = true;
+      dragMovedRef.current = true;
+      const h = heightAt(ev);
+      if (h > 0) setCreatorOpen(true);
+      setCreatorHeight(h);
+    };
+    const onUp = (ev) => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      if (!moved) return;
+      if (heightAt(ev) < CREATOR_CLOSE_PX) {
+        setCreatorOpen(false);
+        // Keep the pre-drag height so reopening restores it instead of a sliver
+        setCreatorHeight(startHeight >= CREATOR_CLOSE_PX ? startHeight : null);
+      }
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    e.preventDefault();
+  };
+
+  const toggleCreator = () => {
+    if (dragMovedRef.current) { dragMovedRef.current = false; return; }
+    setCreatorOpen((o) => !o);
+  };
+
+  // First open sizes the panel to fit the form without scrolling, capped at the drag limit
+  useLayoutEffect(() => {
+    if (!creatorOpen || creatorHeight != null) return;
+    const pane = tablePaneRef.current;
+    const toggle = toggleRowRef.current;
+    const panel = pane?.querySelector(".dk-new-card-dark");
+    if (!pane || !toggle || !panel) return;
+    const topEdge = (pane.querySelector(".dk-table-head") ?? pane.querySelector(".dk-table-search")).getBoundingClientRect().bottom;
+    const maxHeight = pane.getBoundingClientRect().bottom - topEdge - toggle.offsetHeight;
+    setCreatorHeight(Math.min(panel.scrollHeight, maxHeight));
+  }, [creatorOpen, creatorHeight]);
 
   useEffect(() => {
     loggedInvoke("get_cards", { deckId: deck.id })
@@ -1000,7 +1063,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
       )}
 
       <div className="dk-cards-body">
-        <div className="dk-table-pane">
+        <div className="dk-table-pane" ref={tablePaneRef}>
           <div className="dk-table-search">
             <input type="text" placeholder="Search cards..." value={search} onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") setSearch(""); }} />
@@ -1112,14 +1175,14 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
             </>
           )}
 
-          <div className={`dk-creator-toggle-row${creatorOpen ? " open" : ""}`}>
-            <button className="dk-filter-toggle" onClick={() => setCreatorOpen(o => !o)}>
+          <div className={`dk-creator-toggle-row${creatorOpen ? " open" : ""}`} ref={toggleRowRef} onMouseDown={startCreatorDrag}>
+            <button className="dk-filter-toggle" onClick={toggleCreator}>
               {creatorOpen ? "Hide New Card" : "New Card"}
               <span style={{ fontSize: 10, marginLeft: 5 }}>{creatorOpen ? "▾" : "▸"}</span>
             </button>
           </div>
           {creatorOpen && (
-            <div className="dk-new-card-dark">
+            <div className="dk-new-card-dark" style={creatorHeight != null ? { height: creatorHeight, maxHeight: "none" } : undefined}>
               <NewCardForm setToast={setToast} groupId={deck.id} onCreated={handleCreated} />
             </div>
           )}
