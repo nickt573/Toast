@@ -24,12 +24,26 @@ pub fn create_plan(name: &str, conn: &mut Connection) -> Result<Plan> {
 }
 
 pub fn create_todo(todo: NewTodo, conn: &mut Connection) -> Result<Todo> {
+    use chrono::Datelike;
+    let today = get_date(conn)?;
+    let weekday = chrono::NaiveDate::parse_from_str(&today, "%Y-%m-%d")
+        .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?
+        .weekday()
+        .num_days_from_sunday();
+    let is_disabled = (todo.frequency & (1 << weekday)) == 0;
+
     conn.execute(
         r#"
         INSERT INTO todo (plan_id, text, frequency, category, is_done, is_disabled)
-        VALUES (?1, ?2, ?3, ?4, FALSE, FALSE)
+        VALUES (?1, ?2, ?3, ?4, FALSE, ?5)
         "#,
-        rusqlite::params![todo.plan_id, todo.text, todo.frequency, todo.category],
+        rusqlite::params![
+            todo.plan_id,
+            todo.text,
+            todo.frequency,
+            todo.category,
+            is_disabled
+        ],
     )?;
 
     let id = conn.last_insert_rowid();
@@ -41,7 +55,7 @@ pub fn create_todo(todo: NewTodo, conn: &mut Connection) -> Result<Todo> {
         frequency: todo.frequency,
         category: todo.category,
         is_done: false,
-        is_disabled: false,
+        is_disabled,
         position: None,
     })
 }
