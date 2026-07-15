@@ -26,6 +26,7 @@
   --t-yellow:        #E0A92E;
   --t-yellow-bg:     #FBEBC4;
   --t-yellow-bdr:    #EBD08A;
+  --t-time:          #B96A2B;   /* time spent — readable orange from the stat-table family */
 
   /* Done / safe — forest green */
   --t-green:         #4A8C5E;
@@ -71,9 +72,9 @@
   --t-stat-bdr:      #E5B091;
 
   /* Toast to Go — silver; a utility tab, not a feature family */
-  --t-silver:        #9EA7AD;
-  --t-silver-bg:     #E8ECEE;
-  --t-silver-bdr:    #C3CBD0;
+  --t-silver:        #A4A6A7;
+  --t-silver-bg:     #EAEBEB;
+  --t-silver-bdr:    #C9CBCC;
 
   /* Strawberry pink — homepage identity + decorative accent */
   --t-pink:          #F6A7B8;

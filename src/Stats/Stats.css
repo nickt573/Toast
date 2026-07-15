@@ -9,12 +9,14 @@
 
 /* Metric cards — auto-fit (not auto-fill) collapses the empty tracks, so the cards
    always stretch to fill the row; below 130px each they wrap to the next line */
-.st-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.st-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin-bottom: 16px; }
+/* Tight padding so the widest value (e.g. "12h 45m") fits on one line;
+   the grid gap above provides the breathing room instead */
 .st-metric {
   background: var(--t-surface);
   border: 1px solid var(--t-border-2);
   border-radius: var(--t-r-xl);
-  padding: 13px 16px;
+  padding: 10px 11px;
   box-shadow: var(--t-shadow-sm);
 }
 .st-metric-value { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; color: var(--t-text); }
@@ -59,7 +61,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: #F4BF95;
+  background: #EDCBAC;
   cursor: pointer;
 }
 .st-deck-name { font-weight: 600; font-size: 15px; color: var(--t-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -71,7 +73,7 @@
 /* Data table */
 .st-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 /* No bottom border on the header row; the card's outer blue border frames the table */
-.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-text-2); background: #F4BF95; border-bottom: none; font-weight: 700; }
+.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-text-2); background: #EDCBAC; border-bottom: none; font-weight: 700; }
 .st-table th:first-child { text-align: left; }
 .st-table td { padding: 6px 10px; border-bottom: 1px solid var(--t-border); vertical-align: middle; text-align: center; color: var(--t-text-2); overflow: hidden; }
 .st-table td:first-child { text-align: left; }
@@ -130,7 +132,7 @@
    inside its own column (a wall keeps it from pushing the pills below), and
    the unit truncates with its full value shown on hover. Categories sit below.
    Deep peach header with a matching warm border stands off the page peach. */
-.st-todo-collapsed { display: flex; flex-direction: column; gap: 6px; padding: 9px 14px; background: #F4BF95; cursor: pointer; }
+.st-todo-collapsed { display: flex; flex-direction: column; gap: 6px; padding: 9px 14px; background: #EDCBAC; cursor: pointer; }
 /* Warm hairline under the name separates it from the supplementary pills below */
 .st-todo-line { display: flex; align-items: center; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid color-mix(in srgb, var(--t-stat) 30%, transparent); }
 .st-todo-text { font-weight: 600; flex: 1; min-width: 0; font-size: 15px; color: var(--t-text); overflow-wrap: anywhere; }
