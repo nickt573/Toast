@@ -172,11 +172,20 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   user-select: none;
 }
 .hp-streak-chip.at-risk { border-color: var(--t-amber-bdr); background: var(--t-amber-bg); color: var(--t-amber); }
+/* Nothing due, nothing studied: quiet foot note, same scale as .hp-stat-lbl */
+.hp-plan-idle-note {
+  margin-right: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t-amber);
+  align-self: center;
+}
 .hp-plan-card-stats { display: flex; align-items: center; flex: 1; margin-top: 18px; }
 .hp-plan-stat-box { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .hp-stat-num { font-family: var(--t-font-head); font-size: 36px; font-weight: 800; letter-spacing: -0.03em; color: var(--t-text); line-height: 1; }
 .hp-stat-num--todos { color: var(--t-yellow); }
 .hp-stat-num--decks { color: var(--t-blue); }
+.hp-stat-num--zero  { color: var(--t-green); }
 .hp-stat-lbl { font-size: 11px; color: var(--t-text-3); font-weight: 600; }
 .hp-plan-stat-divider { width: 1px; height: 44px; background: var(--t-border); margin: 0 20px; flex-shrink: 0; }
 .hp-plan-card-foot { display: flex; justify-content: flex-end; margin-top: 14px; }

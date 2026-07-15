@@ -1108,8 +1108,11 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                             const streakInfo = counts?.streakInfo;
                             const atRisk = streakInfo && streakInfo.streak > 0 && !streakInfo.studied_today;
                             const hasDue = counts && (counts.todos > 0 || counts.cards > 0);
+                            // Nothing due but nothing studied either: the streak is still
+                            // in danger, so the card must not read as done.
+                            const idle = !!counts && !hasDue && streakInfo && !streakInfo.studied_today;
                             // Requires counts to have loaded, so a plan doesn't flash "done" mid-fetch
-                            const isDone = !!counts && !hasDue;
+                            const isDone = !!counts && !hasDue && !idle;
                             return (
                                 <div
                                     key={plan.id}
@@ -1129,16 +1132,21 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                     </div>
                                     <div className="hp-plan-card-stats">
                                         <div className="hp-plan-stat-box">
-                                            <span className="hp-stat-num hp-stat-num--todos">{counts?.todos ?? 0}</span>
+                                            <span className={`hp-stat-num ${isDone ? "hp-stat-num--zero" : "hp-stat-num--todos"}`}>{counts?.todos ?? 0}</span>
                                             <span className="hp-stat-lbl">{(counts?.todos ?? 0) == 1 ? "todo due" : "todos due"}</span>
                                         </div>
                                         <div className="hp-plan-stat-divider" />
                                         <div className="hp-plan-stat-box">
-                                            <span className="hp-stat-num hp-stat-num--decks">{counts?.cards ?? 0}</span>
+                                            <span className={`hp-stat-num ${isDone ? "hp-stat-num--zero" : "hp-stat-num--decks"}`}>{counts?.cards ?? 0}</span>
                                             <span className="hp-stat-lbl">{(counts?.cards ?? 0) == 1 ? "card due" : "cards due"}</span>
                                         </div>
                                     </div>
                                     <div className="hp-plan-card-foot">
+                                        {idle && (
+                                            <span className="hp-plan-idle-note">
+                                                Nothing due today. Log an extra activity to {streakInfo.streak > 0 ? "keep" : "start"} your streak.
+                                            </span>
+                                        )}
                                         <span className="hp-plan-open">Open plan →</span>
                                     </div>
                                 </div>
