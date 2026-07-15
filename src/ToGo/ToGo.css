@@ -8,7 +8,7 @@
   height: 44px;
   padding: 0 var(--t-page-pad);
   border-bottom: 1px solid var(--t-border);
-  background: linear-gradient(280deg, #D7DEE2 0%, var(--t-surface) 72%);
+  background: linear-gradient(280deg, #DCDDDE 0%, var(--t-surface) 72%);
   flex-shrink: 0;
 }
 .togo-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }

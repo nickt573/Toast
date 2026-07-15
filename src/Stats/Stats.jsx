@@ -1153,8 +1153,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={`${streakInfo.streak}d`}
               color={streakInfo.streak === 0 ? GRAY : atRisk ? AMBER : "var(--t-green)"}
             />
-            <MetricCard label="Deck Study Time" value={fmtTime(metrics.studyMins)} color="var(--t-text-2)" />
-            <MetricCard label="Todo Time"  value={fmtTime(metrics.todoMins)}  color="var(--t-text-2)" />
+            <MetricCard label="Deck Study Time" value={fmtTime(metrics.studyMins)} color="var(--t-time)" />
+            <MetricCard label="Todo Time"  value={fmtTime(metrics.todoMins)}  color="var(--t-time)" />
           </div>
 
           {/* Chart panel */}
