@@ -262,6 +262,7 @@ function SimilarNavigator({ items, frontCount = 0, groupType }) {
 // ─── Todo Complete Popup ──────────────────────────────────────────────────────
 
 function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, allGroups, onConfirm, onCancel, onNavigateToGroup, initialTime = 0 }) {
+    const [text, setText] = useState(todo.text);
     const [timeSpent, setTimeSpent] = useState(initialTime);
     const [numUnit, setNumUnit] = useState("");
     const [details, setDetails] = useState("");
@@ -282,7 +283,14 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
     return (
         <div className="hp-overlay">
             <div className="hp-popup">
-                <div className="hp-popup-title">{todo.text}</div>
+                <div className="hp-popup-title">Complete Todo</div>
+
+                <div>
+                    <div className="hp-popup-label">What did you do?</div>
+                    <input value={text} onChange={(e) => setText(e.target.value)}
+                        placeholder="e.g. Read extra grammar notes"
+                        style={{ width: "100%" }} />
+                </div>
 
                 <div>
                     <div className="hp-popup-label">Categories</div>
@@ -352,6 +360,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                             selectedResourceIds,
                             selectedGroupIds,
                             computeCategory(categoryMap),
+                            text,
                         )}>
                         Done
                     </button>
@@ -804,8 +813,9 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         }
     }
 
-    async function confirmComplete(timeSpent, numUnit, details, resourceIds, groupIds, category) {
+    async function confirmComplete(timeSpent, numUnit, details, resourceIds, groupIds, category, text) {
         if (!completingTodo) return;
+        if (!text?.trim()) { setToast("Please enter a todo name."); return; }
         if (!category || category === 0) { setToast("Select at least one category.", "error"); return; }
         if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "error"); return; }
         try {
@@ -817,6 +827,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                 resourceIds,
                 groupIds,
                 category,
+                text: text.trim(),
             });
             setCompletingTodo(null);
             setCompletingTodoLinks({ groups: [], resources: [] });
