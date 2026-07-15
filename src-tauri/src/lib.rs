@@ -147,6 +147,7 @@ pub fn run() {
             commands::srs::update_date,
             commands::srs::get_current_date,
             commands::srs::is_day_stale,
+            commands::srs::is_first_launch,
             commands::resources::create_resource,
             commands::resources::get_resources,
             commands::resources::update_resource,

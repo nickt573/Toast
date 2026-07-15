@@ -980,7 +980,7 @@ const VIEW_HOME    = "home";
 const VIEW_PLAN    = "plan";
 const VIEW_SESSION = "session";
 
-export default function Homepage({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, refreshDayCount, onRefreshDay }) {
+export default function Homepage({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, refreshDayCount, onRefreshDay, onOpenHelp }) {
     const [plans, setPlans] = useState([]);
     const [view, setView] = useState(VIEW_HOME);
     const [activePlan, setActivePlan] = useState(null);
@@ -1147,6 +1147,9 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                     </div>
                 )}
             </div>
+            {onOpenHelp && (
+                <button className="hp-help-btn" onClick={onOpenHelp} title="How Toast works">?</button>
+            )}
             {version && <div className="hp-version">Toast v{version}</div>}
         </div>
     );

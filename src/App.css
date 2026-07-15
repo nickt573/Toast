@@ -344,6 +344,18 @@ textarea { overflow-y: scroll; }
   background: var(--tab-underline, var(--t-accent));
   border-radius: 3px 3px 0 0;
 }
+/* Lifted above the how-to overlay (z 900) to spotlight the tab being described;
+   pointer-events off so the overlay still blocks navigation. The ring is inset
+   because full-height tabs sit flush with the window top, which clips an
+   outer shadow */
+.app-nav-tab.help-spot {
+  z-index: 901;
+  pointer-events: none;
+  background: rgba(255,255,255,0.12);
+  border-radius: var(--t-r-lg);
+  box-shadow: inset 0 0 0 2px var(--tab-underline, var(--t-accent));
+  color: var(--t-nav-fg);
+}
 .app-nav-center {
   display: flex;
   align-items: center;

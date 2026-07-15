@@ -13,6 +13,25 @@
   margin: 0 auto;
 }
 
+/* How-to opener pinned to the bottom-left corner, mirroring the version tag */
+button.hp-help-btn {
+  position: fixed;
+  left: 12px;
+  bottom: 8px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--t-border-2);
+  background: var(--t-surface);
+  color: var(--t-text-3);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: var(--t-shadow-sm);
+}
+button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bdr); background: var(--t-surface); }
+
 /* Version tag pinned to the bottom-right corner of the homepage */
 .hp-version {
   position: fixed;

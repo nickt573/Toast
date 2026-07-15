@@ -86,6 +86,16 @@ pub fn get_current_date(state: tauri::State<AppState>) -> Result<String, String>
     scheduling::get_date(&conn).map_err(|e| e.to_string())
 }
 
+// Meaningful only before update_date runs, which inserts the app_date row
+#[tauri::command]
+pub fn is_first_launch(state: tauri::State<AppState>) -> Result<bool, String> {
+    let conn = state.conn.lock().unwrap();
+    let count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM app_date", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    Ok(count == 0)
+}
+
 #[tauri::command]
 pub fn is_day_stale(state: tauri::State<AppState>) -> Result<bool, String> {
     let conn = state.conn.lock().unwrap();
