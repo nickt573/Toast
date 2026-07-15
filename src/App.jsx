@@ -16,6 +16,7 @@ import Notebooks from "./Notebooks/Notebooks";
 import Homepage from "./Homepage";
 import Stats from "./Stats/Stats";
 import ToGo from "./ToGo/ToGo";
+import HowTo, { HELP_PAGES } from "./HowTo";
 
 const TABS = [
   { key: "home",      label: "Home",      subtitle: "Today's Dashboard",   color: "var(--t-pink)"   },
@@ -38,7 +39,14 @@ export default function App() {
   const [refreshDayCount, setRefreshDayCount] = useState(0);
   const [dateReady, setDateReady] = useState(false);
   const [closePush, setClosePush] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpPage, setHelpPage] = useState(0);
   const dateChecked = useRef(false);
+
+  function openHelp() {
+    setHelpPage(0);
+    setHelpOpen(true);
+  }
 
   function showToast(msg, type = "info") {
     setToast({ message: msg, type });
@@ -166,12 +174,20 @@ export default function App() {
     if (dateChecked.current) return;
     dateChecked.current = true;
     (async () => {
+      let firstLaunch = false;
+      try {
+        // Must run before update_date, which inserts the app_date row
+        firstLaunch = await loggedInvoke("is_first_launch");
+      } catch (e) {
+        logError("is_first_launch", e);
+      }
       try {
         await loggedInvoke("update_date");
       } catch (e) {
         logError("update_date", e);
       } finally {
         setDateReady(true);
+        if (firstLaunch) openHelp();
       }
     })();
   }, []);
@@ -187,6 +203,7 @@ export default function App() {
           onConsumeReturnContext={() => setHomeReturnContext(null)}
           refreshDayCount={refreshDayCount}
           onRefreshDay={refreshDay}
+          onOpenHelp={openHelp}
         />
       );
       break;
@@ -239,10 +256,11 @@ export default function App() {
       menuComp = <div style={{ padding: 16 }}>Error</div>;
   }
 
+  const helpTab = helpOpen ? HELP_PAGES[helpPage]?.tab : null;
   const navTab = ({ key, label, subtitle, color }) => (
     <button
       key={key}
-      className={`app-nav-tab${key === "home" ? " app-nav-tab--home" : ""}${menu === key ? " active" : ""}`}
+      className={`app-nav-tab${key === "home" ? " app-nav-tab--home" : ""}${menu === key ? " active" : ""}${helpTab === key ? " help-spot" : ""}`}
       style={{ "--tab-underline": color }}
       onClick={() => navigate(key)}
     >
@@ -265,6 +283,9 @@ export default function App() {
       </nav>
 
       <div className="app-content">{dateReady ? menuComp : null}</div>
+      {helpOpen && (
+        <HowTo page={helpPage} setPage={setHelpPage} onClose={() => setHelpOpen(false)} />
+      )}
       {closePush && (
         <BusyOverlay
           title="Pushing to Toast to Go…"
