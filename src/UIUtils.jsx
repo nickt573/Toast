@@ -64,8 +64,6 @@ export function Tip({ text }) {
   );
 }
 
-// Small deck/notebook type badge shown inside group pills (kin to the "?" Tip badge).
-// Always fully filled in its family colors, matching a selected pill's look.
 export function GroupTypeBadge({ type }) {
   const nb = type === "notebook";
   return (
@@ -82,7 +80,7 @@ export function GroupTypeBadge({ type }) {
   );
 }
 
-// Full-info resource card (name / type / url / notes) — shared by Stats and the study page.
+// Full-info resource card, shared by Stats and the study page.
 export function ResourceCard({ res }) {
   const openResource = () => res.url && openUrl(res.url.startsWith("http") ? res.url : `https://${res.url}`);
   return (

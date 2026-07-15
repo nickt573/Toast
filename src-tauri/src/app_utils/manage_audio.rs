@@ -1,7 +1,6 @@
 /// Collects local `src` values from <audio> tags in card HTML.
-/// NOTE: only handles double-quoted `src="…"` — single-quoted attributes are
-/// missed (import always writes double quotes, so this only affects
-/// hand-edited HTML).
+/// Only handles double-quoted `src="…"`, single-quoted attributes are missed
+/// (import always writes double quotes, so only hand-edited HTML is affected).
 pub fn extract_audio_paths_from_html(html: &str) -> Vec<String> {
     let mut paths = Vec::new();
     let lower_html = html.to_lowercase();

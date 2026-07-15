@@ -17,16 +17,16 @@ import "./Stats.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend);
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// Constants:
 
-// Themed palette — matches the app's cozy feature families (slate / forest / clay …)
-const BLUE   = "#5A7A90";  // slate — new cards
-const GREEN  = "#4A8C5E";  // forest — promoted / good retention
-const RED    = "#B85454";  // terracotta — demoted / poor retention
-const AMBER  = "#C49A44";  // amber — mid retention
-const GRAY   = "#9A8488";  // warm grey — neutral
+// Themed palette matching the app's feature families
+const BLUE   = "#5A7A90";  // slate, new cards
+const GREEN  = "#4A8C5E";  // forest, promoted / good retention
+const RED    = "#B85454";  // terracotta, demoted / poor retention
+const AMBER  = "#C49A44";  // amber, mid retention
+const GRAY   = "#9A8488";  // warm grey, neutral
 
-const YELLOW = "#E0A92E"; // yellow — todos
+const YELLOW = "#E0A92E"; // yellow, todos
 
 const BLUE_BG   = "rgba(90,122,144,0.78)";
 const GREEN_BG  = "rgba(74,140,94,0.78)";
@@ -36,7 +36,7 @@ const YELLOW_BG = "rgba(224,169,46,0.78)";
 // Category colors are defined once in PlanUtils and shared with Todos.
 const CATEGORY_COLORS = CATEGORY_COLOR_BY_LABEL;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers:
 
 function fmtTime(minutes) {
   if (!minutes) return "0m";
@@ -66,7 +66,7 @@ function addDays(dateStr, n) {
 function parseCategories(catStr) {
   if (!catStr) return [];
   return catStr.split(",").map(s => s.trim()).filter(Boolean)
-    // "Other" was renamed to "Culture" (bit 64) — alias old stat rows
+    // "Other" was renamed to "Culture" (bit 64), alias old stat rows
     .map(s => s === "Other" ? "Culture" : s);
 }
 
@@ -91,7 +91,7 @@ function computeMetrics(groupStats, todoStats) {
   return { studyMins, todoMins, cardsStudied, todosDone, avgRetention };
 }
 
-// ─── Chart data builders ──────────────────────────────────────────────────────
+// Chart data builders:
 
 // Bucket key per unit: "day" = the date itself (raw daily bars, unchanged),
 // "week" = the Monday of that week, "month" = "YYYY-MM". Labels keep the year.
@@ -211,7 +211,7 @@ function buildByCategoryData(todoStats) {
     });
   });
 
-  // Canonical category order first; any unrecognized legacy labels go last
+  // Canonical category order first, any unrecognized legacy labels go last
   const order = CATEGORIES.map(c => c.label);
   const cats = [
     ...order.filter(c => byCategory[c] > 0),
@@ -229,12 +229,12 @@ function buildByCategoryData(todoStats) {
   };
 }
 
-// ─── Shared chart options ─────────────────────────────────────────────────────
+// Shared chart options:
 
-// Caps how many date labels render as history grows; the bars themselves are unaffected.
+// Caps how many date labels render as history grows, the bars themselves are unaffected.
 const DATE_TICKS = { autoSkip: true, maxTicksLimit: 12, maxRotation: 30, font: { size: 10 } };
 
-// Wraps a label onto word-boundary lines; only truncates past the line limit.
+// Wraps a label onto word-boundary lines, only truncates past the line limit.
 function wrapTickLabel(label, width = 14, maxLines = 2) {
   const lines = [];
   let line = "";
@@ -257,7 +257,7 @@ function wrapTickLabel(label, width = 14, maxLines = 2) {
 }
 
 // Deck names are categorical: never skip a label (every bar stays identified), never
-// rotate, wrap long names instead — tooltips still show the full name.
+// rotate, wrap long names instead. Tooltips still show the full name.
 const DECK_TICKS = {
   autoSkip: false,
   maxRotation: 0,
@@ -293,7 +293,7 @@ const lineOpts = {
   },
 };
 
-// ─── Metric card ─────────────────────────────────────────────────────────────
+// Metric card:
 
 function MetricCard({ label, value, color }) {
   return (
@@ -304,7 +304,7 @@ function MetricCard({ label, value, color }) {
   );
 }
 
-// ─── Chart panel ─────────────────────────────────────────────────────────────
+// Chart panel:
 
 const RANGES = [
   { label: "7d",  days: 7 },
@@ -490,7 +490,7 @@ function ChartPanel({ groupStats, todoStats }) {
   );
 }
 
-// ─── Deck Sessions tab ────────────────────────────────────────────────────────
+// Deck Sessions tab:
 
 function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
   const [deckFilter, setDeckFilter]   = useState("all");
@@ -503,7 +503,6 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
     ? groupStats
     : groupStats.filter(r => r.group_name === deckFilter);
 
-  // Group by deck name
   const byDeck = {};
   visible.forEach(r => {
     if (!byDeck[r.group_name]) byDeck[r.group_name] = [];
@@ -624,7 +623,7 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                           {(r.num_promote + r.num_demote) === 0 ? (
                             <div className="st-ret-bar-wrap">
                               <div className="st-ret-bar-track">
-                                <span className="st-ret-pct" style={{ color: "var(--t-text-3)" }}>—</span>
+                                <span className="st-ret-pct" style={{ color: "var(--t-text-3)" }}>-</span>
                               </div>
                             </div>
                           ) : (
@@ -656,7 +655,7 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
   );
 }
 
-// ─── Todos tab ────────────────────────────────────────────────────────────────
+// Todos tab:
 // Derived from PlanUtils so the filter pills match every category picker's order.
 const ALL_CATEGORIES = CATEGORIES.map(c => c.label);
 
@@ -1014,7 +1013,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
+// Root:
 
 export default function Stats({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext }) {
   const [activePlans,    setActivePlans]   = useState([]);
@@ -1143,7 +1142,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           <div className="st-metrics">
             <MetricCard
               label="Avg. Card Retention"
-              value={metrics.avgRetention !== null ? `${Math.round(metrics.avgRetention * 100)}%` : "—"}
+              value={metrics.avgRetention !== null ? `${Math.round(metrics.avgRetention * 100)}%` : "-"}
               color={metrics.avgRetention !== null ? retColor : GRAY}
             />
             <MetricCard label="Cards Studied" value={metrics.cardsStudied} color="var(--t-blue)" />

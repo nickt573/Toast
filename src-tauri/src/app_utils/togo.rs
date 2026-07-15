@@ -16,7 +16,7 @@ pub fn endpoint() -> &'static str {
     option_env!("TOAST_TOGO_ENDPOINT").unwrap_or("https://toast-to-go.njt112233.workers.dev")
 }
 
-// ── Instance config ──────────────────────────────────────────────────────────
+// Instance config
 // Lives at app_dir/togo.json and is never bundled. That's what keeps the UUID
 // instance-specific: a pull replaces your data but not your identity.
 
@@ -56,7 +56,7 @@ pub fn load_config(app_dir: &Path) -> Result<ToGoConfig, String> {
         if let Ok(cfg) = serde_json::from_str::<ToGoConfig>(&raw) {
             return Ok(cfg);
         }
-        // instance_id is the slot key — keep the bytes recoverable
+        // instance_id is the slot key, keep the bytes recoverable
         let bad = config_path(app_dir).with_extension("json.bad");
         let _ = fs::rename(config_path(app_dir), &bad);
         log::error!(
@@ -151,7 +151,7 @@ pub fn sweep_stale_temp() {
     }
 }
 
-// ── Transport ────────────────────────────────────────────────────────────────
+// Transport
 
 const PART_BYTES: usize = 50 * 1024 * 1024;
 const MAX_PACKAGE_BYTES: u64 = 1024 * 1024 * 1024;
@@ -172,7 +172,7 @@ pub struct UploadedPart {
 
 const THROTTLED: &str = "Too many requests. Wait a minute and try again.";
 
-/// A 429's body says how long to wait (a minute vs. a day); pass it through.
+/// A 429's body says how long to wait (a minute vs. a day). Pass it through.
 async fn throttle_msg(res: reqwest::Response) -> String {
     #[derive(Deserialize)]
     struct Body {
@@ -266,7 +266,7 @@ pub async fn upload(zip_path: &Path, id: &str) -> Result<(), String> {
         part_number += 1;
     }
 
-    // The slot only changes here — an aborted push never becomes visible.
+    // The slot only changes here, an aborted push never becomes visible.
     let res = client
         .post(format!("{base}/mpu/{upload_id}/complete"))
         .json(&serde_json::json!({ "parts": parts }))
@@ -360,7 +360,7 @@ pub async fn slot_info(id: &str) -> Result<Option<SlotInfo>, String> {
     }))
 }
 
-// ── Package ──────────────────────────────────────────────────────────────────
+// Package
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manifest {
@@ -372,8 +372,8 @@ pub struct Manifest {
     pub created_at: String,
 }
 
-/// Zips a database snapshot plus the media trees. Returns the zip path; the
-/// TempDir owns it and must outlive the caller's use.
+/// Zips a database snapshot plus the media trees. The TempDir in the result
+/// owns the path and must outlive the caller's use.
 pub fn bundle(
     app_dir: &Path,
     conn: &Connection,
@@ -486,8 +486,7 @@ fn read_manifest(zip_path: &Path, stage: &Path) -> Result<Manifest, String> {
 }
 
 /// Validates a package, then swaps it in and reopens `conn` against it.
-/// Destructive on success. `app_date` is deliberately left as it came — see the
-/// staleness check below.
+/// Destructive on success. `app_date` is deliberately left as it came, see staleness check below.
 pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result<(), String> {
     // Staged inside app_dir: the swap renames below can't cross filesystems,
     // and the system temp dir often lives on one (tmpfs).
@@ -536,8 +535,7 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
         db::init_schema(&probe, app_dir).map_err(|e| e.to_string())?;
     }
 
-    // Close the live connection before touching the file — Windows won't rename
-    // a file with an open handle.
+    // Close the live connection before touching the file: Windows won't rename a file with an open handle.
     let old = std::mem::replace(
         conn,
         Connection::open_in_memory().map_err(|e| e.to_string())?,
@@ -549,7 +547,7 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
     fs::create_dir_all(&rollback).map_err(|e| e.to_string())?;
 
     // db moves aside first and back last, so "live db missing" brackets the
-    // whole swap — that's what recover_interrupted_swap keys on.
+    // whole swap, that's what recover_interrupted_swap keys on.
     let swap = || -> std::io::Result<()> {
         for name in ["database.db", "cards", "pages"] {
             let live = app_dir.join(name);
@@ -671,7 +669,6 @@ mod tests {
         let (src, conn) = make_app("2026-07-14");
         let (_tmp, zip) = bundle(src.path(), &conn, "instance-a").unwrap();
 
-        // A second, empty install pulls it.
         let (dst, mut dconn) = make_app("2026-07-14");
         dconn.execute("DELETE FROM card", []).unwrap();
         fs::remove_file(dst.path().join("cards/images/a.png")).unwrap();
@@ -821,7 +818,7 @@ mod tests {
             fs::read(dst.path().join("cards/audio/big.wav")).unwrap().len(),
             3 * 1024 * 1024
         );
-        println!("round trip ok — card and media restored from R2");
+        println!("round trip ok, card and media restored from R2");
     }
 
     #[test]

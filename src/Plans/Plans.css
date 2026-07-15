@@ -1,6 +1,5 @@
-/* ── Plans subcomponents ── */
+/* Plans subcomponents */
 
-/* SRS Group Row */
 .plan-srs-row { border: 1px solid var(--t-border-2); border-radius: var(--t-r-xl); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 45%); }
 .plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .plan-srs-name { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
@@ -18,10 +17,9 @@
 .plan-srs-confirm-sub { font-size: 12px; color: var(--t-text-3); margin-bottom: 8px; }
 .plan-srs-confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* SRS add form — carries the deck-family gradient like its clay/yellow siblings */
+/* SRS add form: carries the deck-family gradient like its clay/yellow siblings */
 .plan-srs-add { border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r-lg); padding: 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 55%); }
 
-/* Resource row */
 .plan-resource-row { border: 1px solid var(--t-border-2); border-radius: var(--t-r-xl); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 45%); }
 .plan-resource-edit-form { display: flex; flex-direction: column; gap: 6px; }
 .plan-resource-edit-actions { display: flex; gap: 6px; }
@@ -34,7 +32,6 @@
 .plan-resource-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .plan-resource-add { border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r-lg); padding: 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); }
 
-/* Todo creator */
 .plan-todo-creator { margin-top: 0; }
 .plan-todo-form { border: 1px solid var(--t-yellow-bdr); border-radius: var(--t-r-lg); padding: 12px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%); }
 .plan-form-sublabel { font-size: 12px; margin-bottom: 4px; color: var(--t-text-2); }

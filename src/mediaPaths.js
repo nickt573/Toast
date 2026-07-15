@@ -3,7 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 
 // Media paths are stored relative to the app data dir ("cards/images/x.png").
 // mediaSrc must stay synchronous (it runs inside render paths), so the app
-// dir is fetched once before the first render — see main.jsx.
+// dir is fetched once before the first render, see main.jsx.
 
 let appDir = "";
 

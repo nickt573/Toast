@@ -1,6 +1,6 @@
 import { Limiter } from "./limiter.js";
 
-// Toast to Go — one package slot per instance UUID; push overwrites, pull reads.
+// Toast to Go: one package slot per instance UUID, push overwrites, pull reads.
 // Uploads are multipart because a Worker request body is capped at 100 MB.
 
 const UUID_RE =

@@ -38,9 +38,8 @@ pub fn save_page_audio(
     let audio_dir = app_dir.join("pages").join("audio");
     std::fs::create_dir_all(&audio_dir).map_err(|e| e.to_string())?;
 
-    // The extension must match the bytes so playback picks the right
-    // decoder. The recorder sends WAV; webm/ogg/mp4 cover files recorded by
-    // older MediaRecorder-based builds. ".mp4" matches the legacy behavior.
+    // The extension must match the bytes so playback picks the right decoder.
+    // The recorder sends WAV. webm/ogg/mp4 cover files from older MediaRecorder builds. ".mp4" matches legacy.
     let mime = mime.unwrap_or_default();
     let ext = if mime.contains("wav") {
         "wav"

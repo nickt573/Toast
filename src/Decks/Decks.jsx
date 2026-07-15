@@ -3,10 +3,8 @@ import { loggedInvoke, logError } from "../logger";
 import { open } from "@tauri-apps/plugin-dialog";
 import { CardFace, AudioPlayer, renderAnkiHtml, stripHtml, normalizeSearchText, stripAudioTags, extractRawAudioSrcs } from "./CardFace";
 
-// Read-only preview of an uploaded (Anki) field. Audio tags must not reach
-// the DOM as native <audio controls> — asset:// audio never plays on Linux
-// WebKitGTK and its controls just render "Error" — so they're stripped and
-// replaced with the same backend-read AudioPlayer the study views use.
+// Audio tags stripped from Anki fields: asset:// audio never plays on Linux WebKitGTK
+// and its controls just render "Error". Replaced with AudioPlayer.
 function UploadedHtmlField({ html }) {
   const srcs = extractRawAudioSrcs(html);
   return (
@@ -46,13 +44,10 @@ const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 
 // Mirrors PRIORITY_CEIL in scheduling.rs: sequences below this are prioritized
 const PRIORITY_CEIL = -50000;
 
-// Describes media a sample carries, since the field holds a sound file or a
-// picture rather than the words "audio" or "image".
+// Describes what the field contains rather than its type name, since it holds files not the words "audio" or "image".
 const mediaNote = (media) => `contains ${media.join(" and ")} content`;
 
-// One row of the Anki field-mapping screen. Field names lie often enough that the
-// samples, not the name, are what you map against — so they get arrows to page
-// through real values drawn from across the deck.
+// Anki field-mapping row. Field names are unreliable, so samples (paged through real values) are what you map against.
 function AnkiFieldRow({ field, index, totalNotes, front, back, support, onToggle }) {
   const [at, setAt] = useState(0);
   const samples = field.samples;
@@ -102,7 +97,7 @@ function AnkiFieldRow({ field, index, totalNotes, front, back, support, onToggle
   );
 }
 
-// ─── Deck List ────────────────────────────────────────────────────────────────
+// Deck List
 
 function DeckList({ setToast, onOpenDeck }) {
   const [decks, setDecks] = useState([]);
@@ -404,7 +399,7 @@ function DeckList({ setToast, onOpenDeck }) {
   );
 }
 
-// ─── Card Editor ──────────────────────────────────────────────────────────────
+// Card Editor
 
 function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan }) {
   const [form, setForm] = useState(null);
@@ -432,7 +427,6 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
     is_paused: c.is_paused,
   });
 
-  // Silently persists unsaved edits when the selection changes or the editor goes away
   const autoSave = async (target) => {
     const f = formRef.current;
     const base = baselineRef.current;
@@ -705,7 +699,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
   );
 }
 
-// ─── New Card Form ────────────────────────────────────────────────────────────
+// New Card Form
 
 export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null }) {
   const blank = () => emptyNewCard(groupId);
@@ -837,7 +831,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
   );
 }
 
-// ─── Deck Actions Dropdown ────────────────────────────────────────────────────
+// Deck Actions Dropdown
 
 function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearchable, onResetRequest }) {
   const [open, setOpen] = useState(false);
@@ -868,7 +862,7 @@ function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearch
   );
 }
 
-// ─── Card View ────────────────────────────────────────────────────────────────
+// Card View
 
 function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [cards, setCards] = useState([]);
@@ -883,7 +877,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [lastSeenMap, setLastSeenMap] = useState({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
-  // Dragged panel height, remembered while this deck view stays open; null means the CSS default
+  // Dragged panel height remembered while this deck view is open. null means use the CSS default.
   const [creatorHeight, setCreatorHeight] = useState(null);
   const tablePaneRef = useRef(null);
   const toggleRowRef = useRef(null);
@@ -1129,8 +1123,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
             </div>
           ) : (
             <>
-              {/* Header lives outside the scroll area so the scrollbar starts below it;
-                  both tables share fixed column widths to stay aligned */}
+              {/* Header outside the scroll area so the scrollbar starts below it. Both tables share fixed column widths to stay aligned. */}
               <div className="dk-table-head">
                 <table className="dk-card-table">
                   <colgroup><col /><col /><col className="dk-col-due" /><col className="dk-col-paused" /></colgroup>
@@ -1167,7 +1160,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                             {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star" title="Prioritized">★</span>}
                           </>
                         )}</td>
-                        <td>{card.is_paused ? "Yes" : "—"}</td>
+                        <td>{card.is_paused ? "Yes" : "No"}</td>
                       </tr>
                     );
                     })}
@@ -1203,7 +1196,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
+// Root
 
 export default function Decks({ setToast, initialDeck, onClearInitial, returnTo, onReturnToOrigin }) {
   const [view, setView] = useState(initialDeck ? VIEW_CARDS : VIEW_DECKS);

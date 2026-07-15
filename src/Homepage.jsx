@@ -8,7 +8,7 @@ import { ResourceCard, GroupTypeBadge } from "./UIUtils";
 import { computeCategory, maskToCategories, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
 import "./Homepage.css";
 
-// ─── Shared pill helpers ──────────────────────────────────────────────────────
+// Shared pill helpers
 
 function GroupPill({ group, onClick }) {
     const colorClass = group.group_type === "notebook" ? "pill-plum" : "pill-blue";
@@ -36,11 +36,9 @@ function ResourcePill({ resource }) {
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
 
-// ─── Study Timer ──────────────────────────────────────────────────────────────
-// One stopwatch per plan. Module-level so timers keep running while navigating
-// the app. Elapsed time is mirrored to localStorage (never the database) every
-// few seconds while running, so closing the app pauses each timer and its time
-// is restored on the next launch.
+// Study Timer
+// Module-level so timers survive navigation.
+// Elapsed time goes to localStorage (not the DB) so closing the app pauses each timer and it restores on relaunch.
 
 export const TIMER_STORE_KEY = "toast-study-timers";
 
@@ -77,8 +75,7 @@ function persistStudyTimers() {
     try { localStorage.setItem(TIMER_STORE_KEY, JSON.stringify(out)); } catch { /* storage full/unavailable */ }
 }
 
-// Persist on every timer action, and on a heartbeat while any timer runs so a
-// closed app loses at most a few seconds.
+// Persist on every action and on a heartbeat while running so a closed app loses at most a few seconds.
 function syncTimerPersistence() {
     persistStudyTimers();
     const anyRunning = Object.values(studyTimers).some(t => t.runningSince !== null);
@@ -145,8 +142,7 @@ function StudyTimer({ planId }) {
         ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
         : `${m}:${String(s).padStart(2, "0")}`;
 
-    // A stopped timer that already holds time is paused, not fresh — it offers
-    // Resume so a half-finished session is obvious at a glance.
+    // A stopped timer with accumulated time is paused, not fresh. It shows Resume instead of Start.
     const paused = !running && elapsedMs > 0;
     const toggleClass = running ? "hp-timer-btn--pause" : paused ? "hp-timer-btn--resume" : "hp-timer-btn--start";
 
@@ -162,7 +158,7 @@ function StudyTimer({ planId }) {
 }
 
 
-// ─── Grade Buttons ────────────────────────────────────────────────────────────
+// Grade Buttons
 
 function GradeButtons({ onGrade, card }) {
     // Rendering without a card would throw and unmount the whole app
@@ -206,7 +202,7 @@ function GradeButtons({ onGrade, card }) {
     );
 }
 
-// ─── Similar Items Navigator ──────────────────────────────────────────────────
+// Similar Items Navigator
 
 function SimilarFace({ item, side }) {
     return (
@@ -259,7 +255,7 @@ function SimilarNavigator({ items, frontCount = 0, groupType }) {
     );
 }
 
-// ─── Todo Complete Popup ──────────────────────────────────────────────────────
+// Todo Complete Popup
 
 function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, allGroups, onConfirm, onCancel, onNavigateToGroup, initialTime = 0 }) {
     const [text, setText] = useState(todo.text);
@@ -370,7 +366,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
     );
 }
 
-// ─── Free Todo Popup ──────────────────────────────────────────────────────────
+// Free Todo Popup
 
 function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm, onCancel, setToast, initialTime = 0 }) {
     const [mode, setMode] = useState(todos.length > 0 ? "choose" : "form");
@@ -408,7 +404,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
         setMode("form");
     }
 
-    // Autofill only; the logged stat never stores the todo's id
+    // Autofill only. The logged stat never stores the todo's id.
     async function pickTodo(todo) {
         setText(todo.text);
         setCategoryMap(maskToCategories(todo.category ?? 64));
@@ -550,7 +546,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
     );
 }
 
-// ─── SRS Study Session ────────────────────────────────────────────────────────
+// SRS Study Session
 
 function StudySession({ group, onBack, setToast }) {
     const [card, setCard] = useState(null);
@@ -634,7 +630,7 @@ function StudySession({ group, onBack, setToast }) {
         };
     }, []);
 
-    // WKWebView sometimes drops the repaint after a full card swap; force a flush.
+    // WKWebView sometimes drops the repaint after a full card swap. Force a flush.
     useEffect(() => {
         if (!card) return;
         const el = document.querySelector(".hp-session");
@@ -730,7 +726,7 @@ function StudySession({ group, onBack, setToast }) {
     );
 }
 
-// ─── Plan Study Page ──────────────────────────────────────────────────────────
+// Plan Study Page
 
 function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToast }) {
     const [todos, setTodos] = useState([]);
@@ -940,7 +936,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                     })}
                 </div>
 
-                {/* Resources — quiet reference list, collapsed by default */}
+                {/* Resources, collapsed by default. */}
                 {planResources.length > 0 && (
                     <div className="hp-resources">
                         <span className="hp-resources-toggle" onClick={() => setShowResources(s => !s)}>
@@ -985,7 +981,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
     );
 }
 
-// ─── Homepage ─────────────────────────────────────────────────────────────────
+// Homepage
 
 const VIEW_HOME    = "home";
 const VIEW_PLAN    = "plan";
@@ -1119,10 +1115,9 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                             const streakInfo = counts?.streakInfo;
                             const atRisk = streakInfo && streakInfo.streak > 0 && !streakInfo.studied_today;
                             const hasDue = counts && (counts.todos > 0 || counts.cards > 0);
-                            // Nothing due but nothing studied either: the streak is still
-                            // in danger, so the card must not read as done.
+                            // Nothing due but nothing studied: streak is still at risk so this must not read as done.
                             const idle = !!counts && !hasDue && streakInfo && !streakInfo.studied_today;
-                            // Requires counts to have loaded, so a plan doesn't flash "done" mid-fetch
+                            // Requires counts so a plan doesn't flash "done" while loading.
                             const isDone = !!counts && !hasDue && !idle;
                             return (
                                 <div

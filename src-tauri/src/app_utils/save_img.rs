@@ -14,7 +14,7 @@ pub fn save_card_image(src_path: Option<String>, app_dir: &Path) -> Result<Optio
     std::fs::create_dir_all(&dest_dir)
         .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
 
-    // Already stored (relative or a legacy absolute form) — keep, normalized
+    // Already stored (relative or a legacy absolute form), keep normalized
     if is_stored_media(&src, app_dir, "cards/images") {
         return Ok(Some(to_relative(&src, app_dir)));
     }
@@ -38,7 +38,7 @@ pub fn save_page_image(image_path: Option<String>, app_dir: &Path) -> Result<Opt
         return Ok(None);
     };
 
-    // Already stored (relative or a legacy absolute form) — keep, normalized
+    // Already stored (relative or a legacy absolute form), keep normalized
     if is_stored_media(&image_path, app_dir, "pages/images") {
         return Ok(Some(to_relative(&image_path, app_dir)));
     }

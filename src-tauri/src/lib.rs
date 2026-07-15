@@ -1,5 +1,4 @@
-// NOTE: Notebooks as SRS groups is deprecated — some backend support remains,
-// but the frontend UI no longer exposes it.
+// Notebooks as SRS groups is deprecated, some backend support remains but the UI no longer exposes it.
 
 use rusqlite::Connection;
 use std::path::PathBuf;
@@ -16,10 +15,8 @@ pub struct AppState {
     pub app_dir: PathBuf,
 }
 
-// macOS 26+ composites bundled .icns icons onto a default grey squircle in the
-// Dock. Setting the icon at runtime (which is what `tauri dev` does — hence the
-// transparent toast in dev) makes the Dock and Cmd-Tab show the PNG as-is.
-// Finder and Launchpad still show the bundled icon.
+// macOS 26+ composites bundled .icns icons onto a grey squircle. Setting at runtime
+// (what `tauri dev` does, hence the transparent toast in dev) makes Dock and Cmd-Tab show the PNG as-is.
 #[cfg(target_os = "macos")]
 fn set_dock_icon() {
     use objc2::{AnyThread, MainThreadMarker};
@@ -69,7 +66,7 @@ pub fn run() {
 
             db::init_schema(&conn, &app_dir)?;
 
-            log::info!("App started — db at {}", app_dir.display());
+            log::info!("App started, db at {}", app_dir.display());
 
             app.manage(AppState {
                 conn: Mutex::new(conn),

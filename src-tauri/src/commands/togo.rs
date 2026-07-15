@@ -100,7 +100,7 @@ pub async fn pull_package(id: String, state: tauri::State<'_, AppState>) -> Resu
         togo::restore(&app_dir, &zip_path, &mut conn)?;
     }
 
-    // The pull already succeeded; failing to record it must not fail it.
+    // The pull already succeeded, failing to record it must not fail it.
     if let Err(e) = togo::load_config(&app_dir).and_then(|mut cfg| {
         togo::record_pull(&mut cfg, &id);
         togo::save_config(&app_dir, &cfg)

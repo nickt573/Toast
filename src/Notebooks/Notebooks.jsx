@@ -25,13 +25,11 @@ import "./Notebooks.css";
 const VIEW_NOTEBOOKS = "notebooks";
 const VIEW_PAGES     = "pages";
 
-// Text sizes offered in the toolbar, in px. DEFAULT_FONT_SIZE matches the
-// .ProseMirror base size, so choosing it clears the mark rather than setting one.
+// Choosing DEFAULT_FONT_SIZE clears the mark instead of setting one, matching the .ProseMirror base size.
 const FONT_SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32];
 const DEFAULT_FONT_SIZE = 13;
 
-// Text colors. The mark stores a concrete color, so these are hex literals
-// rather than design tokens — each mirrors a family color from App.css.
+// The mark stores a concrete hex value, so CSS variables can't be used here.
 const FONT_COLORS = [
     { label: "Default",    value: null },
     { label: "Red",        value: "#C0392B" },
@@ -55,7 +53,7 @@ async function pickFile(extensions) {
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
-// Empty paragraphs don't count; any other node type does
+// Empty paragraphs don't count. Any other node type does.
 function isContentEmpty(json) {
     const hasContent = (node) => {
         if (!node) return false;
@@ -66,7 +64,7 @@ function isContentEmpty(json) {
     return !json || !hasContent(json);
 }
 
-// ─── Notebook List ────────────────────────────────────────────────────────────
+// Notebook List
 
 function NotebookList({ setToast, onOpenNotebook }) {
     const [notebooks, setNotebooks] = useState([]);
@@ -228,13 +226,9 @@ function NotebookList({ setToast, onOpenNotebook }) {
     );
 }
 
-// ─── Audio Recorder ───────────────────────────────────────────────────────────
+// Audio Recorder
 
-// Recording lives in a hook so its compact controls can render inside the
-// toolbar while the (line-hungry) audio player renders on its own bar only when
-// a clip actually exists.
-// 16 kHz mono 16-bit is plenty for voice notes and keeps the WAV (and the
-// JSON-encoded IPC payload carrying it) ~3x smaller than the mic's native rate
+// 16 kHz is plenty for voice and keeps the WAV (and IPC payload) about 3x smaller than the mic's normal rate.
 const WAV_RATE = 16000;
 
 function encodeWav(pcm, srcRate) {
@@ -264,9 +258,7 @@ function encodeWav(pcm, srcRate) {
     return new Uint8Array(buf);
 }
 
-// Records raw PCM via WebAudio and encodes a WAV file. MediaRecorder is
-// deliberately not used: WebKitGTK's implementation advertises only audio/mp4
-// and then emits zero bytes, so recordings on Linux were silently empty.
+// MediaRecorder deliberately not used: WebKitGTK advertises audio/mp4 but emits zero bytes on Linux.
 function useAudioRecorder({ audioFile, onAudioChange }) {
     const [recording, setRecording] = useState(false);
     const [paused, setPaused] = useState(false);
@@ -295,8 +287,7 @@ function useAudioRecorder({ audioFile, onAudioChange }) {
             ctxRef.current = ctx;
             const source = ctx.createMediaStreamSource(stream);
             const proc = ctx.createScriptProcessor(4096, 1, 1);
-            // The processor only runs while wired to the destination; the
-            // zero-gain sink keeps the mic from echoing out of the speakers
+            // Zero-gain sink keeps the mic from echoing while keeping the processor wired to the destination.
             const sink = ctx.createGain();
             sink.gain.value = 0;
             chunksRef.current = [];
@@ -337,17 +328,14 @@ function useAudioRecorder({ audioFile, onAudioChange }) {
         } catch (e) { logError("save_page_audio", e); }
     }
 
-    // Only clears the reference. The file is reconciled when the edit ends:
-    // update_page deletes it on save, cleanup_orphaned_media on cancel.
-    // Deleting it from disk here broke Cancel — the DB kept pointing at a
-    // file that no longer existed.
+    // Just clears the reference. Deleting from disk here broke Cancel: the DB kept pointing at a gone file.
+    // Actual cleanup happens in update_page on save and cleanup_orphaned_media on cancel.
     function deleteAudio() { onAudioChange(null); }
 
     return { recording, paused, startRecording, pauseRecording, resumeRecording, stopRecording, deleteAudio };
 }
 
-// Compact audio controls that slot into the toolbar. With a clip present the
-// play button takes the record button's slot — re-recording is Delete + Record.
+// With a clip present, the play button takes the record slot. Re-record by deleting then recording again.
 function AudioControls({ audioFile, audio }) {
     if (audio.recording) {
         return (
@@ -374,7 +362,7 @@ function AudioControls({ audioFile, audio }) {
     );
 }
 
-// ─── Page Editor (TipTap) ─────────────────────────────────────────────────────
+// Page Editor (TipTap)
 
 export function PageEditor({ content, onChange, editable, audioFile, onAudioChange }) {
     const [linkPrompt, setLinkPrompt] = useState(false);
@@ -382,7 +370,6 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
     const [colorPrompt, setColorPrompt] = useState(false);
     const audio = useAudioRecorder({ audioFile, onAudioChange: onAudioChange ?? (() => {}) });
 
-    // Track toolbar overflow so we can fade the edges the user can still scroll to
     const toolbarRef = useRef(null);
     const [tbScroll, setTbScroll] = useState({ l: false, r: false });
     const updateTbScroll = useCallback(() => {
@@ -392,9 +379,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         const r = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
         setTbScroll((prev) => (prev.l === l && prev.r === r ? prev : { l, r }));
     }, []);
-    // A plain mouse wheel only ever sends vertical delta, but the toolbar has
-    // no vertical overflow to consume it — without this it's only scrollable
-    // via trackpad horizontal swipe or manual dragging.
+    // Mouse wheel only sends vertical delta; redirect it horizontal since the toolbar has no vertical overflow.
     const handleTbWheel = useCallback((e) => {
         const el = toolbarRef.current;
         if (!el || el.scrollWidth <= el.clientWidth) return;
@@ -493,7 +478,6 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
 
     if (!editor) return null;
 
-    // Unmarked text inherits the .ProseMirror base size and color
     const textStyle = editor.getAttributes("textStyle");
     const activeFontSize = parseInt(textStyle.fontSize, 10) || DEFAULT_FONT_SIZE;
     const activeColor = textStyle.color ?? null;
@@ -516,8 +500,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                             <button className="nb-tb-btn" onClick={() => { setLinkPrompt(false); setLinkInput(""); }}>Cancel</button>
                         </div>
                     )}
-                    {/* Swatches sit on their own row rather than in a popover — the
-                        toolbar scrolls horizontally and would clip an anchored menu */}
+                    {/* Swatches on their own row; the toolbar would clip an anchored popover when scrolled. */}
                     {colorPrompt && (
                         <div className="nb-inline-prompt nb-color-prompt">
                             {FONT_COLORS.map(({ label, value }) => (
@@ -592,7 +575,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
     );
 }
 
-// ─── Card Creator Panel ───────────────────────────────────────────────────────
+// Card Creator Panel
 
 function CardCreatorPanel({ setToast }) {
     const [open, setOpen] = useState(false);
@@ -621,8 +604,7 @@ function CardCreatorPanel({ setToast }) {
                 <span style={{ fontSize: 13, fontWeight: 500 }}>Create a card</span>
                 <span style={{ fontSize: 10, color: "var(--t-text-3)" }}>{open ? "▾" : "▸"}</span>
             </div>
-            {/* Body opens below the bar; kept mounted while closed so in-progress
-                input survives toggling */}
+            {/* Kept mounted while closed so in-progress input survives toggling. */}
             <div className="nb-card-body">
                 <NewCardForm
                     groupId={deckId}
@@ -635,7 +617,7 @@ function CardCreatorPanel({ setToast }) {
     );
 }
 
-// ─── Editable page wrapper ────────────────────────────────────────────────────
+// Editable page wrapper
 
 function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioChange, onDraft }) {
     const [contentJson, setContentJson] = useState(initialContent ?? null);
@@ -657,14 +639,13 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
     );
 }
 
-// ─── Page Viewer / Editor ─────────────────────────────────────────────────────
+// Page Viewer / Editor
 
 function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, startNewOnOpen }) {
     const [allPages, setAllPages] = useState([]);
     const [query, setQuery] = useState("");
     const [pageIndex, setPageIndex] = useState(0);
-    // Set to the id of a page the view should land on once the list next settles
-    // (after a save, when the page may have moved or not existed before).
+    // After a save, the page may have moved or not existed yet; this holds the id to land on once the list settles.
     const [pendingPageId, setPendingPageId] = useState(null);
     const [editing, setEditing] = useState(false);
     const [dateOn, setDateOn] = useState("");
@@ -702,8 +683,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         return pages;
     }, [allPages, query, dateOn]);
 
-    // Changing a filter re-shuffles the list, so it starts over at page one.
-    // Editing a page must NOT reset the index — that's what keeps you on the page you saved.
+    // Filter changes start over at page one. Editing must NOT reset the index: that's how you stay on the saved page.
     useEffect(() => { setPageIndex(0); }, [query, dateOn]);
 
     useEffect(() => {
@@ -775,14 +755,13 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 setToast("Page saved.");
             }
             setEditing(false); setIsNew(false);
-            // Recordings replaced mid-edit stay on disk until now; the DB is
-            // authoritative at this point, so orphans are safe to sweep
+            // Recordings replaced mid-edit stay on disk until now. DB is authoritative so orphans are safe to sweep.
             loggedInvoke("cleanup_orphaned_media").catch(e => logError("cleanup_orphaned_media", e));
             return true;
         } catch (e) { logError("catch", e); setToast("Failed to save page.", "error"); return false; }
     }
 
-    // Back autosaves; an untitled page blocks unless it is entirely empty
+    // Back autosaves. An untitled page blocks navigation unless it's entirely empty.
     async function handleBack(navigate) {
         if (editing) {
             const draft = liveContentRef.current;
@@ -802,8 +781,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         try {
             await loggedInvoke("delete_page", { id: currentPage.id });
             setAllPages((prev) => prev.filter((p) => p.id !== currentPage.id));
-            // Land on the previous page; deleting the first one leaves index 0,
-            // which is now the page that followed it.
+            // Land on the previous page. Deleting the first one leaves index 0, now the page that followed it.
             setPageIndex((prev) => Math.max(0, prev - 1));
             setToast("Page deleted.");
         } catch (e) { logError("catch", e); setToast("Failed to delete page.", "error"); }
@@ -935,7 +913,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") { e.target.blur(); return; }
                                             if (e.key === "Escape") { e.target.value = pageIndex + 1; e.target.blur(); return; }
-                                            // digits only — block e/+/-/. and any other characters
+                                            // block e/+/-/. and other non-numeric keys
                                             if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
                                         }}
                                         onPaste={(e) => {
@@ -965,7 +943,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
     );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
+// Root
 
 export default function Notebooks({ setToast, initialNotebook, onClearInitial, returnTo, onReturnToOrigin }) {
     const [view, setView] = useState(initialNotebook ? VIEW_PAGES : VIEW_NOTEBOOKS);

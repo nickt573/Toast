@@ -2,8 +2,7 @@ use crate::app_utils::paths::{relativize_html_media, relativize_image_nodes, to_
 use rusqlite::{params, Connection};
 use std::path::Path;
 
-/// Stamped into Toast to Go packages; a pull rejects a mismatch. Bump on any
-/// schema change.
+/// Stamped into Toast to Go packages. A pull rejects a mismatch. Bump on any schema change.
 pub const SCHEMA_VERSION: u32 = 1;
 
 /// Adds a column to an existing table if it doesn't already have it.
@@ -83,8 +82,8 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
             let rel = |v: &Option<String>| v.as_ref().map(|p| to_relative(p, app_dir));
             let (nfi, nbi, nfa, nba) = (rel(&fi), rel(&bi), rel(&fa), rel(&ba));
 
-            // Only uploaded cards embed media in their HTML; custom card text
-            // is user prose and could contain literal paths — never rewrite it.
+            // Only uploaded cards embed media in their HTML. Custom card text
+            // is user prose and could contain literal paths, never rewrite it.
             let (nfront, nback, nsupport) = if is_uploaded {
                 (
                     relativize_html_media(&front, app_dir),
@@ -160,7 +159,7 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     // v1.1.0: read-only support content mapped from Anki fields on import,
     // kept separate from front/back so it stays out of similar-card matching.
     add_column_if_missing(conn, "card", "imported_support", "TEXT")?;
-    // v1.2.0: optional manual order for todos; numbered todos sort ahead of
+    // v1.2.0: optional manual order for todos. Numbered todos sort ahead of
     // unnumbered ones and stay contiguous 1..N per plan (see set_todo_position).
     add_column_if_missing(conn, "todo", "position", "INTEGER DEFAULT NULL")?;
     // v1.2.0: todo time is whole minutes now; round decimals logged by older

@@ -15,11 +15,10 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
     const [selectedGroupIds, setSelectedGroupIds] = useState([]);
     const [selectedResourceIds, setSelectedResourceIds] = useState([]);
 
-    // Reload on mount, and whenever the plan's resources/groups change so the
-    // todo's linked pills update live — no leave/return.
+    // Reload whenever the plan's resources/groups change so linked pills update live, no leave/return needed.
     useEffect(() => { loadLinks(); }, [planResources, allGroups]);
 
-    // The backend clamps and shifts order numbers; show the value it settled on
+    // The backend clamps and shifts order numbers, show the value it settled on
     useEffect(() => { setOrderNum(todo.position ?? ""); }, [todo.position]);
 
     async function loadLinks() {

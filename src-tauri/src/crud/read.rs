@@ -319,7 +319,7 @@ pub fn get_plan_srs_groups(plan_id: i64, conn: &Connection) -> Result<Vec<(Group
     results.collect()
 }
 
-/// Returns all groups not currently assigned to any plan — available to add to a plan.
+/// Returns all groups not currently assigned to any plan, available to add to a plan.
 pub fn get_unassigned_groups(conn: &Connection) -> Result<Vec<Group>> {
     let mut stmt = conn.prepare(
         r#"

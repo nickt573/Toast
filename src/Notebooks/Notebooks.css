@@ -1,25 +1,21 @@
-/* ── Notebooks view ── */
+/* Notebooks view */
 .nb-root { display: flex; flex-direction: column; height: 100%; }
 
-/* List */
 .nb-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
 .nb-notebook-name { font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-text); }
 .nb-notebook-name-input { flex: 1; }
 .nb-new-notebook { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
 .nb-new-notebook input { flex: 1; }
 
-/* Merge panel */
 .nb-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border-2); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
 .nb-merge-row { display: flex; gap: 8px; align-items: center; }
 .nb-merge-row select { flex: 1; }
 
-/* Pages view */
 .nb-pages-root { display: flex; flex-direction: column; height: 100%; }
 .nb-pages-header { display: flex; align-items: center; gap: 8px; padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: linear-gradient(280deg, var(--t-plum-bg) 0%, var(--t-surface) 72%); flex-shrink: 0; }
 .nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
 
-/* Search/filter bar — condensed single row. Deep peach so the chrome reads as a
-   band above the lighter page body rather than blending into it. */
+/* Search bar: deep peach so the chrome reads as a band above the lighter page body */
 .nb-search {
   display: flex;
   gap: 10px;
@@ -44,7 +40,6 @@
 .nb-date-clear { font-size: 13px; line-height: 1; padding: 0 2px; border: none; background: none; box-shadow: none; color: var(--t-text-3); cursor: pointer; }
 .nb-date-clear:hover { background: none; box-shadow: none; color: var(--t-text); }
 
-/* Page layout */
 .nb-page-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; background: var(--t-bg); }
 .nb-page-meta { padding: 10px 20px 0; max-width: 700px; margin: 0 auto; width: 100%; box-sizing: border-box; flex-shrink: 0; }
 .nb-page-title { font-family: var(--t-font-head); font-size: 21px; font-weight: 700; margin: 0 0 4px; color: var(--t-text); }
@@ -54,20 +49,18 @@
 .nb-page-description { font-size: 13px; color: var(--t-text-2); margin: 0 0 6px; line-height: 1.5; }
 .nb-page-date { font-size: 11px; line-height: 19.5px; color: var(--t-text-3); margin: 0 0 12px; }
 .nb-page-divider { border: none; border-top: 1px solid var(--t-border); margin: 0 0 6px; }
-/* Edit-mode title/description — plain single-line inputs, side by side, with the
-   Save/Cancel actions inline on the same row (no separate action bar) */
+/* Edit-mode title/description: inputs side by side with Save/Cancel inline, no separate action bar */
 .nb-page-meta-edit { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
 .nb-page-meta-edit button { flex-shrink: 0; }
 .nb-page-title-input { flex: 1; min-width: 0; font-family: var(--t-font-head); font-size: 14px; font-weight: 700; color: var(--t-text); }
 .nb-page-desc-input { flex: 1.6; min-width: 0; font-size: 13px; color: var(--t-text-2); }
 
-/* Editor */
 .nb-editor-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; max-width: 700px; margin: 0 auto 6px; width: 100%; box-sizing: border-box; padding: 0 20px; min-height: 0; }
 .nb-view-content .nb-editor-wrap { max-width: 100%; padding: 0; }
 .nb-editor-scroll { flex: 1; overflow-y: scroll; padding-bottom: 16px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; }
 .nb-view-content .nb-editor-scroll { border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
 
-/* Toolbar — no-wrap so groups stay together */
+/* Toolbar: no-wrap so groups stay together */
 .nb-toolbar {
   display: flex;
   gap: 2px;
@@ -80,8 +73,7 @@
   scrollbar-width: none;
 }
 .nb-toolbar::-webkit-scrollbar { display: none; }
-/* Horizontal-scroll affordance — fade + chevron on whichever edge still has
-   hidden buttons the user can scroll to */
+/* Horizontal-scroll affordance: fade + chevron on whichever edge has hidden buttons */
 .nb-toolbar-wrap { position: relative; }
 .nb-toolbar-wrap::before,
 .nb-toolbar-wrap::after {
@@ -115,7 +107,6 @@
 .nb-tb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .nb-tb-sep { width: 1px; background: var(--t-border); margin: 0 3px; align-self: stretch; flex-shrink: 0; }
 
-/* Font size picker */
 .nb-tb-select {
   font-size: 12px;
   padding: 2px 4px;
@@ -126,11 +117,11 @@
   box-shadow: none;
 }
 
-/* Font color — the chip under the A previews the color that would be applied */
+/* Font color: the chip under the A previews the color that would be applied */
 .nb-tb-color-btn { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.2; }
 .nb-tb-color-chip { display: block; width: 13px; height: 3px; border-radius: 2px; }
 
-/* Swatch row — shares the link prompt's bar, so it scrolls with narrow editors */
+/* Swatch row shares the link prompt's bar so it scrolls with narrow editors */
 .nb-color-prompt { gap: 5px; }
 .nb-color-swatch {
   width: 20px;
@@ -155,11 +146,10 @@
 }
 .nb-color-swatch--default:hover { background: var(--t-bg); color: var(--t-text); }
 
-/* Inline link prompt */
 .nb-inline-prompt { display: flex; gap: 6px; align-items: center; padding: 5px 0; margin-bottom: 4px; border-bottom: 1px solid var(--t-border); flex-wrap: wrap; }
 .nb-inline-prompt input { flex: 1; min-width: 140px; }
 
-/* Page nav — deep peach, matching the search band at the top of the page */
+/* Page nav: deep peach matching the search band at the top */
 .nb-page-nav { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--t-border-2); background: var(--t-surface-3); flex-shrink: 0; font-size: 13px; color: var(--t-text-2); }
 .nb-page-nav-indicator { display: inline-flex; align-items: center; gap: 5px; }
 .nb-page-jump { width: 48px; text-align: center; padding: 2px 4px; font-size: 12px; background: var(--t-surface); appearance: textfield; -moz-appearance: textfield; }
@@ -168,13 +158,10 @@
 .nb-page-empty { color: var(--t-text-3); font-style: italic; padding: 40px 20px; text-align: center; font-size: 13px; }
 .nb-no-match { color: var(--t-text-3); font-style: italic; padding: 24px 20px; text-align: center; font-size: 13px; }
 
-/* Edit body — flex column; also the clip/positioning frame for the card panel */
+/* Edit body: also the clip/positioning frame for the card panel */
 .nb-edit-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; position: relative; }
 
-/* Card creator — closed, the handle is docked below the text box with a gap.
-   Open, the whole thing detaches into an overlay panel anchored to the bottom of
-   the edit area: the purple bar sits at the TOP and the form expands below it,
-   like a panel opening up over the text (the way panels open elsewhere). */
+/* Card creator: when open it detaches into an absolute overlay anchored to the bottom, purple bar at top */
 .nb-card-creator { position: relative; flex-shrink: 0; max-width: 660px; width: calc(100% - 40px); margin: 8px auto 12px; box-sizing: border-box; }
 .nb-card-creator.open {
   position: absolute; left: 0; right: 0; bottom: 6px; margin: 0 auto;
@@ -185,7 +172,7 @@
   overflow: hidden; z-index: 5;
 }
 
-/* The handle — a docked bar when closed, the panel's header when open */
+/* The handle: docked bar when closed, panel header when open */
 .nb-card-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   cursor: pointer; user-select: none;
@@ -200,11 +187,10 @@
   border-radius: var(--t-r-lg) var(--t-r-lg) 0 0;
 }
 
-/* The body — hidden when closed, scrolls below the header when open */
+/* The body: hidden when closed, scrolls below the header when open */
 .nb-card-body { display: none; }
 .nb-card-creator.open .nb-card-body { display: block; flex: 1; min-height: 0; overflow-y: scroll; }
 .nb-card-creator.open .dk-new-card { background: var(--t-surface-2); border-top: none; }
 
-/* Inline page title + actions row */
 .nb-page-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .nb-page-title-row .nb-page-title { flex: 1; margin-bottom: 0; }

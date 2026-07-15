@@ -1,7 +1,6 @@
-/* ── Decks view ── */
+/* Decks view */
 .dk-root { display: flex; flex-direction: column; height: 100%; }
 
-/* List view */
 .dk-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
 .dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-text); }
 .dk-deck-name-input { width: 100%; }
@@ -10,11 +9,9 @@
 .dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
 .dk-new-deck input { flex: 1; }
 
-/* Merge panel */
 .dk-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border-2); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
 
-/* Anki field mapping — long decks scroll instead of pushing the panel offscreen;
-   the visible scrollbar comes from the app-wide rules in App.css */
+/* Anki field mapping. Long decks scroll instead of pushing the panel offscreen (scrollbar is app-wide). */
 .dk-anki-field-scroll { max-height: 38vh; overflow-y: scroll; display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid var(--t-border); }
 /* Header sits outside the scroll box, so it must reserve the same gutter width
    (the 10px ::-webkit-scrollbar in App.css) or its columns drift off the checkboxes */
@@ -39,14 +36,12 @@
 .dk-merge-row { display: flex; gap: 8px; align-items: center; }
 .dk-merge-row select { flex: 1; }
 
-/* Card view layout */
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
 .dk-cards-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); flex-shrink: 0; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 72%); }
 .dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
 .dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent); background: var(--t-accent-bg); border: 1px solid var(--t-accent-bdr); border-radius: var(--t-r-pill); padding: 1px 8px; user-select: none; }
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
-/* Table pane */
 .dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); }
 .dk-table-search { flex-shrink: 0; padding: 8px 10px; border-bottom: 1px solid var(--t-border-2); display: flex; flex-direction: column; gap: 5px; background: var(--t-surface-3); }
 .dk-table-search > input { width: 100%; box-sizing: border-box; background: var(--t-surface); }
@@ -76,10 +71,7 @@
 .dk-filter-btn.active,
 .dk-filter-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
 
-/* Card table — leftover space below the rows matches the editor pane's backdrop.
-   Excluded from the app-wide scrollbar styling (App.css), so it keeps the native
-   overlay scrollbar: no track, floating thumb, takes no layout space. The header
-   sits in its own container above the scroll area so the thumb never crosses it. */
+/* Card table uses a native overlay scrollbar (excluded from App.css rules): no track, floating thumb, takes no layout space. */
 .dk-table-head { flex-shrink: 0; background: var(--t-surface-3); }
 .dk-table-scroll { flex: 1; overflow-y: auto; background: var(--t-surface-2); }
 .dk-card-table { width: 100%; border-collapse: collapse; background: var(--t-bg); table-layout: fixed; }
@@ -88,8 +80,7 @@
 .dk-card-table th { background: var(--t-surface-3); text-align: center; padding: 5px 8px; border-bottom: 1px solid var(--t-border); font-size: 11px; color: var(--t-text-3); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: calc(2.9em + 10px); }
 .dk-card-table tr { cursor: pointer; }
-/* Fixed two-line cells — the row height lives on the td (below) so single-line
-   entries center vertically like the Due/Paused cells; the clamp only caps at 2 lines */
+/* Row height lives on the td so single-line entries center vertically. The clamp just caps at 2 lines. */
 .dk-cell-clamp {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -99,8 +90,7 @@
   max-height: 2.9em;
 }
 .dk-card-table tr:hover td { background: var(--t-surface-2); }
-/* Due rows — every due state (new/review/overdue) shares ONE golden highlight.
-   Distinct hue from the peachy headers so it reads lighter, not "blended dark". */
+/* Every due state shares one golden highlight, distinct hue from the peachy headers so it reads lighter. */
 .dk-card-table tr.is-new-due td,
 .dk-card-table tr.is-review-due td,
 .dk-card-table tr.is-review-overdue td       { background: rgba(224, 169, 46, 0.24); }
@@ -108,11 +98,11 @@
 .dk-card-table tr.is-review-due:hover td,
 .dk-card-table tr.is-review-overdue:hover td { background: rgba(224, 169, 46, 0.34); }
 
-/* Overdue-but-not-due — faint gold so it relates yet reads weaker */
+/* Overdue but not yet due: faint gold so it relates but reads weaker. */
 .dk-card-table tr.is-overdue-only td       { background: rgba(224, 169, 46, 0.10); }
 .dk-card-table tr.is-overdue-only:hover td { background: rgba(224, 169, 46, 0.17); }
 
-/* Selected — distinct slate-blue fill; wins over the caramel due tint (declared last) */
+/* Selected: distinct slate-blue fill that wins over the caramel due tint (declared last). */
 .dk-card-table tr.selected td,
 .dk-card-table tr.selected:hover td { background: var(--t-blue-bg); color: var(--t-text); }
 
@@ -124,8 +114,7 @@
 .dk-creator-toggle-row .dk-filter-toggle { background: var(--t-btn); border-color: var(--t-btn-bdr); color: var(--t-btn-fg); border-radius: var(--t-r-pill); }
 .dk-creator-toggle-row .dk-filter-toggle:hover { background: var(--t-btn-h); color: var(--t-btn-fg); }
 
-/* Editor pane */
-/* Muted backdrop so bright editable inputs read as real fields and read-only fields read as locked */
+/* Muted backdrop so bright editable inputs read as real fields and read-only fields read as locked. */
 .dk-editor-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; gap: 12px; background: var(--t-surface-2); }
 .dk-editor-pane textarea, .dk-editor-pane input[type="text"] { background: var(--t-surface); }
 .dk-editor-none { color: var(--t-text-3); font-style: italic; padding: 16px; font-size: 13px; }
@@ -133,7 +122,6 @@
 
 .dk-field { display: flex; flex-direction: column; gap: 4px; }
 .dk-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); }
-/* Read-only (Anki) fields — recessed, muted, clearly not editable */
 .dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 11px; font-size: 13px; background: var(--t-bg); box-shadow: inset 0 1px 2px rgba(58,48,36,0.06); line-height: 1.6; color: var(--t-text-2); }
 .dk-field-row { display: flex; align-items: center; gap: 4px; }
 /* Searchable / Pause: each group snug internally (via .dk-new-card-check), with
@@ -150,9 +138,8 @@
 
 .dk-uploaded-badge { font-size: 11px; background: var(--t-blue-bg); color: var(--t-blue); border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r); padding: 2px 7px; font-weight: 600; user-select: none; }
 
-/* New card area — a tool tray that slid open, visibly distinct from the table above.
-   Capped at half the pane and scrolls: the Front/Back textareas are user-resizable,
-   so a grown form would otherwise push its own Add Card button off the bottom. */
+/* Capped at half the pane and scrollable: Front/Back textareas are user-resizable,
+   so without the cap a grown form would push its Add Card button off the bottom. */
 .dk-new-card-dark { background: var(--t-surface-2); border-top: none; flex-shrink: 0; max-height: 50%; overflow-y: scroll; }
 .dk-new-card-dark .dk-new-card { background: transparent; border-top: none; }
 .dk-new-card-dark input,
@@ -168,20 +155,17 @@
 .dk-new-card-dark .dk-file-row input[type="text"] { background: var(--t-surface); color: var(--t-text); border-color: var(--t-border-2); }
 .dk-new-card-dark .dk-field label { color: var(--t-text-3); }
 
-/* Preview */
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
 .dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: 0 2px 8px rgba(26,18,8,0.06); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
 
-/* Deck actions dropdown */
 .dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: 0 6px 20px rgba(0,0,0,0.12); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
 /* Square (radius 0) so hover highlights sit flush inside the menu container,
    whose own border radius clips the outer corners */
 .dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }
 .dk-menu-item:hover { background: var(--t-surface-2); color: var(--t-text); box-shadow: none; }
-/* Outranks the global button.danger fill — flat like its siblings, red tint on hover only */
+/* Outranks the global button.danger fill. Flat like its siblings, red tint on hover only. */
 .dk-actions-menu .dk-menu-item.danger { background: none; border-radius: 0; color: var(--t-red); }
 .dk-actions-menu .dk-menu-item.danger:hover { background: var(--t-red-bg); color: var(--t-red); }
 
-/* Confirm reset bar */
 .dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); border-bottom: 1px solid var(--t-red-bdr); font-size: 13px; color: var(--t-red); flex-shrink: 0; }

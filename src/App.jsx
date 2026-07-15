@@ -20,7 +20,7 @@ import HowTo, { HELP_PAGES } from "./HowTo";
 
 const TABS = [
   { key: "home",      label: "Home",      subtitle: "Today's Dashboard",   color: "var(--t-pink)"   },
-  { key: "plans",     label: "Plans",     subtitle: "Study Plans & Todos", color: "#E8935F" }, /* peachy orange — caramel reads gold on the dark nav */
+  { key: "plans",     label: "Plans",     subtitle: "Study Plans & Todos", color: "#E8935F" }, /* peachy orange, caramel reads gold on the dark nav */
   { key: "decks",     label: "Decks",     subtitle: "SRS Flashcard Decks",     color: "var(--t-blue)"   },
   { key: "notebooks", label: "Notebooks", subtitle: "Notes & Journals",       color: "var(--t-plum)"   },
   { key: "stats",     label: "Stats",     subtitle: "Progress & Streaks",  color: "var(--t-stat)"   },
@@ -94,7 +94,7 @@ export default function App() {
     setStatsReturnContext(null);
   }
 
-  // Check GitHub Releases for a newer version on launch; if the user accepts,
+  // Check GitHub Releases for a newer version on launch. If the user accepts,
   // download, verify signature, install, and relaunch. Silently no-ops in dev.
   useEffect(() => {
     (async () => {
@@ -116,7 +116,7 @@ export default function App() {
   }, []);
 
   // Toast to Go: push on close, per the user's setting. A failed push must never
-  // trap the user in a window that won't shut — log it and close anyway.
+  // trap the user in a window that won't shut, log it and close anyway.
   useEffect(() => {
     let unlisten;
     let gone = false;
@@ -154,13 +154,13 @@ export default function App() {
           } catch (e) {
             logError("push on close", e);
           }
-          await win.destroy(); // not close() — that re-fires this handler
+          await win.destroy(); // not close(): that re-fires this handler
         } finally {
           togoLock.active = false;
           setClosePush(false);
         }
       });
-      // registration is async; cleanup may have already run
+      // registration is async, cleanup may have already run
       if (gone) fn();
       else unlisten = fn;
     })();
