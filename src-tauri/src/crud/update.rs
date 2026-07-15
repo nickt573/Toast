@@ -326,6 +326,7 @@ pub fn complete_todo(
     resource_ids: Vec<i64>,
     group_ids: Vec<i64>,
     category: i64,
+    text_override: Option<String>,
     conn: &Connection,
 ) -> Result<()> {
     let today = get_date(&conn)?;
@@ -335,6 +336,12 @@ pub fn complete_todo(
         [todo_id],
         |row| Ok((row.get(0)?, row.get(1)?)),
     )?;
+
+    // Only the logged entry uses the override; the todo keeps its name
+    let text = match text_override.map(|t| t.trim().to_string()) {
+        Some(t) if !t.is_empty() => t,
+        _ => text,
+    };
 
     if category == 0 {
         return Err(rusqlite::Error::InvalidParameterName(

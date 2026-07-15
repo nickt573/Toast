@@ -79,6 +79,7 @@ pub fn complete_todo(
     resource_ids: Vec<i64>,
     group_ids: Vec<i64>,
     category: i64,
+    text: Option<String>,
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
@@ -90,6 +91,7 @@ pub fn complete_todo(
         resource_ids,
         group_ids,
         category,
+        text,
         &conn,
     )
     .map_err(|e| {
