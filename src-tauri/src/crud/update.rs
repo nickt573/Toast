@@ -5,7 +5,7 @@ use rusqlite::{Connection, Result};
 use std::path::Path;
 
 /// Snapshot a resource's full info (name/url/type/notes) into a todo_stats log row.
-/// The snapshot persists after the resource is deleted; live values override it via
+/// The snapshot persists after the resource is deleted. Live values override it via
 /// COALESCE in the read query while the resource still exists.
 fn insert_stat_resource(stat_id: i64, resource_id: i64, conn: &Connection) -> Result<()> {
     let snap: (String, Option<String>, Option<String>, Option<String>) = conn
@@ -337,7 +337,7 @@ pub fn complete_todo(
         |row| Ok((row.get(0)?, row.get(1)?)),
     )?;
 
-    // Only the logged entry uses the override; the todo keeps its name
+    // Only the logged entry uses the override, the todo keeps its name
     let text = match text_override.map(|t| t.trim().to_string()) {
         Some(t) if !t.is_empty() => t,
         _ => text,

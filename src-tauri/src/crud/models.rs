@@ -23,7 +23,7 @@ pub struct Todo {
     pub category: i64,
     pub is_done: bool,
     pub is_disabled: bool,
-    // Manual order; set via set_todo_position, never through update_todo.
+    // Manual order, set via set_todo_position and never through update_todo.
     #[serde(default)]
     pub position: Option<i64>,
 }
@@ -60,7 +60,7 @@ pub struct Card {
 
     pub support: Option<String>,
     // Read-only support content mapped from Anki fields on import (Anki HTML).
-    // Never written by update_card — only set at import time.
+    // Never written by update_card, only set at import time.
     #[serde(default)]
     pub imported_support: Option<String>,
     pub front_image: Option<String>,

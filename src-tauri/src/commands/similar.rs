@@ -35,9 +35,8 @@ pub fn get_similar_cards(
         });
     }
 
-    // No SQL text prefilter: raw columns hold HTML with entities (&nbsp; etc.),
-    // so LIKE against decoded tokens drops valid matches. 
-    // Matching is done entirely on tokenized text below.
+    // No SQL text prefilter: raw columns hold HTML with entities (&nbsp; etc.)
+    // so LIKE against decoded tokens drops valid matches. Matching is done on tokenized text below.
     let sql = "SELECT id, group_id, front, back, support, imported_support, \
          front_image, back_image, front_audio, back_audio, \
          tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded, position \
@@ -99,7 +98,7 @@ pub fn get_similar_cards(
     })
 }
 
-// Whole-word containment; prevents "you" matching "younger". Non-ASCII bytes
+// Whole-word containment: prevents "you" matching "younger". Non-ASCII bytes
 // (e.g. Japanese) count as word boundaries.
 fn word_boundary_match(text: &str, token: &str) -> bool {
     if token.is_empty() {
@@ -188,7 +187,7 @@ fn decode_entities(s: &str) -> String {
     while let Some(start) = rest.find('&') {
         out.push_str(&rest[..start]);
         rest = &rest[start..];
-        // Entity names are short; a distant ';' means this '&' is literal text
+        // Entity names are short, a distant ';' means this '&' is literal text
         let end = rest.find(';').filter(|&end| end <= 12);
         let decoded = end.and_then(|end| {
             let name = &rest[1..end];

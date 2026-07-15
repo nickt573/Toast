@@ -3,7 +3,7 @@ import { mediaSrc } from "../mediaPaths";
 import { loggedInvoke, logError } from "../logger";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 
 export function rewriteAnkiSrcs(html) {
     if (!html) return "";
@@ -27,8 +27,7 @@ export function cleanAnkiHtml(html) {
         .replace(/\{\{[^}]*\}\}/g, "")
         .replace(/<div[^>]*>\s*<\/div>/gi, "")
         .replace(/<span>\s*<\/span>/gi, "")
-        // Anki wraps each line in a div — every div boundary becomes a comma
-        // separator (incl. the common `bare text<div>line 2</div>` shape)
+        // Anki wraps each line in a div. Every div boundary becomes a comma separator.
         .replace(/<div[^>]*>/gi, ", ")
         .replace(/<\/div>/gi, "")
         .replace(/(\s*<br\s*\/?>\s*){3,}/gi, "<br/><br/>")
@@ -49,9 +48,8 @@ export function renderAnkiHtml(html) {
     return cleanAnkiHtml(rewriteAnkiSrcs(html));
 }
 
-// Canonical text form so search queries and card text always compare equal:
-// invisible characters removed, curly quotes straightened, all whitespace
-// (including decoded &nbsp;) collapsed to single plain spaces.
+// Normalize so search queries and card text always compare equal.
+// Strips invisible chars, straightens curly quotes, collapses all whitespace (including &nbsp;).
 export function normalizeSearchText(str) {
     if (!str) return "";
     return str
@@ -96,7 +94,7 @@ export function LinkifiedText({ text }) {
     );
 }
 
-// ─── Audio helpers ────────────────────────────────────────────────────────────
+// Audio helpers
 
 export function extractRawAudioSrcs(html) {
     if (!html) return [];
@@ -117,10 +115,8 @@ export function stripAudioTags(html) {
         .replace(/<audio\b[^>]*\/>/gi, "");
 }
 
-// ─── AudioPlayer ──────────────────────────────────────────────────────────────
+// AudioPlayer
 
-// buttonClassName swaps the default audio-btn look for a host-provided class
-// so the player can blend into toolbars (e.g. nb-tb-btn)
 export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
     const [src, setSrc] = useState(null);
     const [playing, setPlaying] = useState(false);
@@ -206,7 +202,7 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
     );
 }
 
-// ─── CardFace ─────────────────────────────────────────────────────────────────
+// CardFace
 
 const imgStyle = {
     maxWidth: "100%",

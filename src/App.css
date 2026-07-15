@@ -1,94 +1,93 @@
-/* ── Toast Design System ─────────────────────────────────────────────────────── */
+/* Toast Design System: */
 
 :root {
-  /* Backgrounds — peachy Neapolitan cream + warm surfaces */
-  --t-bg:            #FDE6D8;   /* main app background — peach cream */
-  --t-surface:       #FFF9F4;   /* card / surface fill — warm off-white */
+  /* Backgrounds: peachy Neapolitan cream + warm surfaces */
+  --t-bg:            #FDE6D8;   /* main app background, peach cream */
+  --t-surface:       #FFF9F4;   /* card / surface fill, warm off-white */
   --t-surface-2:     #FBEAE0;   /* muted: read-only fields, form zones */
   --t-surface-3:     #F7D9C4;   /* deep peach: table/section headers over white bodies */
   --t-border:        #F0D9CC;   /* default dividers */
   --t-border-2:      #E8CDBD;   /* card / input / secondary-button borders */
 
-  /* Text — chocolate-plum */
+  /* Text: chocolate-plum */
   --t-text:          #4A3A3D;   /* primary */
   --t-text-2:        #6B5458;   /* secondary */
   --t-text-3:        #9A8488;   /* tertiary / quiet */
   --t-placeholder:   #C0AAAE;
 
-  /* Plans / primary accent — wheat / caramel */
+  /* Plans / primary accent: wheat / caramel */
   --t-accent:        #C99A63;
   --t-accent-h:      #B5854E;
   --t-accent-bg:     #F3E4CF;
   --t-accent-bdr:    #DFC59C;
   --t-accent-fg:     #FFF9F4;   /* text on caramel fill */
 
-  /* Todos — sunflower yellow (incomplete / pending) */
+  /* Todos: sunflower yellow (incomplete / pending) */
   --t-yellow:        #E0A92E;
   --t-yellow-bg:     #FBEBC4;
   --t-yellow-bdr:    #EBD08A;
-  --t-time:          #B96A2B;   /* time spent — readable orange from the stat-table family */
+  --t-time:          #B96A2B;   /* time spent, readable orange from the stat-table family */
 
-  /* Done / safe — forest green */
+  /* Done / safe: forest green */
   --t-green:         #4A8C5E;
   --t-green-bg:      #D9E8D6;
   --t-green-bdr:     #A6C6A8;
 
-  /* Destructive — red */
+  /* Destructive: red */
   --t-red:           #B85454;
   --t-red-bg:        #F5E0E0;
   --t-red-bg-h:      #EFCBCB;   /* danger hover (deepened) */
   --t-red-bdr:       #D8AEAE;
 
-  /* Stat reds (demoted / poor retention) — truer, warmer red than the pinkish
-     danger fill above, so a metric never reads as a destructive button */
+  /* Stat reds (demoted / poor retention): warmer than the danger fill so metrics don't read as delete buttons */
   --t-red-2:         #B04A42;
   --t-red-2-bg:      #F7D3C9;
   --t-red-2-bdr:     #E0A99C;
 
-  /* Decks / Cards — slate blue (softened to harmonize) */
+  /* Decks / Cards: slate blue (softened to harmonize) */
   --t-blue:          #5A7A90;
   --t-blue-bg:       #DDE7EC;
   --t-blue-bdr:      #AEC4D0;
 
-  /* Warning / at-risk — weak yellow-tan (amber) */
+  /* Warning / at-risk: weak yellow-tan (amber) */
   --t-amber:         #C49A44;
   --t-amber-bg:      #F5EAD2;
   --t-amber-bdr:     #D8C088;
 
-  /* Notebooks — plum (softened to harmonize) */
+  /* Notebooks: plum (softened to harmonize) */
   --t-plum:          #8A6A96;
   --t-plum-bg:       #ECE0F0;
   --t-plum-bdr:      #C8B4D2;
 
-  /* Resources — terracotta (token name kept as legacy "clay") */
+  /* Resources: terracotta (token name kept as legacy "clay") */
   --t-clay:          #C2705A;
   --t-clay-bg:       #F6E0D6;
   --t-clay-bdr:      #E2B5A4;
 
-  /* Stats — dark / burnt orange (distinct from caramel plans) */
+  /* Stats: dark / burnt orange (distinct from caramel plans) */
   --t-stat:          #C85A2A;
   --t-stat-h:        #B04A1F;
   --t-stat-bg:       #F7DDC9;
   --t-stat-bdr:      #E5B091;
 
-  /* Toast to Go — silver; a utility tab, not a feature family */
+  /* Toast to Go: silver. A utility tab, not a feature family */
   --t-silver:        #A4A6A7;
   --t-silver-bg:     #EAEBEB;
   --t-silver-bdr:    #C9CBCC;
 
-  /* Strawberry pink — homepage identity + decorative accent */
+  /* Strawberry pink: homepage identity + decorative accent */
   --t-pink:          #F6A7B8;
   --t-pink-2:        #F8C1C9;
   --t-pink-bg:       #FDE0E6;
   --t-pink-bdr:      #F2B8C4;
 
-  /* Neutral (maintenance) buttons — rich mauve pulled from the nav family */
+  /* Neutral (maintenance) buttons: rich mauve pulled from the nav family */
   --t-btn:           #8B5F6B;
   --t-btn-h:         #784E5A;   /* hover deepens */
   --t-btn-bdr:       #7D5461;
   --t-btn-fg:        #FFF9F4;   /* text on mauve fill */
 
-  /* Nav — chocolate */
+  /* Nav: chocolate */
   --t-nav-bg:        #4A3A3D;
   --t-nav-fg:        #FDE6D8;
   --t-nav-dim:       #B89AA0;
@@ -101,7 +100,7 @@
   --t-nav-h:         54px;
   --t-page-pad:      24px;
   --t-r:             3px;
-  --t-r-btn:         6px;   /* non-pill buttons — slightly softer */
+  --t-r-btn:         6px;   /* non-pill buttons, slightly softer */
   --t-r-lg:          5px;
   --t-r-xl:          8px;
   --t-r-pill:        999px;
@@ -113,7 +112,7 @@
   --t-shadow-lg:     0 6px 20px rgba(26,18,8,0.13);
 }
 
-/* ── Reset ── */
+/* Reset: */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
@@ -130,7 +129,7 @@ html, body, #root {
 
 a { color: var(--t-blue); text-decoration: underline; }
 
-/* ── Universal button ── */
+/* Universal button: */
 button {
   font-family: inherit;
   font-size: 12px;
@@ -147,29 +146,28 @@ button {
   user-select: none;
   transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease), box-shadow var(--t-ease);
 }
-/* Neutral hover DEEPENS the mauve — never switches to a page background */
+/* Neutral hover deepens the mauve, never switches to a page background */
 button:hover  { background: var(--t-btn-h); color: var(--t-btn-fg); border-color: var(--t-btn-h); }
 button:active { background: var(--t-btn-h); filter: brightness(0.95); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
 
-/* Primary — copper fill */
+/* Primary: copper fill */
 button.primary { background: var(--t-accent); color: var(--t-accent-fg); border-color: var(--t-accent); box-shadow: var(--t-shadow-sm); }
 button.primary:hover { background: var(--t-accent-h); border-color: var(--t-accent-h); color: var(--t-accent-fg); }
 
-/* Destructive — soft red fill at rest, deepens on hover (never transparent) */
+/* Destructive: soft red fill at rest, deepens on hover (never transparent) */
 button.danger { color: var(--t-red); border-color: var(--t-red-bdr); background: var(--t-red-bg); }
 button.danger:hover { background: var(--t-red-bg-h); border-color: var(--t-red); color: var(--t-red); }
 
-/* Quiet — alias of the neutral mauve (kept for Back/Cancel/Hide semantics) */
+/* Quiet: alias of the neutral mauve (kept for Back/Cancel/Hide semantics) */
 button.quiet { background: var(--t-btn); border-color: var(--t-btn-bdr); color: var(--t-btn-fg); box-shadow: none; }
 button.quiet:hover { background: var(--t-btn-h); border-color: var(--t-btn-h); color: var(--t-btn-fg); }
 
 button.btn-amber { background: var(--t-amber-bg); border-color: var(--t-amber-bdr); color: var(--t-amber); }
 button.btn-amber:hover { border-color: var(--t-amber); background: var(--t-amber-bg); filter: brightness(0.95); }
 
-/* Audio play/pause pill — quiet surface look that stays out of the mauve
-   family so playback controls read as media, not actions */
+/* Audio pill: quiet surface look so playback reads as media, not actions */
 button.audio-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--t-r-lg); border: 1px solid var(--t-border); background: var(--t-surface); font-size: 13px; color: var(--t-text-2); box-shadow: none; }
 button.audio-btn:hover { background: var(--t-surface); border-color: var(--t-text-3); color: var(--t-text-2); filter: brightness(0.98); }
 button.audio-btn:active { background: var(--t-surface); filter: brightness(0.95); }
@@ -178,11 +176,11 @@ button.audio-btn.sm { padding: 2px 10px; font-size: 12px; border-radius: var(--t
 button.btn-blue  { background: var(--t-blue-bg);  border-color: var(--t-blue-bdr);  color: var(--t-blue);  }
 button.btn-blue:hover  { border-color: var(--t-blue);  background: var(--t-blue-bg); filter: brightness(0.95); }
 
-/* Checkbox pills/labels — double-click shouldn't text-select them */
+/* Checkbox pills/labels: double-click shouldn't text-select them */
 label:has(input[type="checkbox"]),
 input[type="checkbox"] + label { user-select: none; }
 
-/* ── Universal inputs ── */
+/* Universal inputs: */
 input, textarea, select {
   font-family: inherit;
   font-size: 13px;
@@ -203,9 +201,7 @@ input:focus, textarea:focus, select:focus {
 input::placeholder, textarea::placeholder { color: var(--t-placeholder); }
 textarea { resize: vertical; }
 
-/* ── Custom checkboxes — themed, not system default ──
-   Checked fill uses currentColor so each checkbox inherits its context's family
-   color (blue in deck pills, plum in notebook pills, clay in resource pills…). */
+/* Custom checkboxes: checked fill uses currentColor so each picks up its context's family color */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
@@ -231,12 +227,12 @@ input[type="checkbox"]:checked {
   background-position: center;
   background-size: 10px;
 }
-/* Ring only for keyboard focus — mouse clicks shouldn't leave a glow behind */
+/* Ring only for keyboard focus. Mouse clicks shouldn't leave a glow behind */
 input[type="checkbox"]:focus { outline: none; border-color: var(--t-btn-bdr); box-shadow: none; }
 input[type="checkbox"]:checked:focus { border-color: currentColor; }
 input[type="checkbox"]:focus-visible { border-color: var(--t-accent); box-shadow: 0 0 0 3px var(--t-accent-bg); }
 
-/* Read-only field — muted fill, no focus affordance */
+/* Read-only field: muted fill, no focus affordance */
 .input-readonly,
 input.input-readonly, textarea.input-readonly {
   background: var(--t-surface-2);
@@ -244,10 +240,8 @@ input.input-readonly, textarea.input-readonly {
   color: var(--t-text);
 }
 
-/* ── Scrollbars — visible whenever content overflows ──
-   Styling ::-webkit-scrollbar opts out of the macOS overlay style, so the
-   thumb stays shown as a cue that a region scrolls. The deck card table is
-   excluded (:not) so it keeps the native floating overlay scrollbar. */
+/* Styled scrollbars opt out of the macOS overlay style so the thumb stays visible.
+   .dk-table-scroll excluded, it keeps the native overlay. */
 :not(.dk-table-scroll)::-webkit-scrollbar { width: 10px; height: 10px; }
 :not(.dk-table-scroll)::-webkit-scrollbar-track { background: transparent; }
 :not(.dk-table-scroll)::-webkit-scrollbar-thumb {
@@ -258,14 +252,11 @@ input.input-readonly, textarea.input-readonly {
 }
 :not(.dk-table-scroll)::-webkit-scrollbar-thumb:hover { background: var(--t-btn-bdr); background-clip: padding-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
-/* Scroll regions use overflow-y: scroll instead of auto so the track space is
-   always reserved; WebKit ignores scrollbar-gutter on flex and capped layouts,
-   and the transparent track keeps the reserved strip invisible until needed.
-   Page scroll bodies shave the 10px track off their right padding so the
-   visible right gap matches the left. */
+/* scroll not auto: WebKit ignores scrollbar-gutter, this reserves the track.
+   Scroll bodies shave 10px off right padding to match the left gap. */
 textarea { overflow-y: scroll; }
 
-/* ── App shell ── */
+/* App shell: */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -273,7 +264,7 @@ textarea { overflow-y: scroll; }
   overflow: hidden;
 }
 
-/* ── Navigation — dark espresso bar ── */
+/* Navigation: dark espresso bar */
 .app-nav {
   flex-shrink: 0;
   display: flex;
@@ -331,7 +322,7 @@ textarea { overflow-y: scroll; }
 .app-nav-tab:hover  { background: rgba(255,255,255,0.06); border-color: transparent; color: var(--t-nav-fg); box-shadow: none; }
 .app-nav-tab:active { background: rgba(255,255,255,0.03); box-shadow: none; }
 .app-nav-tab.active { color: var(--t-nav-fg); background: none; }
-/* Home — no underline; a soft rounded pink pill instead */
+/* Home: soft rounded pink pill instead of an underline */
 .app-nav-tab--home { height: 36px; align-self: center; border-radius: var(--t-r-xl); }
 .app-nav-tab--home.active { background: rgba(246,167,184,0.16); }
 .app-nav-tab--home.active::after { display: none; }
@@ -345,10 +336,8 @@ textarea { overflow-y: scroll; }
   background: var(--tab-underline, var(--t-accent));
   border-radius: 3px 3px 0 0;
 }
-/* Lifted above the how-to overlay (z 900) to spotlight the tab being described;
-   pointer-events off so the overlay still blocks navigation. The ring is inset
-   because full-height tabs sit flush with the window top, which clips an
-   outer shadow */
+/* Above the how-to overlay (z 900), pointer-events off so it still blocks nav.
+   Inset ring, the window top clips an outer shadow. */
 .app-nav-tab.help-spot {
   z-index: 901;
   pointer-events: none;
@@ -364,9 +353,8 @@ textarea { overflow-y: scroll; }
   flex-shrink: 0;
 }
 
-/* The right spacer's basis matches the logo + Home width, so the tab group
-   sits at the true center of the bar when there's room, and the right
-   margin collapses first as the window narrows (never overlapping Home). */
+/* Right spacer basis = logo + Home width, so tabs center and the right side
+   collapses first on narrow windows. */
 .app-nav-spacer { flex: 1 1 0; }
 .app-nav-spacer--right { flex-basis: 168px; }
 
@@ -382,7 +370,7 @@ textarea { overflow-y: scroll; }
   flex-direction: column;
 }
 
-/* ── Toast notification ── */
+/* Toast notification: */
 .toast {
   position: fixed;
   bottom: 18px;
@@ -403,7 +391,7 @@ textarea { overflow-y: scroll; }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.error { background: var(--t-red); color: var(--t-btn-fg); }
 
-/* ── Busy overlay (Toast to Go transfers) ── */
+/* Busy overlay (Toast to Go transfers): */
 .busy-overlay {
   position: fixed;
   inset: 0;
@@ -438,14 +426,14 @@ textarea { overflow-y: scroll; }
 }
 @keyframes busy-spin { to { transform: rotate(360deg); } }
 
-/* ── Shared section label ── */
+/* Shared section label: */
 .section-label {
   font-size: 11px;
   font-weight: 700;
   color: var(--t-text-3);
 }
 
-/* ── Pill badges ── */
+/* Pill badges: */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -468,12 +456,11 @@ textarea { overflow-y: scroll; }
 .pill-neutral { background: var(--t-surface-2); color: var(--t-text-2); border-color: var(--t-border-2); }
 .pill-dead    { opacity: 0.45; cursor: default; }
 
-/* ── Clickable pill ── */
+/* Clickable pill: */
 .pill-clickable { cursor: pointer; }
 .pill-clickable:hover { filter: brightness(0.94); }
 
-/* ── Picker pills — the ONE checkbox-pill control used by every form/popup
-      (Homepage popups, plan builder, todo editor, Frequency/Category pickers) ── */
+/* Picker pills: the one checkbox-pill control shared by every form/popup */
 .picker-pill {
   display: inline-flex;
   align-items: center;
@@ -494,7 +481,7 @@ textarea { overflow-y: scroll; }
 .picker-pill.active-resource { border-color: var(--t-clay-bdr);   background: var(--t-clay-bg);   color: var(--t-clay); }
 .picker-pill.active-accent   { border-color: var(--t-accent-bdr); background: var(--t-accent-bg); color: var(--t-accent); }
 
-/* ── Shared new-card form (Decks + Notebooks) ── */
+/* Shared new-card form (Decks + Notebooks): */
 .dk-new-card {
   flex-shrink: 0;
   border-top: 1px solid var(--t-border);
@@ -533,19 +520,12 @@ textarea { overflow-y: scroll; }
   color: var(--t-text-2);
   flex-shrink: 0;
 }
-/* Reset the browser's asymmetric default checkbox margins so the flex gap is the
-   only spacing — keeps the box, its label, and the ? tip evenly spaced. */
+/* zero the browser's uneven checkbox margins, flex gap does the spacing */
 .dk-new-card-check input[type="checkbox"] { margin: 0; }
-/* Cancel the 74px label min-width inherited from .dk-new-card-row label, which
-   otherwise stretches short labels ("Searchable") and flings the ? tip far right. */
+/* cancel the 74px row-label min-width that flings the ? tip far right */
 .dk-new-card-check label { min-width: 0; }
-/* Actions area. Width budget: on the deck page this form sits in the 440px
-   table pane (~412px usable), and the first check row alone is ~360px — so the
-   Add Card button cannot sit beside row one. Layout: row one (Searchable /
-   Priority add / Create flipped copy) spans the full width; row two holds the
-   two flip-only checks with the button on its right, where there is room.
-   The flip-only checks are always rendered (disabled until "Create flipped
-   copy" is on) so nothing shifts as it toggles. */
+/* Check row one (~360px) won't fit beside Add Card in the 440px deck pane, so
+   the button sits in row two. Flip-only checks always render so nothing shifts. */
 .dk-new-card-actions {
   display: grid;
   grid-template-columns: 1fr max-content;
@@ -562,18 +542,17 @@ textarea { overflow-y: scroll; }
 }
 .dk-new-card-checkrow:first-child { grid-column: 1 / -1; }
 .dk-new-card-actions button.primary { grid-column: 2; grid-row: 2; justify-self: end; }
-/* Fade only the checkbox + label when disabled — the ? tip stays fully
-   opaque so its explanation remains readable. */
+/* fade only box + label when disabled, keep the ? tip readable */
 .dk-new-card-check.disabled input,
 .dk-new-card-check.disabled label { opacity: 0.4; }
 .dk-new-card-check.disabled label { cursor: default; }
 .dk-new-card button.primary { flex-shrink: 0; }
 
-/* ── Plans containers ── */
+/* Plans containers: */
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
-/* ── Unified landing pages (Plans / Decks / Notebooks) ── */
+/* Unified landing pages (Plans / Decks / Notebooks): */
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: var(--t-surface); flex-shrink: 0; }
 .landing-hdr--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 72%); }
 .landing-hdr--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 72%); }
@@ -584,7 +563,7 @@ textarea { overflow-y: scroll; }
 .landing-footer input { flex: 1; }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
 
-/* Empty-section placeholder — a white bubble holding the space where content will go */
+/* Empty-section placeholder bubble */
 .empty-bubble {
   background: var(--t-surface);
   border: 1px dashed var(--t-border-2);
@@ -597,7 +576,7 @@ textarea { overflow-y: scroll; }
   font-style: italic;
 }
 
-/* The card — shared visual DNA for all list items */
+/* Shared card look for all list items */
 .landing-card {
   display: flex;
   align-items: center;
@@ -615,7 +594,7 @@ textarea { overflow-y: scroll; }
   box-shadow: var(--t-shadow);
   transform: translateY(-1px);
 }
-/* Per-feature gradient washes (replace the old left-bar stripes) */
+/* Per-feature gradient washes */
 .landing-card--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 45%); }
 .landing-card--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 45%); }
 .landing-card--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 45%); }
@@ -628,7 +607,7 @@ textarea { overflow-y: scroll; }
 .landing-card-meta { font-size: 11px; color: var(--t-text-3); margin-top: 2px; }
 .landing-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
-/* Stat readouts beneath the name — homepage-style number over label */
+/* Stat readouts beneath the name, homepage-style number over label */
 .landing-card-stats { display: flex; align-items: flex-end; margin-top: 14px; }
 /* Fixed min-width so counts line up column-wise across cards */
 .landing-stat { --stat-c: var(--t-text-2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 64px; }
@@ -655,7 +634,7 @@ textarea { overflow-y: scroll; }
 .todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); margin-bottom: 5px; }
 .todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
-/* ── Plan builder ── */
+/* Plan builder: */
 .plan-builder-cols { display: flex; flex-direction: column; gap: 26px; }
 .plan-col-main { min-width: 0; }
 .plan-col-side { min-width: 0; padding-top: 22px; border-top: 1px solid var(--t-border); }
@@ -666,9 +645,8 @@ textarea { overflow-y: scroll; }
 .plan-col-label--resources { color: var(--t-clay); }
 .plan-col-label--srs       { color: var(--t-blue); }
 
-/* ── ProseMirror editor styles ── */
-/* 13px here is the editor's default size; it must stay in step with
-   DEFAULT_FONT_SIZE in Notebooks.jsx, which clears the font-size mark. */
+/* ProseMirror editor styles: */
+/* 13px must match DEFAULT_FONT_SIZE in Notebooks.jsx, which clears the font-size mark */
 .nb-editor-scroll .ProseMirror {
   outline: none;
   min-height: 200px;
@@ -677,8 +655,7 @@ textarea { overflow-y: scroll; }
   padding-bottom: 40px;
   color: var(--t-text);
 }
-/* One font page-wide. Pasted font-family declarations are stripped on the way in
-   (stripPastedFonts), and this is the backstop for anything that slips through. */
+/* one font page-wide, backstop for pasted fonts that slip past stripPastedFonts */
 .nb-editor-scroll .ProseMirror,
 .nb-editor-scroll .ProseMirror * { font-family: var(--t-font-body); }
 .nb-editor-scroll .ProseMirror p  { margin: 0; }
@@ -723,7 +700,7 @@ textarea { overflow-y: scroll; }
 .nb-view-content .ProseMirror { cursor: default; }
 .nb-view-content .ProseMirror a { cursor: pointer; }
 
-/* ── Resource card (name / type / url / notes) — shared by Stats + study page ── */
+/* Resource card (name / type / url / notes), shared by Stats + study page: */
 .st-resource-cards { display: flex; flex-direction: column; gap: 6px; }
 .st-resource-card { border: 1px solid var(--t-clay-bdr); background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 45%); border-radius: var(--t-r); padding: 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }

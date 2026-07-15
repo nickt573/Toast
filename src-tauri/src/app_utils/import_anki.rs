@@ -324,8 +324,7 @@ fn media_sources(tmp_dir: &tempfile::TempDir) -> Result<HashMap<String, PathBuf>
 
 /// A selectable field on the mapping screen. Field names routinely misdescribe
 /// their contents, so samples are what you actually map against. `note_count` is
-/// how many notes have something in it — a note type can declare a field its notes
-/// never fill, and such a field is worth nothing on a card.
+/// how many notes have something in it (a type can declare a field its notes never fill).
 #[derive(serde::Serialize)]
 pub struct AnkiField {
     pub name: String,
@@ -334,8 +333,8 @@ pub struct AnkiField {
 }
 
 /// One note's value for a field. `media` names the kinds of media it carries
-/// ("audio", "image"), which the UI must describe rather than print — the field
-/// holds a sound file, it doesn't hold the word "audio".
+/// ("audio", "image"), which the UI must describe rather than print (the field
+/// holds a sound file, it doesn't hold the word "audio").
 #[derive(serde::Serialize, PartialEq)]
 pub struct AnkiSample {
     pub text: String,
@@ -407,8 +406,7 @@ struct FieldScan {
     samples: Vec<AnkiSample>,
 }
 
-/// Deterministic xorshift — enough to spread samples across the deck instead of
-/// always showing its first few notes, without pulling in an RNG dependency.
+/// Deterministic xorshift, enough to spread samples across the deck without pulling in an RNG dependency.
 struct Rng(u64);
 
 impl Rng {

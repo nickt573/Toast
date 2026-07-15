@@ -1,22 +1,22 @@
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// Rainbow categories (muted to fit the cozy theme; each works as a white-text fill
+// Rainbow categories (muted to fit the cozy theme, each works as a white-text fill
 // and as colored text on a light tint). Reading-red is kept brighter than the
 // deep-maroon resource color so the two reds don't collide.
 export const CATEGORIES = [
     { label: "Reading",    bit: 1,  color: "#C0392B" },  // red
     { label: "Writing",    bit: 2,  color: "#C2702A" },  // orange
-    { label: "Speaking",   bit: 4,  color: "#B08A1F" },  // dark gold (not pale yellow — legibility)
+    { label: "Speaking",   bit: 4,  color: "#B08A1F" },  // dark gold (not pale yellow: legibility)
     { label: "Listening",  bit: 8,  color: "#4A8C5E" },  // green
     { label: "Vocabulary", bit: 16, color: "#3E6E96" },  // blue
     { label: "Grammar",    bit: 32, color: "#7A5E8A" },  // purple
     { label: "Culture",    bit: 64, color: "#8A6E55" },  // brown
 ];
 
-// Single source of truth for category colors — themed to the cozy palette.
+// Single source of truth for category colors, themed to the cozy palette.
 export const CATEGORY_COLOR_BY_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.label, c.color]));
 
-// ─── Frequency helpers ────────────────────────────────────────────────────────
+// Frequency helpers
 
 export function computeFrequency(frequency) {
     let mask = 0;
@@ -30,7 +30,7 @@ export function maskToArray(mask) {
     return Array.from({ length: 7 }, (_, i) => (mask & (1 << i)) !== 0);
 }
 
-// ─── Category helpers ─────────────────────────────────────────────────────────
+// Category helpers
 
 export function computeCategory(categoryArray) {
     let mask = 0;
@@ -48,8 +48,7 @@ export function maskToCategories(mask) {
     return result;
 }
 
-// ─── Shared components ────────────────────────────────────────────────────────
-// Both pickers render the shared .picker-pill control (App.css).
+// Shared components: both pickers render the shared .picker-pill control (App.css).
 
 export function FrequencyPicker({ frequency, onChange }) {
     return (
@@ -69,8 +68,7 @@ export function FrequencyPicker({ frequency, onChange }) {
     );
 }
 
-// Read-only display of a todo's categories as solid colored pills — matches the
-// todo stats table header. Renders nothing when no category bits are set.
+// Solid colored category pills, matching the todo stats table header.
 export function CategoryPills({ mask, style }) {
     const cats = CATEGORIES.filter(({ bit }) => mask & bit);
     if (cats.length === 0) return null;

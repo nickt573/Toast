@@ -1,4 +1,4 @@
-/* ── Toast to Go ── */
+/* Toast to Go */
 .togo-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
 .togo-header {
@@ -29,7 +29,7 @@
 
 .togo-blurb { font-size: 12px; line-height: 1.55; color: var(--t-text-2); margin-bottom: 12px; }
 
-/* ── ID row ── */
+/* ID row */
 .togo-id { display: flex; align-items: center; gap: 6px; }
 
 .togo-id-value {
@@ -91,7 +91,7 @@ button.togo-icon-btn:hover { background: var(--t-surface-2); border-color: var(-
 
 .togo-empty { font-size: 12px; color: var(--t-text-3); font-style: italic; }
 
-/* ── Saved IDs ── */
+/* Saved IDs */
 .togo-recents { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 
 .togo-recents li {
@@ -128,7 +128,7 @@ button.togo-label:hover { background: none; color: var(--t-text); border-color: 
 }
 .togo-label-input:focus { outline: none; }
 
-/* ── Close behavior ── */
+/* Close behavior */
 .togo-choices { display: flex; gap: 8px; margin-top: 6px; }
 
 button.togo-choice {

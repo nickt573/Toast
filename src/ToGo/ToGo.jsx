@@ -63,7 +63,7 @@ function EyeIcon({ open }) {
   );
 }
 
-// IDs are bearer credentials — masked by default, and copyable without revealing.
+// IDs are bearer credentials, masked by default and copyable without revealing.
 function MaskedId({ id, onCopied }) {
   const [shown, setShown] = useState(false);
 

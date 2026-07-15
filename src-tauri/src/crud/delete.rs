@@ -5,7 +5,6 @@ use rusqlite::{Connection, OptionalExtension, Result};
 use std::path::Path;
 
 pub fn delete_plan(id: i64, conn: &mut Connection) -> Result<()> {
-    // Get all groups assigned to this plan before deleting
     let group_ids: Vec<i64> = conn
         .prepare("SELECT group_id FROM scheduler INNER JOIN \"group\" g ON g.id = scheduler.group_id WHERE g.plan_id = ?1")?
         .query_map([id], |row| row.get(0))?
@@ -105,7 +104,6 @@ pub fn delete_card(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
     let (front_image, back_image, front_audio, back_audio, is_uploaded, front, back, imported_support, is_due, group_id) =
         row;
 
-    // For uploaded cards, also collect images and audio embedded in HTML
     let (html_images, html_audio) = if is_uploaded {
         html_media_paths(&front, &back, imported_support.as_deref())
     } else {
@@ -129,7 +127,6 @@ pub fn delete_card(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
 }
 
 pub fn delete_deck(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
-    // Collect per-side media for custom cards
     let media: Vec<(
         Option<String>,
         Option<String>,
@@ -148,7 +145,6 @@ pub fn delete_deck(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
         rows
     };
 
-    // Collect HTML-embedded images and audio from uploaded cards
     let (mut html_images, mut html_audio) = {
         let mut stmt = conn.prepare(
             "SELECT front, back, imported_support FROM card WHERE group_id = ?1 AND is_uploaded = TRUE",
@@ -168,7 +164,6 @@ pub fn delete_deck(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
         (images, audio)
     };
 
-    // After collecting, deduplicate
     html_images.sort();
     html_images.dedup();
 
@@ -195,7 +190,6 @@ pub fn delete_deck(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
 }
 
 pub fn delete_notebook(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
-    // Fetch all page content and audio files before cascade delete
     let pages: Vec<(String, Option<String>)> = conn
         .prepare("SELECT content, audio_file FROM page WHERE group_id = ?1")?
         .query_map([id], |row| Ok((row.get(0)?, row.get(1)?)))?
@@ -280,7 +274,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
     let mut referenced_audio: HashSet<String> = HashSet::new();
     let mut referenced_page_audio: HashSet<String> = HashSet::new();
 
-    // ── Custom card front/back images ─────────────────────────────────────────
+    // Custom card images
     for col in &["front_image", "back_image"] {
         let mut stmt = conn.prepare(&format!("SELECT {col} FROM card WHERE {col} IS NOT NULL"))?;
         let rows = stmt
@@ -291,7 +285,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
         }
     }
 
-    // ── Custom card front/back audio ──────────────────────────────────────────
+    // Custom card audio
     for col in &["front_audio", "back_audio"] {
         let mut stmt = conn.prepare(&format!("SELECT {col} FROM card WHERE {col} IS NOT NULL"))?;
         let rows = stmt
@@ -302,7 +296,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
         }
     }
 
-    // ── Uploaded card HTML (images and audio embedded in front/back/support) ─
+    // Uploaded card HTML
     {
         let mut stmt = conn
             .prepare("SELECT front, back, imported_support FROM card WHERE is_uploaded = TRUE")?;
@@ -317,7 +311,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
         }
     }
 
-    // ── Page content (embedded images via TipTap JSON) ────────────────────────
+    // Page content images
     {
         let mut stmt = conn.prepare("SELECT content FROM page")?;
         let rows: Vec<String> = stmt
@@ -331,7 +325,7 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
         }
     }
 
-    // ── Page audio_file ───────────────────────────────────────────────────────
+    // Page audio
     {
         let mut stmt = conn.prepare("SELECT audio_file FROM page WHERE audio_file IS NOT NULL")?;
         let rows = stmt
@@ -344,15 +338,8 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
 
     let mut deleted = 0;
 
-    // Walked files are keyed as "{subdir}/{filename}" — the canonical stored
-    // form — so comparison never depends on the walk's absolute paths or the
-    // OS separator. pages/images is intentionally not walked: its orphans are
-    // removed by removed_image_paths/delete_page, same as before.
-    //
-    // Liveness is checked against the union of every referenced set: a file
-    // can land in one subdir but be referenced as another kind (an <audio>
-    // src with an extension the importer didn't classify as audio ends up in
-    // cards/images), and it must not be deleted for that.
+    // Keys are "{subdir}/{filename}" so comparisons don't depend on absolute paths or OS separators.
+    // Liveness checks against the union of all sets because a file can be referenced under a different subdir than where it landed.
     let all_referenced: HashSet<&String> = referenced_images
         .iter()
         .chain(referenced_audio.iter())
@@ -386,11 +373,11 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
             .collect();
 
         // Safety valve: files exist AND references exist, yet not a single
-        // file matches a reference — that's a systematic key mismatch (a bug),
+        // file matches a reference. That's a systematic key mismatch (a bug),
         // not real orphans. Deleting here would wipe every media file.
         if !referenced.is_empty() && !files.is_empty() && orphans.len() == files.len() {
             log::error!(
-                "cleanup_orphaned_media: refusing to delete all {} files in {subdir} — \
+                "cleanup_orphaned_media: refusing to delete all {} files in {subdir}: \
                  no stored reference matches any file, which indicates a path-format bug",
                 files.len()
             );
@@ -520,7 +507,7 @@ mod tests {
         touch(&audio_dir, "a.mp3");
         touch(&audio_dir, "b.mp3");
 
-        // references exist but match no file at all — must not delete anything
+        // references exist but match no file at all, must not delete anything
         conn.execute(
             "INSERT INTO card (group_id, front, back, front_audio)
              VALUES (1, 'f', 'b', 'cards/audio/elsewhere.mp3')",

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-/// Media directories under the app data dir; stored paths are relative to
+/// Media directories under the app data dir. Stored paths are relative to
 /// app_dir and always use forward slashes, e.g. "cards/images/<uuid>.png".
 pub const MEDIA_SUBDIRS: [&str; 4] = ["cards/images", "cards/audio", "pages/images", "pages/audio"];
 
@@ -12,11 +12,9 @@ fn is_url(path: &str) -> bool {
 }
 
 /// Canonicalizes a stored media reference to app_dir-relative form.
-/// Absolute paths under the current app_dir are stripped to their media
-/// subpath; absolute paths under a stale root (renamed username, app dir
-/// copied from another machine or OS) are recovered by locating the media
-/// subdir marker. URLs, already-relative paths, and anything that isn't a
-/// media file under a known subdir are returned unchanged.
+/// Absolute paths under the current app_dir are stripped to their media subpath.
+/// Absolute paths under a stale root (renamed username, app dir copied from another machine)
+/// are recovered by locating the media subdir marker. URLs and non-media paths are unchanged.
 pub fn to_relative(path: &str, app_dir: &Path) -> String {
     if path.is_empty() || is_url(path) {
         return path.to_string();
@@ -114,9 +112,8 @@ pub fn relativize_html_media(html: &str, app_dir: &Path) -> Option<String> {
     changed.then_some(out)
 }
 
-/// Relativizes attrs.src of every TipTap image node, and syncs attrs.rawPath
-/// to the stored copy — display prefers rawPath, which historically kept
-/// pointing at the originally picked file instead of the app-dir copy.
+/// Relativizes attrs.src of every TipTap image node and syncs attrs.rawPath to the stored copy.
+/// rawPath historically kept pointing at the originally picked file, not the app-dir copy.
 /// Returns true if anything changed.
 pub fn relativize_image_nodes(node: &mut serde_json::Value, app_dir: &Path) -> bool {
     use serde_json::Value;

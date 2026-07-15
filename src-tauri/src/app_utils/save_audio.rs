@@ -22,7 +22,7 @@ pub fn save_card_audio_files(src_paths: Vec<String>, app_dir: &Path) -> Result<V
             continue;
         }
 
-        // Already stored (relative or a legacy absolute form) — keep, normalized
+        // Already stored (relative or a legacy absolute form), keep normalized
         if is_stored_media(&src, app_dir, "cards/audio") {
             result.push(to_relative(&src, app_dir));
             continue;

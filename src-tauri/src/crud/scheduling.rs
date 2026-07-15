@@ -67,7 +67,7 @@ pub fn update_date(conn: &Connection) -> Result<()> {
 
     let n_days = match stored {
         None => {
-            // First launch — insert today, no tick needed
+            // First launch: insert today, no tick needed
             conn.execute(
                 "INSERT INTO app_date (id, date) VALUES (0, ?1)",
                 rusqlite::params![today.to_string()],
@@ -85,7 +85,7 @@ pub fn update_date(conn: &Connection) -> Result<()> {
         }
     };
 
-    // New day — reset todo completion state, then tick SRS
+    // New day: reset todo completion state, then tick SRS
     conn.execute("UPDATE todo SET is_done = FALSE", [])?;
 
     for _ in 0..n_days {
@@ -172,15 +172,9 @@ pub fn count_due_items(group_id: &i64, conn: &Connection) -> Result<(i64, i64)> 
     )
 }
 
-/// Tops up a group's due queue to its daily quota.
-///
-/// Quota invariant: what counts against max_new/max_review is
-/// `studied today (non-overflow) + currently due non-overflow cards`.
-/// Overflow cards (is_overdue = TRUE, carried over from yesterday) are
-/// "free" — they never consume quota, which is why both COUNT queries
-/// filter on is_overdue = FALSE. The tri-state is_overdue encoding is:
-/// TRUE = overflow carry-over, FALSE = scheduled normally today,
-/// NULL = not due (see db.rs).
+/// Tops up a group's due queue to its daily quota. Studied today + currently due
+/// counts against the maxes, but overflow carry-overs (is_overdue = TRUE) are free,
+/// hence the is_overdue = FALSE filters (tri-state, see db.rs).
 pub fn fill_group(group_id: i64, conn: &Connection) -> Result<()> {
     let (max_new, studied_new, max_review, studied_review): (i64, i64, i64, i64) = conn.query_row(
         "SELECT max_new, studied_new, max_review, studied_review FROM scheduler WHERE group_id = ?1",
@@ -378,9 +372,8 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
 
     let is_new = old_tier == 0 && new_tier > 0;
     let is_promote = old_tier > 0 && new_tier > old_tier;
-    // A same-tier grade on a graduated card deliberately counts as a demotion:
-    // tier is clamped at a floor of 1, so grading "again" on tier 1 keeps the
-    // tier while still being a failed review.
+    // A same-tier grade on a graduated card counts as a demotion: tier clamps at 1,
+    // so grading "again" on tier 1 keeps the tier but is still a failed review.
     let is_demote = old_tier > 0 && new_tier <= old_tier;
 
     // Only non-overflow cards (is_overdue == FALSE) consume the daily quota;
@@ -535,10 +528,8 @@ pub fn add_group_time(group_id: i64, minutes: f64, conn: &Connection) -> Result<
     Ok(())
 }
 
-// Called both from the deck editor and from remove_group_from_plan with reset=true.
-// Wipes card progress and inserts a blank group_stats row for today so subsequent
-// grading writes to a fresh slot, splitting pre/post reset data.
-// If not in plan, a new row will be generated anyway on add
+// Wipes card progress and starts a blank group_stats row for today, splitting
+// pre/post reset data. Also called from remove_group_from_plan with reset=true.
 pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
     let today = get_date(conn)?;
 
@@ -624,12 +615,8 @@ pub fn max_clamp_group(group_id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// Cards below PRIORITY_CEIL sit in the priority range, unreachable by the
-/// 1/day tick (~137 years). Both entry points anchor an empty range at
-/// PRIORITY_ANCHOR and grow away from it, so `ORDER BY sequence ASC` yields:
-///
-///   marks (LIFO)                  anchor      priorities (FIFO)
-///   ...  -1,000,002  -1,000,001  [-1,000,000]  -999,999  -999,998  ...
+/// Below PRIORITY_CEIL the 1/day tick can't reach (~137 years). An empty range
+/// anchors at PRIORITY_ANCHOR, marks grow LIFO below it, priorities FIFO above.
 const PRIORITY_CEIL: i64 = -50_000;
 const PRIORITY_ANCHOR: i64 = -1_000_000;
 
@@ -669,10 +656,8 @@ pub fn prioritize_card(card_id: i64, conn: &Connection) -> Result<()> {
     fill_group(group_id, conn)
 }
 
-/// Returns (streak, studied_today) for a plan.
-/// A day counts if it has any todo_stats row OR any group_stats row with cards graded.
-/// studied_today reflects whether qualifying activity exists on the current stored date.
-/// If not studied today, the streak carries forward from yesterday (standard behaviour).
+/// (streak, studied_today) for a plan. A day counts with any todo_stats row or any
+/// graded group_stats row. Not studied today yet: streak carries from yesterday.
 pub fn get_plan_streak(plan_id: i64, conn: &Connection) -> Result<(i64, bool)> {
     use std::collections::HashSet;
 

@@ -2,9 +2,7 @@ import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
 import { useState } from "react";
 
-// ─── Reveal Block ─────────────────────────────────────────────────────────────
-// Plain-text prompt + answer. In edit mode both fields are visible and editable.
-// In read-only mode the answer is hidden behind a Reveal toggle.
+// Reveal Block: prompt + answer, in read-only mode the answer is hidden behind a toggle.
 
 // Fixed-basis label column so the Prompt and Answer cells (and their right
 // borders) always line up regardless of content width.

@@ -12,7 +12,7 @@ const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: fa
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
-// ─── SRS Group Row ────────────────────────────────────────────────────────────
+// SRS Group Row
 
 function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData, srsGroups, setToast, onNavigateToGroup }) {
     const [removing, setRemoving] = useState(false);
@@ -126,7 +126,7 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
     );
 }
 
-// ─── SRS Section ──────────────────────────────────────────────────────────────
+// SRS Section
 
 function SrsSection({ planId, setToast, onNavigateToGroup }) {
     const [srsGroups, setSrsGroups] = useState([]);
@@ -248,7 +248,7 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
     );
 }
 
-// ─── Resources Section ────────────────────────────────────────────────────────
+// Resources Section
 
 function ResourcesSection({ planId, setToast, onChanged }) {
     const [resources, setResources] = useState([]);
@@ -396,7 +396,7 @@ function ResourcesSection({ planId, setToast, onChanged }) {
     );
 }
 
-// ─── Todo Creator ─────────────────────────────────────────────────────────────
+// Todo Creator
 
 function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
     const [open, setOpen] = useState(false);
@@ -535,7 +535,7 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
     );
 }
 
-// ─── Plans ────────────────────────────────────────────────────────────────────
+// Plans
 
 export default function Plans({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext }) {
     const [plans, setPlans] = useState([]);

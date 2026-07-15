@@ -1,4 +1,4 @@
-/* ── Homepage ── */
+/* Homepage */
 .hp-root {
   flex: 1;
   overflow-y: scroll;
@@ -13,7 +13,6 @@
   margin: 0 auto;
 }
 
-/* How-to opener pinned to the bottom-left corner, mirroring the version tag */
 button.hp-help-btn {
   position: fixed;
   left: 12px;
@@ -32,7 +31,6 @@ button.hp-help-btn {
 }
 button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bdr); background: var(--t-surface); }
 
-/* Version tag pinned to the bottom-right corner of the homepage */
 .hp-version {
   position: fixed;
   right: 12px;
@@ -106,7 +104,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   line-height: 1.5;
 }
 
-/* Plan card — dashboard tile */
 .hp-plan-card {
   padding: 22px 24px;
   min-height: 170px;
@@ -129,7 +126,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-plan-card.has-due {
   border-color: var(--t-accent-bdr);
 }
-/* Nothing left due today — green outline + check, matching .hp-deck-check */
+/* Nothing left due today, green outline + check matching .hp-deck-check. */
 .hp-plan-card.is-done {
   border-color: var(--t-green-bdr);
 }
@@ -172,7 +169,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   user-select: none;
 }
 .hp-streak-chip.at-risk { border-color: var(--t-amber-bdr); background: var(--t-amber-bg); color: var(--t-amber); }
-/* Nothing due, nothing studied: quiet foot note, same scale as .hp-stat-lbl */
 .hp-plan-idle-note {
   margin-right: auto;
   font-size: 11px;
@@ -191,7 +187,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-plan-card-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
 .hp-plan-open { font-size: 12px; font-weight: 600; color: var(--t-accent); letter-spacing: 0.02em; }
 
-/* ── Plan study page ── */
+/* Plan study page */
 .hp-plan-page {
   padding: 24px var(--t-page-pad);
   max-width: 700px;
@@ -207,7 +203,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* 18px is the standard for free-floating "← Back + title" headers (also .hp-session-header h2) */
 .hp-plan-back h2 { margin: 0; font-family: var(--t-font-head); font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--t-text); }
 
-/* ── Study timer ── */
+/* Study timer */
 .hp-timer {
   margin-left: auto;
   display: flex;
@@ -230,10 +226,10 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-timer-display.running { color: var(--t-text); }
 .hp-timer-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--t-r-pill); }
-/* Family-colored actions: green go, blue resume, amber pause, red clear; hover deepens the fill */
+/* Family-colored actions: green Start, blue Resume, amber Pause, red Clear. Hover deepens the fill. */
 .hp-timer-btn--start { background: var(--t-green-bg); border-color: var(--t-green-bdr); color: var(--t-green); }
 .hp-timer-btn--start:hover { background: var(--t-green-bg); border-color: var(--t-green); color: var(--t-green); filter: brightness(0.95); }
-/* Resume — a paused timer holding time reads blue, distinct from a fresh green Start */
+/* Resume is blue, distinct from a fresh green Start. */
 .hp-timer-btn--resume { background: var(--t-blue-bg); border-color: var(--t-blue-bdr); color: var(--t-blue); }
 .hp-timer-btn--resume:hover { background: var(--t-blue-bg); border-color: var(--t-blue); color: var(--t-blue); filter: brightness(0.95); }
 .hp-timer-btn--pause { background: var(--t-amber-bg); border-color: var(--t-amber-bdr); color: var(--t-amber); }
@@ -271,7 +267,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-todo-row:last-child { margin-bottom: 0; }
 
-/* Existing-todo options in the Log Extra prescreen — todo-family bars */
+/* Existing-todo options in the Log Extra prescreen, todo-family bars. */
 .hp-free-todo-option {
   text-align: left;
   font-size: 13px;
@@ -282,7 +278,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   color: var(--t-text);
   /* Keep full height so the list scrolls instead of squashing rows */
   flex-shrink: 0;
-  /* Global button styling is nowrap; clamp long todo names instead of overflowing the popup */
+  /* Global button styling is nowrap. Clamp long todo names so they don't overflow the popup. */
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -307,7 +303,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   color: var(--t-text-3);
 }
 
-/* Deck row in study page */
 .hp-deck-row {
   display: flex;
   align-items: center;
@@ -328,13 +323,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-deck-row--empty { cursor: default !important; background: linear-gradient(280deg, var(--t-green-bg) 0%, var(--t-surface) 45%) !important; border-color: var(--t-green-bdr) !important; }
 .hp-deck-name { flex: 1; font-weight: 600; font-size: 15px; color: var(--t-text); }
-/* Green check marks decks with nothing left due, mirroring the todo checkboxes */
 .hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
 .hp-deck-new, .hp-deck-review { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hp-deck-new { color: var(--t-blue); min-width: 62px; }
 .hp-deck-review { color: var(--t-green); min-width: 86px; }
 
-/* ── Study session ── */
+/* Study session */
 .hp-session {
   height: 100%;
   overflow-y: scroll;
@@ -356,7 +350,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-session-counts { font-size: 12px; color: var(--t-text-3); display: flex; gap: 10px; font-variant-numeric: tabular-nums; }
 .hp-session-counts span { min-width: 56px; text-align: right; }
 
-/* Card container */
 .hp-card-box {
   border: 1px solid var(--t-border-2);
   border-radius: var(--t-r-xl);
@@ -370,7 +363,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   box-shadow: var(--t-shadow);
 }
 
-/* Workspace textarea */
 .hp-workspace {
   width: 100%;
   box-sizing: border-box;
@@ -387,7 +379,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-workspace::placeholder { color: var(--t-text-3); }
 
-/* Flip button */
 .hp-flip-btn {
   width: 100%;
   padding: 11px;
@@ -405,7 +396,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-flip-btn:hover { background: var(--t-accent-h); color: var(--t-accent-fg); box-shadow: 0 3px 10px rgba(201,154,99,0.42); transform: translateY(-1px); }
 .hp-flip-btn:active { transform: translateY(0); }
 
-/* Grade buttons */
 .hp-grade-bar { display: flex; gap: 8px; }
 .hp-grade-btn {
   flex: 1;
@@ -442,7 +432,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-grade-bar .hp-grade-easy:hover,
 .hp-grade-bar .hp-grade-gotit:hover  { background: var(--t-green-bg); border-color: var(--t-green); color: var(--t-green); filter: brightness(0.94); }
 
-/* Done screen */
 .hp-done {
   text-align: center;
   padding: 56px 0;
@@ -450,7 +439,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-done-title  { font-family: var(--t-font-head); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 6px; color: var(--t-text); }
 .hp-done-sub    { font-size: 13px; color: var(--t-text-3); }
 
-/* Similar cards */
 .hp-similar {
   margin-top: 16px;
   border: 1px solid var(--t-blue-bdr);
@@ -477,7 +465,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-similar-back  { font-size: 13px; color: var(--t-text-2); text-align: center; }
 .hp-similar-nav   { display: flex; gap: 8px; justify-content: center; }
 
-/* Popup overlays */
 .hp-overlay {
   position: fixed;
   inset: 0;
@@ -505,7 +492,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-popup-label { font-size: 12px; color: var(--t-text-2); margin-bottom: 4px; }
 .hp-popup-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* Study-page resources — quiet reference list */
 .hp-resources { margin-bottom: 16px; padding: 2px 6px; }
 .hp-resources-toggle {
   display: inline-flex;
@@ -525,12 +511,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   flex-direction: column;
   gap: 6px;
   margin-top: 8px;
-  /* clay left rule — same treatment as the plan editor's resources section */
+  /* clay left rule, matching the plan editor's resources section. */
   margin-left: 10px;
   padding-left: 14px;
   border-left: 2px solid var(--t-clay-bdr);
 }
-/* Study-page resource rows — match the todo/deck row treatment above (surface + family gradient) */
+/* Match the todo/deck row treatment above. */
 .hp-resources-list .st-resource-card {
   background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 45%);
   border-color: var(--t-clay-bdr);
