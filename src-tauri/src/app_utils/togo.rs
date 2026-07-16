@@ -502,7 +502,7 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
     let ours = env!("CARGO_PKG_VERSION");
     if manifest.app_version != ours {
         return Err(format!(
-            "That package was made by Toast {}; you're on {}. Both machines must run the same version.",
+            "That package was made by Toast {} while you're on {}. Both machines must run the same version.",
             manifest.app_version, ours
         ));
     }

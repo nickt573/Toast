@@ -4,7 +4,7 @@ import "./HowTo.css";
 export const HELP_PAGES = [
     {
         tab: null,
-        title: "Welcome to Toast",
+        title: "Welcome to Toast!",
         body: "Toast is a home for managing and tracking your language learning. Set up plans to work through each day, and Toast keeps track of the rest.",
     },
     {
@@ -30,7 +30,7 @@ export const HELP_PAGES = [
     {
         tab: "togo",
         title: "Toast to Go",
-        body: "Toast to Go carries your data between computers. Push a copy when you leave one machine, then pull it down on another using your key. You can save the keys you pull from often, and choose whether Toast offers to push whenever you close the app.",
+        body: "Toast to Go carries your data between computers. Push a copy when you leave one machine, then pull it down on another using your key. You can save the keys you pull from often, and choose whether Toast offers to push whenever you close the app. Keep in mind that you cannot pull packages with a different version number or with a date from the future.",
     },
     {
         tab: "home",
