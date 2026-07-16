@@ -473,7 +473,7 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
             SELECT id, todo_id, plan_id, plan_name, date, text, category, details, time_spent_minutes, num_unit
             FROM todo_stats
             WHERE plan_id = ?1
-            ORDER BY date DESC, id DESC
+            ORDER BY date DESC, id ASC
             "#,
         )?
         .query_map([plan_id], |row| {
