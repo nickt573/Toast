@@ -167,6 +167,9 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     conn.execute_batch("UPDATE todo_stats SET time_spent_minutes = ROUND(time_spent_minutes);")?;
     // v1.3.0: media paths stored relative to the app data dir.
     migrate_media_paths(conn, app_dir)?;
+    // v1.5.0: skip a todo for today only. Cleared on day rollover and when the
+    // todo's frequency changes.
+    add_column_if_missing(conn, "todo", "is_skipped", "BOOLEAN NOT NULL DEFAULT FALSE")?;
     Ok(())
 }
 
@@ -189,7 +192,8 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 category INTEGER DEFAULT 64, -- 0b1000000 (other)
 
                 is_done BOOLEAN NOT NULL DEFAULT FALSE,
-                is_disabled BOOLEAN NOT NULL DEFAULT FALSE, -- disabled by frequency
+                is_disabled BOOLEAN NOT NULL DEFAULT FALSE, -- disabled by frequency or skip
+                is_skipped BOOLEAN NOT NULL DEFAULT FALSE, -- skipped for today, resets on rollover
 
                 position INTEGER DEFAULT NULL, -- manual order; contiguous 1..N per plan, NULL sorts last
 

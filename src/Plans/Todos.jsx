@@ -80,7 +80,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
     if (!editing) {
         return (
-            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", opacity: todo.is_disabled ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%)" }}>
+            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", opacity: todo.is_disabled && !todo.is_skipped ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 17, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>

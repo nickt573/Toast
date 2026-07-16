@@ -31,7 +31,7 @@ pub fn get_plan_summaries(conn: &Connection) -> Result<Vec<(i64, i64, i64, i64)>
 pub fn get_todos(plan_id: i64, conn: &Connection) -> Result<Vec<Todo>> {
     conn.prepare(
         r#"
-        SELECT id, plan_id, text, frequency, category, is_done, is_disabled, position
+        SELECT id, plan_id, text, frequency, category, is_done, is_disabled, is_skipped, position
         FROM todo
         WHERE plan_id = ?1
         ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, text COLLATE NOCASE ASC
@@ -46,7 +46,8 @@ pub fn get_todos(plan_id: i64, conn: &Connection) -> Result<Vec<Todo>> {
             category: row.get(4)?,
             is_done: row.get(5)?,
             is_disabled: row.get(6)?,
-            position: row.get(7)?,
+            is_skipped: row.get(7)?,
+            position: row.get(8)?,
         })
     })?
     .collect()

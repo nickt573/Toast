@@ -292,6 +292,24 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   border-color: var(--t-green-bdr);
   background: linear-gradient(280deg, var(--t-green-bg) 0%, var(--t-surface) 45%);
 }
+.hp-todo-row.skipped {
+  opacity: 0.5;
+}
+
+.hp-todo-skip {
+  float: right;
+  font-size: 11px;
+  padding: 2px 10px;
+  margin-left: 10px;
+  background: var(--t-accent);
+  border-color: var(--t-accent);
+  color: var(--t-accent-fg);
+}
+.hp-todo-skip:hover {
+  background: var(--t-accent-h);
+  border-color: var(--t-accent-h);
+  color: var(--t-accent-fg);
+}
 
 .hp-todo-text {
   font-weight: 600;

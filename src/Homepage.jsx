@@ -779,7 +779,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                 loggedInvoke("get_resources", { planId: plan.id }),
                 loggedInvoke("get_groups"),
             ]);
-            const enabled = t.filter(todo => !todo.is_disabled);
+            // Skipped todos are disabled but stay visible, greyed out
+            const enabled = t.filter(todo => !todo.is_disabled || todo.is_skipped);
             setTodos(enabled);
             setAllTodos(t);
             setSrsGroups(srs.filter(([group]) => group.group_type === "deck"));
@@ -796,6 +797,13 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             }));
             setTodoLinks(links);
         } catch (e) { logError("catch", e); setToast("Failed to load plan data.", "error"); }
+    }
+
+    async function handleTodoSkip(todo) {
+        try {
+            await loggedInvoke("set_todo_skipped", { todoId: todo.id, skipped: !todo.is_skipped });
+            await loadData();
+        } catch (e) { logError("catch", e); setToast("Failed to skip todo.", "error"); }
     }
 
     async function handleTodoCheck(todo) {
@@ -874,17 +882,23 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         <span className="hp-section-label hp-section-label--todos" style={{ marginBottom: 0, flex: 1 }}>Todos</span>
                         <button onClick={() => { pauseStudyTimer(plan.id); setShowFreeTodo(true); }} style={{ fontSize: 11 }}>Log Extra</button>
                     </div>
-                    {todos.length === 0 && (
+                    {todos.every(todo => todo.is_skipped) && (
                         <div className="empty-bubble">No todos today.</div>
                     )}
                     {todos.map(todo => {
                         const links = todoLinks[todo.id] ?? { groups: [], resources: [] };
                         return (
-                            <div key={todo.id} className={`hp-todo-row${todo.is_done ? " done" : ""}`}>
+                            <div key={todo.id} className={`hp-todo-row${todo.is_done ? " done" : ""}${todo.is_skipped ? " skipped" : ""}`}>
                                 <div style={{ overflow: "hidden" }}>
                                     <input type="checkbox" checked={todo.is_done}
+                                        disabled={todo.is_skipped}
                                         onChange={() => handleTodoCheck(todo)}
-                                        style={{ float: "left", marginRight: 10, marginTop: 3, cursor: "pointer" }} />
+                                        style={{ float: "left", marginRight: 10, marginTop: 3, cursor: todo.is_skipped ? "default" : "pointer" }} />
+                                    {!todo.is_done && (
+                                        <button className="hp-todo-skip" onClick={() => handleTodoSkip(todo)}>
+                                            {todo.is_skipped ? "Unskip" : "Skip"}
+                                        </button>
+                                    )}
                                     <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
                                         {todo.text}
                                     </div>

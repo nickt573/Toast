@@ -46,13 +46,22 @@ pub fn update_todo(todo: Todo, conn: &Connection) -> Result<()> {
         .weekday()
         .num_days_from_sunday();
     let today_bit = 1i64 << today;
-    let is_disabled = (todo.frequency & today_bit) == 0;
+
+    // Changing the frequency drops the skip, so disabling and re-enabling a day
+    // starts it fresh instead of coming back still skipped.
+    let (old_frequency, old_skipped): (i64, bool) = conn.query_row(
+        "SELECT frequency, is_skipped FROM todo WHERE id = ?1",
+        [todo.id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let is_skipped = old_skipped && old_frequency == todo.frequency;
+    let is_disabled = (todo.frequency & today_bit) == 0 || is_skipped;
 
     conn.execute(
         r#"
         UPDATE todo
-        SET text = ?1, frequency = ?2, category = ?3, is_done = ?4, is_disabled = ?5
-        WHERE id = ?6
+        SET text = ?1, frequency = ?2, category = ?3, is_done = ?4, is_disabled = ?5, is_skipped = ?6
+        WHERE id = ?7
         "#,
         rusqlite::params![
             todo.text,
@@ -60,8 +69,24 @@ pub fn update_todo(todo: Todo, conn: &Connection) -> Result<()> {
             todo.category,
             todo.is_done,
             is_disabled,
+            is_skipped,
             todo.id
         ],
+    )?;
+    Ok(())
+}
+
+pub fn set_todo_skipped(todo_id: i64, skipped: bool, conn: &Connection) -> Result<()> {
+    let date_str = get_date(conn)?;
+    let today = chrono::NaiveDate::parse_from_str(&date_str, "%Y-%m-%d")
+        .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?
+        .weekday()
+        .num_days_from_sunday();
+    let today_bit = 1i64 << today;
+
+    conn.execute(
+        "UPDATE todo SET is_skipped = ?1, is_disabled = ((frequency & ?2) = 0) OR ?1 WHERE id = ?3",
+        rusqlite::params![skipped, today_bit, todo_id],
     )?;
     Ok(())
 }

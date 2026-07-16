@@ -51,13 +51,16 @@ pub fn get_date(conn: &Connection) -> Result<String> {
 
 pub fn update_date(conn: &Connection) -> Result<()> {
     let today = chrono::Local::now().date_naive();
-
-    // Always recalculate is_disabled based on today's weekday
     let today_bit = 1i64 << today.weekday().num_days_from_sunday();
-    conn.execute(
-        "UPDATE todo SET is_disabled = ((frequency & ?1) = 0)",
-        [today_bit],
-    )?;
+
+    // Recalculates is_disabled from today's weekday. Skips stay disabled, so a
+    // same-day relaunch can't revive a skipped todo.
+    let recalc_disabled = |conn: &Connection| {
+        conn.execute(
+            "UPDATE todo SET is_disabled = ((frequency & ?1) = 0) OR is_skipped",
+            [today_bit],
+        )
+    };
 
     let stored: Option<String> = conn
         .query_row("SELECT date FROM app_date WHERE id = 0", [], |row| {
@@ -68,6 +71,7 @@ pub fn update_date(conn: &Connection) -> Result<()> {
     let n_days = match stored {
         None => {
             // First launch: insert today, no tick needed
+            recalc_disabled(conn)?;
             conn.execute(
                 "INSERT INTO app_date (id, date) VALUES (0, ?1)",
                 rusqlite::params![today.to_string()],
@@ -79,14 +83,16 @@ pub fn update_date(conn: &Connection) -> Result<()> {
                 .map_err(|e| rusqlite::Error::InvalidParameterName(e.to_string()))?;
             let delta = (today - stored_date).num_days();
             if delta <= 0 {
+                recalc_disabled(conn)?;
                 return Ok(());
-            } // same day, nothing to do
+            } // same day, nothing else to do
             delta as u32
         }
     };
 
-    // New day: reset todo completion state, then tick SRS
-    conn.execute("UPDATE todo SET is_done = FALSE", [])?;
+    // New day: reset todo completion and skips, then tick SRS
+    conn.execute("UPDATE todo SET is_done = FALSE, is_skipped = FALSE", [])?;
+    recalc_disabled(conn)?;
 
     for _ in 0..n_days {
         tick_all(conn)?;

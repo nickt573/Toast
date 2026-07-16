@@ -23,6 +23,9 @@ pub struct Todo {
     pub category: i64,
     pub is_done: bool,
     pub is_disabled: bool,
+    // Skipped for today. Set via set_todo_skipped, never through update_todo.
+    #[serde(default)]
+    pub is_skipped: bool,
     // Manual order, set via set_todo_position and never through update_todo.
     #[serde(default)]
     pub position: Option<i64>,

@@ -20,6 +20,16 @@ pub fn update_todo(todo: Todo, state: tauri::State<AppState>) -> Result<(), Stri
 }
 
 #[tauri::command]
+pub fn set_todo_skipped(
+    todo_id: i64,
+    skipped: bool,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    update::set_todo_skipped(todo_id, skipped, &conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn delete_todo(id: i64, state: tauri::State<AppState>) -> Result<(), String> {
     let mut conn = state.conn.lock().unwrap();
     delete::delete_todo(id, &mut conn).map_err(|e| e.to_string())
