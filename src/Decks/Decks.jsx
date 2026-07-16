@@ -1160,7 +1160,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                             {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star" title="Prioritized">★</span>}
                           </>
                         )}</td>
-                        <td>{card.is_paused ? "Yes" : "No"}</td>
+                        <td>{card.is_paused ? "Yes" : "—"}</td>
                       </tr>
                     );
                     })}
