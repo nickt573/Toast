@@ -502,7 +502,7 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
 
                     {groups.length > 0 && (
                         <div>
-                            <div className="plan-form-sublabel">Decks/Notebooks</div>
+                            <div className="plan-form-sublabel">Decks / Notebooks</div>
                             <div className="plan-pill-group">
                                 {groups.map(g => {
                                     const active = selectedGroupIds.includes(g.id);

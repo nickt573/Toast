@@ -96,7 +96,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
                         {(linkedGroups.length > 0 || linkedResources.length > 0) && (
                             <div className="todo-section">
-                                <div className="todo-section-label">Tagged Materials</div>
+                                <div className="todo-section-label">Resources / Decks / Notebooks</div>
                                 <div className="todo-section-pills">
                                     {linkedResources.map(r => (
                                         <span key={r.id}
@@ -178,7 +178,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
                 {allGroups && allGroups.length > 0 && (
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4 }}>Decks/Notebooks</div>
+                        <div style={{ fontSize: 12, marginBottom: 4 }}>Decks / Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {allGroups.map(g => {
                                 const active = selectedGroupIds.includes(g.id);

@@ -10,7 +10,7 @@ export const HELP_PAGES = [
     {
         tab: "plans",
         title: "Plans",
-        body: "A plan is one subject or goal, like a language or a class. Fill it with todos that repeat on the days you pick, each with categories describing the language skills it targets (like reading or listening). Link your decks to a plan for daily SRS review, and add resources like books and websites. You can also tag a todo with the decks, notebooks, and resources it uses, so they're always one click away.",
+        body: "A plan is one subject or goal, like a language or a class. Fill it with todos that repeat on the days you pick, each with categories describing the language skills it targets (like reading or listening). Link your decks to a plan for daily SRS review, and add outside resources like books and websites. You can also tag a todo with the decks, notebooks, and resources it uses, so they're always one click away.",
     },
     {
         tab: "decks",

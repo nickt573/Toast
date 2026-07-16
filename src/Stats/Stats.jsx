@@ -307,10 +307,10 @@ function MetricCard({ label, value, color }) {
 // Chart panel:
 
 const RANGES = [
+  { label: "All", days: null },
   { label: "7d",  days: 7 },
   { label: "30d", days: 30 },
   { label: "90d", days: 90 },
-  { label: "All", days: null },
 ];
 
 function ChartPanel({ groupStats, todoStats }) {
@@ -666,6 +666,14 @@ function fmtDayLabel(dateStr) {
   });
 }
 
+const SEARCH_SCOPES = [
+  { key: "all",       label: "All" },
+  { key: "name",      label: "Name" },
+  { key: "details",   label: "Details" },
+  { key: "resources", label: "Resources" },
+  { key: "groups",    label: "Decks / Notebooks" },
+];
+
 function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResources, onOpenDeck }) {
   const [catFilter, setCatFilter] = useState("all");
   const [expanded,  setExpanded]  = useState({});
@@ -673,8 +681,22 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   const [dateTo,    setDateTo]    = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editForm,  setEditForm]  = useState(null);
+  const [search,    setSearch]    = useState("");
+  const [scopes,    setScopes]    = useState(() => new Set(["all"]));
+  const [preset,    setPreset]    = useState("All");
 
-  const applyPreset = (days) => {
+  // All stands alone: picking it clears the rest, picking anything else clears it
+  const toggleScope = (key) => setScopes(prev => {
+    if (key === "all") return new Set(["all"]);
+    const next = new Set(prev);
+    next.delete("all");
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    return next.size === 0 ? new Set(["all"]) : next;
+  });
+
+  const applyPreset = (label, days) => {
+    setPreset(label);
     if (days === null) { setDateFrom(""); setDateTo(""); return; }
     const d = new Date(today);
     d.setDate(d.getDate() - (days - 1));
@@ -682,10 +704,27 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     setDateTo(today);
   };
 
+  // A hand-picked date no longer matches whatever preset was highlighted
+  const editDate = (setter) => (e) => { setter(e.target.value); setPreset(null); };
+
   let visible = todoStats;
   if (dateFrom) visible = visible.filter(r => r.date >= dateFrom);
   if (dateTo)   visible = visible.filter(r => r.date <= dateTo);
   if (catFilter !== "all") visible = visible.filter(r => parseCategories(r.category).includes(catFilter));
+
+  const query = search.trim().toLowerCase();
+  if (query) {
+    const has = s => (s || "").toLowerCase().includes(query);
+    const inScope = key => scopes.has("all") || scopes.has(key);
+    visible = visible.filter(r =>
+      (inScope("name") && has(r.text)) ||
+      (scopes.has("all") && has(r.num_unit)) ||
+      (inScope("details") && has(r.details)) ||
+      // Resources match on name and description only, never the type or link
+      (inScope("resources") && r.resources.some(res => has(res.name) || has(res.notes))) ||
+      (inScope("groups") && r.groups.some(g => has(g.name)))
+    );
+  }
 
   const toggle = id => setExpanded(e => ({ ...e, [id]: !e[id] }));
 
@@ -757,16 +796,34 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: "var(--t-text-3)", fontWeight: 500 }}>Date:</span>
-        {[{ label: "All", days: null }, { label: "7d", days: 7 }, { label: "30d", days: 30 }, { label: "90d", days: 90 }].map(({ label, days }) => (
-          <button key={label} className="st-btn-sm" onClick={() => applyPreset(days)}>{label}</button>
-        ))}
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-          style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)" }} />
-        <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>-</span>
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-          style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)" }} />
+      {/* Grid so the search bar and the date pair share a column and end at the same edge */}
+      <div style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "8px 6px", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="date" value={dateFrom} onChange={editDate(setDateFrom)}
+            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)" }} />
+          <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>-</span>
+          <input type="date" value={dateTo} onChange={editDate(setDateTo)}
+            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)" }} />
+        </div>
+        <div className="st-pills">
+          {[{ label: "All", days: null }, { label: "7d", days: 7 }, { label: "30d", days: 30 }, { label: "90d", days: 90 }].map(({ label, days }) => (
+            <button key={label} className={`st-pill${preset === label ? " active" : ""}`} onClick={() => applyPreset(label, days)}>{label}</button>
+          ))}
+        </div>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search todo history"
+          size={1}
+          style={{ fontSize: 12, padding: "3px 8px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)", width: "100%" }}
+        />
+        <div className="st-pills">
+          {SEARCH_SCOPES.map(s => (
+            <button key={s.key} className={`st-pill${scopes.has(s.key) ? " active" : ""}`} onClick={() => toggleScope(s.key)}>
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="st-pills" style={{ marginBottom: 12 }}>
         <button className={`st-pill${catFilter === "all" ? " active" : ""}`} onClick={() => setCatFilter("all")}>All</button>
@@ -820,7 +877,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                   )}
                   {r.resources.length > 0 && (
                     <div className="st-todo-section">
-                      <div className="st-todo-section-label">Tagged Resources</div>
+                      <div className="st-todo-section-label">Resources</div>
                       <div className="st-resource-cards">
                         {r.resources.map((res, i) => <ResourceCard key={i} res={res} />)}
                       </div>
@@ -828,7 +885,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                   )}
                   {r.groups.length > 0 && (
                     <div className="st-todo-section">
-                      <div className="st-todo-section-label">Tagged Decks/Notebooks</div>
+                      <div className="st-todo-section-label">Decks / Notebooks</div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {r.groups.map((g, i) => {
                           const live = g.group_id != null ? allGroups.find(x => x.id === g.group_id) : null;
@@ -920,7 +977,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     if (editForm.resources.length === 0 && addableResources.length === 0) return null;
                     return (
                       <div>
-                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Tagged Resources</div>
+                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Resources</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {editForm.resources.map((res, i) => {
                             const dead = !planResources.some(pr => pr.name === res);
@@ -957,7 +1014,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     if (editForm.groups.length === 0 && addableGroups.length === 0) return null;
                     return (
                       <div>
-                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Tagged Decks/Notebooks</div>
+                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Decks / Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                           {editForm.groups.map((g, i) => {
                             const info = r.groups.find(x => x.name === g);
@@ -995,7 +1052,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     );
                   })()}
                   <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-                    Deleted materials can be removed here, but they cannot be added back.
+                    Resources, decks, and notebooks that have been deleted can be removed here, but they cannot be added back.
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="primary" onClick={() => saveEdit(r)}>Save</button>

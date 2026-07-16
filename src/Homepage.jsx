@@ -316,7 +316,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
 
                 {allGroups.length > 0 && (
                     <div>
-                        <div className="hp-popup-label">Decks/Notebooks</div>
+                        <div className="hp-popup-label">Decks / Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {allGroups.map(g => (
                                 <label key={g.id} className={`picker-pill${selectedGroupIds.includes(g.id) ? (g.group_type === "notebook" ? " active-notebook" : " active-deck") : ""}`}>
@@ -504,7 +504,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
 
                 {allGroups.length > 0 && (
                     <div>
-                        <div className="hp-popup-label">Decks/Notebooks</div>
+                        <div className="hp-popup-label">Decks / Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {allGroups.map(g => (
                                 <label key={g.id} className={`picker-pill${selectedGroupIds.includes(g.id) ? (g.group_type === "notebook" ? " active-notebook" : " active-deck") : ""}`}>
@@ -897,7 +897,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 </div>
                                 {(links.groups.length > 0 || links.resources.length > 0) && (
                                     <div className="todo-section">
-                                        <div className="todo-section-label">Tagged Materials</div>
+                                        <div className="todo-section-label">Resources / Decks / Notebooks</div>
                                         <div className="todo-section-pills">
                                             {links.resources.map(r => (
                                                 <ResourcePill key={r.id} resource={r} />
