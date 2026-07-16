@@ -1007,7 +1007,7 @@ const VIEW_HOME    = "home";
 const VIEW_PLAN    = "plan";
 const VIEW_SESSION = "session";
 
-export default function Homepage({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, refreshDayCount, onRefreshDay, onOpenHelp }) {
+export default function Homepage({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, refreshDayCount, onRefreshDay, onOpenHelp, firstLaunch }) {
     const [plans, setPlans] = useState([]);
     const [view, setView] = useState(VIEW_HOME);
     const [activePlan, setActivePlan] = useState(null);
@@ -1109,7 +1109,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
             <div className="hp-home">
                 <div className="hp-greeting-row">
                     <div>
-                        <div className="hp-greeting">Welcome back</div>
+                        <div className="hp-greeting">{firstLaunch ? "Welcome" : "Welcome back"}</div>
                         <div className="hp-date">{displayDate}</div>
                     </div>
                     {onRefreshDay && (

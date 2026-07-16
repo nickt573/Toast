@@ -41,6 +41,7 @@ export default function App() {
   const [closePush, setClosePush] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpPage, setHelpPage] = useState(0);
+  const [firstLaunch, setFirstLaunch] = useState(false);
   const dateChecked = useRef(false);
 
   function openHelp() {
@@ -188,7 +189,10 @@ export default function App() {
         logError("update_date", e);
       } finally {
         setDateReady(true);
-        if (firstLaunch) openHelp();
+        if (firstLaunch) {
+          setFirstLaunch(true);
+          openHelp();
+        }
       }
     })();
   }, []);
@@ -205,6 +209,7 @@ export default function App() {
           refreshDayCount={refreshDayCount}
           onRefreshDay={refreshDay}
           onOpenHelp={openHelp}
+          firstLaunch={firstLaunch}
         />
       );
       break;
