@@ -437,6 +437,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
     if (!f.is_uploaded && (!f.front.trim() || !f.back.trim())) return;
     try {
       await loggedInvoke("update_card", { card: { ...f, support: f.support || null, front_image: f.front_image || null, back_image: f.back_image || null, front_audio: f.front_audio || null, back_audio: f.back_audio || null } });
+      baselineRef.current = snap;
       onSaved({ ...target, ...snap, support: f.support });
     } catch (e) { logError("catch", e); setToast("Failed to save card changes.", "error"); }
   };
@@ -459,6 +460,14 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
       .catch((e) => { logError("get_card_grade_log", e); if (!cancelled) setCardLog([]); });
     return () => { cancelled = true; autoSave(card); };
   }, [card?.id]);
+
+  // Debounced autosave while editing, so changes survive even if the app
+  // closes before the card-switch autosave gets a chance to run
+  useEffect(() => {
+    if (!form) return;
+    const t = setTimeout(() => autoSave(card), 1200);
+    return () => clearTimeout(t);
+  }, [form]);
 
   useEffect(() => {
     if (!card || !form || card.id !== form.id) return;
@@ -489,15 +498,6 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
   const pickBackImage  = async () => { const p = await pickFile(["png","jpg","jpeg","gif","webp"]); if (p) set("back_image", p); };
   const pickFrontAudio = async () => { const p = await pickFile(["mp3","wav","ogg","m4a"]); if (p) set("front_audio", p); };
   const pickBackAudio  = async () => { const p = await pickFile(["mp3","wav","ogg","m4a"]); if (p) set("back_audio", p); };
-
-  const save = async () => {
-    try {
-      await loggedInvoke("update_card", { card: { ...form, support: form.support || null, front_image: form.front_image || null, back_image: form.back_image || null, front_audio: form.front_audio || null, back_audio: form.back_audio || null } });
-      setToast("Card successfully updated.");
-      baselineRef.current = snapshotCard(form);
-      onSaved({ ...form });
-    } catch (e) { logError("catch", e); setToast("Failed to update card.", "error"); }
-  };
 
   const deleteCard = async () => {
     skipAutoSaveRef.current = true;
@@ -581,34 +581,30 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
         )}
       </div>
 
-      {!form.is_uploaded && (
-        <div className="dk-field">
-          <label>Front Image</label>
-          <div className="dk-file-row">
-            <input type="text" value={parseFile(form.front_image ?? "")} readOnly placeholder="No file selected" />
-            <button onClick={pickFrontImage}>Browse</button>
-            {form.front_image && <button onClick={() => set("front_image", null)}>Clear</button>}
-          </div>
+      <div className="dk-field">
+        <label>Front Image</label>
+        <div className="dk-file-row">
+          <input type="text" value={parseFile(form.front_image ?? "")} readOnly placeholder="No file selected" />
+          <button onClick={pickFrontImage}>Browse</button>
+          {form.front_image && <button onClick={() => set("front_image", null)}>Clear</button>}
         </div>
-      )}
+      </div>
 
-      {!form.is_uploaded && (
-        <div className="dk-field">
-          <label>Front Audio</label>
-          {form.front_audio && (
-            <div style={{ marginBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-              <AudioPlayer path={form.front_audio} style={{ alignSelf: "flex-start" }} />
-              <div className="dk-file-row">
-                <input type="text" value={parseFile(form.front_audio)} readOnly style={{ flex: 1 }} />
-                <button onClick={() => set("front_audio", null)}>Clear</button>
-              </div>
+      <div className="dk-field">
+        <label>Front Audio</label>
+        {form.front_audio && (
+          <div style={{ marginBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+            <AudioPlayer path={form.front_audio} style={{ alignSelf: "flex-start" }} />
+            <div className="dk-file-row">
+              <input type="text" value={parseFile(form.front_audio)} readOnly style={{ flex: 1 }} />
+              <button onClick={() => set("front_audio", null)}>Clear</button>
             </div>
-          )}
-          <button onClick={pickFrontAudio} style={{ alignSelf: "flex-start" }}>
-            {form.front_audio ? "Replace" : "+ Add Front Audio"}
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+        <button onClick={pickFrontAudio} style={{ alignSelf: "flex-start" }}>
+          {form.front_audio ? "Replace" : "+ Add Front Audio"}
+        </button>
+      </div>
 
       <div className="dk-field">
         <label>Back {form.is_uploaded && <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span>}</label>
@@ -619,34 +615,30 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
         )}
       </div>
 
-      {!form.is_uploaded && (
-        <div className="dk-field">
-          <label>Back Image</label>
-          <div className="dk-file-row">
-            <input type="text" value={parseFile(form.back_image ?? "")} readOnly placeholder="No file selected" />
-            <button onClick={pickBackImage}>Browse</button>
-            {form.back_image && <button onClick={() => set("back_image", null)}>Clear</button>}
-          </div>
+      <div className="dk-field">
+        <label>Back Image</label>
+        <div className="dk-file-row">
+          <input type="text" value={parseFile(form.back_image ?? "")} readOnly placeholder="No file selected" />
+          <button onClick={pickBackImage}>Browse</button>
+          {form.back_image && <button onClick={() => set("back_image", null)}>Clear</button>}
         </div>
-      )}
+      </div>
 
-      {!form.is_uploaded && (
-        <div className="dk-field">
-          <label>Back Audio</label>
-          {form.back_audio && (
-            <div style={{ marginBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-              <AudioPlayer path={form.back_audio} style={{ alignSelf: "flex-start" }} />
-              <div className="dk-file-row">
-                <input type="text" value={parseFile(form.back_audio)} readOnly style={{ flex: 1 }} />
-                <button onClick={() => set("back_audio", null)}>Clear</button>
-              </div>
+      <div className="dk-field">
+        <label>Back Audio</label>
+        {form.back_audio && (
+          <div style={{ marginBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+            <AudioPlayer path={form.back_audio} style={{ alignSelf: "flex-start" }} />
+            <div className="dk-file-row">
+              <input type="text" value={parseFile(form.back_audio)} readOnly style={{ flex: 1 }} />
+              <button onClick={() => set("back_audio", null)}>Clear</button>
             </div>
-          )}
-          <button onClick={pickBackAudio} style={{ alignSelf: "flex-start" }}>
-            {form.back_audio ? "Replace" : "+ Add Back Audio"}
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+        <button onClick={pickBackAudio} style={{ alignSelf: "flex-start" }}>
+          {form.back_audio ? "Replace" : "+ Add Back Audio"}
+        </button>
+      </div>
 
       {form.imported_support && (
         <div className="dk-field">
@@ -676,7 +668,6 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
       {cardLogSummary}
 
       <div className="dk-editor-actions">
-        <button className="primary" onClick={save}>Save</button>
         <ConfirmDelete onConfirm={deleteCard} />
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           {inPlan && (

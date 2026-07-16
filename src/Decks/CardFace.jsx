@@ -229,13 +229,16 @@ export function CardFace({ card, showBack }) {
     const backAudioSrcs  = card.is_uploaded ? extractRawAudioSrcs(card.back)  : [];
     const supportAudioSrcs = card.is_uploaded && card.imported_support ? extractRawAudioSrcs(card.imported_support) : [];
 
-    const frontAudio = card.is_uploaded
-        ? frontAudioSrcs.map((src, i) => <AudioPlayer key={i} path={src} style={audioStyle} />)
-        : card.front_audio ? [<AudioPlayer key={0} path={card.front_audio} style={audioStyle} />] : [];
+    // Anki-embedded audio first, then any audio added in the editor
+    const frontAudio = [
+        ...frontAudioSrcs.map((src, i) => <AudioPlayer key={`anki-${i}`} path={src} style={audioStyle} />),
+        ...(card.front_audio ? [<AudioPlayer key="own" path={card.front_audio} style={audioStyle} />] : []),
+    ];
 
-    const backAudio = card.is_uploaded
-        ? backAudioSrcs.map((src, i) => <AudioPlayer key={i} path={src} style={audioStyle} />)
-        : card.back_audio ? [<AudioPlayer key={0} path={card.back_audio} style={audioStyle} />] : [];
+    const backAudio = [
+        ...backAudioSrcs.map((src, i) => <AudioPlayer key={`anki-${i}`} path={src} style={audioStyle} />),
+        ...(card.back_audio ? [<AudioPlayer key="own" path={card.back_audio} style={audioStyle} />] : []),
+    ];
 
     return (
         <div style={{ width: "100%" }}>
@@ -250,7 +253,7 @@ export function CardFace({ card, showBack }) {
                 )}
             </div>
 
-            {!card.is_uploaded && card.front_image && (
+            {card.front_image && (
                 <img src={mediaSrc(card.front_image)} alt="" style={imgStyle} />
             )}
 
@@ -289,7 +292,7 @@ export function CardFace({ card, showBack }) {
                         )}
                     </div>
 
-                    {!card.is_uploaded && card.back_image && (
+                    {card.back_image && (
                         <img src={mediaSrc(card.back_image)} alt="" style={imgStyle} />
                     )}
 
