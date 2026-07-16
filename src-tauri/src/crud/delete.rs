@@ -44,20 +44,20 @@ pub fn delete_todo(id: i64, conn: &mut Connection) -> Result<()> {
     tx.commit()
 }
 
-/// Collects (image, audio) file paths embedded in an uploaded card's HTML
-/// (front, back, and imported support).
+/// Collects (image, audio) file paths embedded in an uploaded card's imported HTML.
 fn html_media_paths(
-    front: &str,
-    back: &str,
+    imported_front: Option<&str>,
+    imported_back: Option<&str>,
     imported_support: Option<&str>,
 ) -> (Vec<String>, Vec<String>) {
-    let mut images = extract_image_paths_from_html(front);
-    images.extend(extract_image_paths_from_html(back));
-    let mut audio = extract_audio_paths_from_html(front);
-    audio.extend(extract_audio_paths_from_html(back));
-    if let Some(support) = imported_support {
-        images.extend(extract_image_paths_from_html(support));
-        audio.extend(extract_audio_paths_from_html(support));
+    let mut images = Vec::new();
+    let mut audio = Vec::new();
+    for html in [imported_front, imported_back, imported_support]
+        .into_iter()
+        .flatten()
+    {
+        images.extend(extract_image_paths_from_html(html));
+        audio.extend(extract_audio_paths_from_html(html));
     }
     (images, audio)
 }
@@ -69,8 +69,8 @@ pub fn delete_card(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
         Option<String>,
         Option<String>,
         bool,
-        String,
-        String,
+        Option<String>,
+        Option<String>,
         Option<String>,
         bool,
         i64,
@@ -78,7 +78,7 @@ pub fn delete_card(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
     let row: CardMediaRow = match conn.query_row(
         r#"
         SELECT front_image, back_image, front_audio, back_audio,
-               is_uploaded, front, back, imported_support, is_due, group_id
+               is_uploaded, imported_front, imported_back, imported_support, is_due, group_id
         FROM card WHERE id = ?1
         "#,
         [id],
@@ -101,11 +101,15 @@ pub fn delete_card(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
         Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(()),
         Err(e) => return Err(e),
     };
-    let (front_image, back_image, front_audio, back_audio, is_uploaded, front, back, imported_support, is_due, group_id) =
+    let (front_image, back_image, front_audio, back_audio, is_uploaded, imported_front, imported_back, imported_support, is_due, group_id) =
         row;
 
     let (html_images, html_audio) = if is_uploaded {
-        html_media_paths(&front, &back, imported_support.as_deref())
+        html_media_paths(
+            imported_front.as_deref(),
+            imported_back.as_deref(),
+            imported_support.as_deref(),
+        )
     } else {
         (vec![], vec![])
     };
@@ -147,17 +151,18 @@ pub fn delete_deck(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
 
     let (mut html_images, mut html_audio) = {
         let mut stmt = conn.prepare(
-            "SELECT front, back, imported_support FROM card WHERE group_id = ?1 AND is_uploaded = TRUE",
+            "SELECT imported_front, imported_back, imported_support FROM card WHERE group_id = ?1 AND is_uploaded = TRUE",
         )?;
-        let rows: Vec<(String, String, Option<String>)> = stmt
+        let rows: Vec<(Option<String>, Option<String>, Option<String>)> = stmt
             .query_map([id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
             .filter_map(|r| r.ok())
             .collect();
 
         let mut images = Vec::new();
         let mut audio = Vec::new();
-        for (front, back, imported_support) in rows {
-            let (i, a) = html_media_paths(&front, &back, imported_support.as_deref());
+        for (ifront, iback, isupport) in rows {
+            let (i, a) =
+                html_media_paths(ifront.as_deref(), iback.as_deref(), isupport.as_deref());
             images.extend(i);
             audio.extend(a);
         }
@@ -298,14 +303,16 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
 
     // Uploaded card HTML
     {
-        let mut stmt = conn
-            .prepare("SELECT front, back, imported_support FROM card WHERE is_uploaded = TRUE")?;
-        let rows: Vec<(String, String, Option<String>)> = stmt
+        let mut stmt = conn.prepare(
+            "SELECT imported_front, imported_back, imported_support FROM card WHERE is_uploaded = TRUE",
+        )?;
+        let rows: Vec<(Option<String>, Option<String>, Option<String>)> = stmt
             .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
             .filter_map(|r| r.ok())
             .collect();
-        for (front, back, imported_support) in rows {
-            let (images, audio) = html_media_paths(&front, &back, imported_support.as_deref());
+        for (ifront, iback, isupport) in rows {
+            let (images, audio) =
+                html_media_paths(ifront.as_deref(), iback.as_deref(), isupport.as_deref());
             referenced_images.extend(images.iter().map(|p| to_relative(p, app_dir)));
             referenced_audio.extend(audio.iter().map(|p| to_relative(p, app_dir)));
         }
@@ -485,8 +492,8 @@ mod tests {
 
         touch(&app_dir.join("cards/images"), "clip.xyz");
         conn.execute(
-            "INSERT INTO card (group_id, front, back, is_uploaded)
-             VALUES (1, '<audio controls src=\"cards/images/clip.xyz\"></audio>', 'b', TRUE)",
+            "INSERT INTO card (group_id, front, back, imported_front, is_uploaded)
+             VALUES (1, '', '', '<audio controls src=\"cards/images/clip.xyz\"></audio>', TRUE)",
             [],
         )
         .unwrap();

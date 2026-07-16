@@ -62,8 +62,12 @@ pub struct Card {
     pub sequence: i32,
 
     pub support: Option<String>,
-    // Read-only support content mapped from Anki fields on import (Anki HTML).
-    // Never written by update_card, only set at import time.
+    // imported_x: read-only Anki HTML set at import time, never written by
+    // update_card. x is the user's own text on every card.
+    #[serde(default)]
+    pub imported_front: Option<String>,
+    #[serde(default)]
+    pub imported_back: Option<String>,
     #[serde(default)]
     pub imported_support: Option<String>,
     pub front_image: Option<String>,
@@ -92,6 +96,10 @@ pub struct NewCard {
     pub is_uploaded: bool,
 
     pub support: Option<String>,
+    #[serde(default)]
+    pub imported_front: Option<String>,
+    #[serde(default)]
+    pub imported_back: Option<String>,
     #[serde(default)]
     pub imported_support: Option<String>,
     pub front_image: Option<String>,

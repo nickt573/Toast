@@ -200,8 +200,8 @@ pub fn update_card(card: Card, conn: &Connection, app_dir: &Path) -> Result<()> 
         card.back_audio.clone()
     };
 
-    // imported_support is intentionally never updated: it is read-only content
-    // set once at Anki import time (the user-editable slot is `support`).
+    // imported_front/back/support are never updated: read-only content set at
+    // import time. The user-editable slots are front/back/support.
     conn.execute(
         r#"
         UPDATE card SET
@@ -593,4 +593,68 @@ fn category_mask_to_string(mask: i64) -> String {
         .map(|(_, name)| *name)
         .collect();
     parts.join(", ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::crud::models::Card;
+
+    #[test]
+    fn update_card_saves_user_fields_and_leaves_imported_alone() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_schema(&conn, tmp.path()).unwrap();
+        conn.execute(
+            "INSERT INTO \"group\" (id, name, group_type) VALUES (1, 'g', 'deck')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO card (id, group_id, front, back, imported_front, imported_back, imported_support, is_uploaded)
+             VALUES (1, 1, '', '', '<b>anki front</b>', '<b>anki back</b>', '<b>anki support</b>', TRUE)",
+            [],
+        )
+        .unwrap();
+
+        let card = Card {
+            id: 1,
+            group_id: 1,
+            front: "my front".into(),
+            back: "my back".into(),
+            tier: 0,
+            ease: 0.0,
+            sequence: 0,
+            support: Some("my support".into()),
+            imported_front: None,
+            imported_back: None,
+            imported_support: None,
+            front_image: None,
+            back_image: None,
+            front_audio: None,
+            back_audio: None,
+            is_searchable: true,
+            is_uploaded: true,
+            is_due: false,
+            is_overdue: None,
+            is_paused: false,
+            position: None,
+        };
+        update_card(card, &conn, tmp.path()).unwrap();
+
+        let row: (String, String, String, String, String, String) = conn
+            .query_row(
+                "SELECT front, back, support, imported_front, imported_back, imported_support FROM card WHERE id = 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)),
+            )
+            .unwrap();
+        assert_eq!(row.0, "my front");
+        assert_eq!(row.1, "my back");
+        assert_eq!(row.2, "my support");
+        // imported content survives even though the incoming card carried None
+        assert_eq!(row.3, "<b>anki front</b>");
+        assert_eq!(row.4, "<b>anki back</b>");
+        assert_eq!(row.5, "<b>anki support</b>");
+    }
 }

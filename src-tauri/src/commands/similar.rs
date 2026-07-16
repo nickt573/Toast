@@ -17,16 +17,30 @@ pub fn get_similar_cards(
 ) -> Result<SimilarResult, String> {
     let conn = state.conn.lock().unwrap();
 
-    let (front, back, group_id): (String, String, i64) = conn
+    let (front, back, imported_front, imported_back, group_id): (
+        String,
+        String,
+        Option<String>,
+        Option<String>,
+        i64,
+    ) = conn
         .query_row(
-            "SELECT front, back, group_id FROM card WHERE id = ?1",
+            "SELECT front, back, imported_front, imported_back, group_id FROM card WHERE id = ?1",
             [item_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                ))
+            },
         )
         .map_err(|e| e.to_string())?;
 
-    let front_tokens = extract_tokens(&front);
-    let back_tokens = extract_tokens(&back);
+    let front_tokens = side_tokens(&front, imported_front.as_deref());
+    let back_tokens = side_tokens(&back, imported_back.as_deref());
 
     if front_tokens.is_empty() && back_tokens.is_empty() {
         return Ok(SimilarResult {
@@ -37,7 +51,7 @@ pub fn get_similar_cards(
 
     // No SQL text prefilter: raw columns hold HTML with entities (&nbsp; etc.)
     // so LIKE against decoded tokens drops valid matches. Matching is done on tokenized text below.
-    let sql = "SELECT id, group_id, front, back, support, imported_support, \
+    let sql = "SELECT id, group_id, front, back, support, imported_front, imported_back, imported_support, \
          front_image, back_image, front_audio, back_audio, \
          tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded, position \
          FROM card WHERE is_searchable = TRUE AND id != ?1 AND group_id = ?2";
@@ -51,20 +65,22 @@ pub fn get_similar_cards(
                 front: row.get(2)?,
                 back: row.get(3)?,
                 support: row.get(4)?,
-                imported_support: row.get(5)?,
-                front_image: row.get(6)?,
-                back_image: row.get(7)?,
-                front_audio: row.get(8)?,
-                back_audio: row.get(9)?,
-                tier: row.get(10)?,
-                ease: row.get(11)?,
-                sequence: row.get(12)?,
-                is_searchable: row.get(13)?,
-                is_due: row.get(14)?,
-                is_overdue: row.get(15)?,
-                is_paused: row.get(16)?,
-                is_uploaded: row.get(17)?,
-                position: row.get(18)?,
+                imported_front: row.get(5)?,
+                imported_back: row.get(6)?,
+                imported_support: row.get(7)?,
+                front_image: row.get(8)?,
+                back_image: row.get(9)?,
+                front_audio: row.get(10)?,
+                back_audio: row.get(11)?,
+                tier: row.get(12)?,
+                ease: row.get(13)?,
+                sequence: row.get(14)?,
+                is_searchable: row.get(15)?,
+                is_due: row.get(16)?,
+                is_overdue: row.get(17)?,
+                is_paused: row.get(18)?,
+                is_uploaded: row.get(19)?,
+                position: row.get(20)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -76,8 +92,8 @@ pub fn get_similar_cards(
     for card in results {
         // Candidates are tokenized the same way as the studied card so both sides
         // compare HTML-free, entity-decoded, and paren-stripped.
-        let cand_front = extract_tokens(&card.front);
-        let cand_back = extract_tokens(&card.back);
+        let cand_front = side_tokens(&card.front, card.imported_front.as_deref());
+        let cand_back = side_tokens(&card.back, card.imported_back.as_deref());
         let fm = front_tokens
             .iter()
             .any(|t| cand_front.iter().any(|ct| word_boundary_match(ct, t)));
@@ -96,6 +112,15 @@ pub fn get_similar_cards(
         front: front_matched,
         back: back_only,
     })
+}
+
+// One side's search terms: user text plus any imported Anki HTML.
+fn side_tokens(user: &str, imported: Option<&str>) -> Vec<String> {
+    let mut tokens = extract_tokens(user);
+    if let Some(html) = imported {
+        tokens.extend(extract_tokens(html));
+    }
+    tokens
 }
 
 // Whole-word containment: prevents "you" matching "younger". Non-ASCII bytes

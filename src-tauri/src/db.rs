@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 use std::path::Path;
 
 /// Stamped into Toast to Go packages. A pull rejects a mismatch. Bump on any schema change.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Adds a column to an existing table if it doesn't already have it.
 /// CREATE TABLE IF NOT EXISTS won't alter tables that predate a new column,
@@ -45,15 +45,15 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
             Option<String>,
             Option<String>,
             Option<String>,
-            String,
-            String,
+            Option<String>,
+            Option<String>,
             Option<String>,
             bool,
         );
         let rows: Vec<CardRow> = tx
             .prepare(
                 "SELECT id, front_image, back_image, front_audio, back_audio,
-                        front, back, imported_support, is_uploaded
+                        imported_front, imported_back, imported_support, is_uploaded
                  FROM card",
             )?
             .query_map([], |row| {
@@ -74,24 +74,21 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
 
         let mut update = tx.prepare(
             "UPDATE card SET front_image = ?2, back_image = ?3, front_audio = ?4,
-                             back_audio = ?5, front = ?6, back = ?7, imported_support = ?8
+                             back_audio = ?5, imported_front = ?6, imported_back = ?7,
+                             imported_support = ?8
              WHERE id = ?1",
         )?;
 
-        for (id, fi, bi, fa, ba, front, back, support, is_uploaded) in rows {
+        for (id, fi, bi, fa, ba, ifront, iback, isupport, is_uploaded) in rows {
             let rel = |v: &Option<String>| v.as_ref().map(|p| to_relative(p, app_dir));
             let (nfi, nbi, nfa, nba) = (rel(&fi), rel(&bi), rel(&fa), rel(&ba));
 
-            // Only uploaded cards embed media in their HTML. Custom card text
-            // is user prose and could contain literal paths, never rewrite it.
+            // Embedded media only lives in imported HTML. front/back/support are
+            // user prose that could contain literal paths, never rewrite those.
+            let rel_html =
+                |v: &Option<String>| v.as_ref().and_then(|s| relativize_html_media(s, app_dir));
             let (nfront, nback, nsupport) = if is_uploaded {
-                (
-                    relativize_html_media(&front, app_dir),
-                    relativize_html_media(&back, app_dir),
-                    support
-                        .as_ref()
-                        .and_then(|s| relativize_html_media(s, app_dir)),
-                )
+                (rel_html(&ifront), rel_html(&iback), rel_html(&isupport))
             } else {
                 (None, None, None)
             };
@@ -104,9 +101,9 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
                     nbi,
                     nfa,
                     nba,
-                    nfront.as_deref().unwrap_or(&front),
-                    nback.as_deref().unwrap_or(&back),
-                    nsupport.as_deref().or(support.as_deref()),
+                    nfront.as_deref().or(ifront.as_deref()),
+                    nback.as_deref().or(iback.as_deref()),
+                    nsupport.as_deref().or(isupport.as_deref()),
                 ])?;
                 changed_cards += 1;
             }
@@ -165,6 +162,15 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     // v1.2.0: todo time is whole minutes now; round decimals logged by older
     // releases (idempotent, the column itself stays FLOAT).
     conn.execute_batch("UPDATE todo_stats SET time_spent_minutes = ROUND(time_spent_minutes);")?;
+    // v1.5.0: uploaded cards' Anki HTML moves to imported_front/back so front/back
+    // become user fields. Only unmigrated rows are both-NULL (the importer always
+    // writes these columns), and this must run before the media-path pass.
+    add_column_if_missing(conn, "card", "imported_front", "TEXT")?;
+    add_column_if_missing(conn, "card", "imported_back", "TEXT")?;
+    conn.execute_batch(
+        "UPDATE card SET imported_front = front, imported_back = back, front = '', back = ''
+         WHERE is_uploaded = TRUE AND imported_front IS NULL AND imported_back IS NULL;",
+    )?;
     // v1.3.0: media paths stored relative to the app data dir.
     migrate_media_paths(conn, app_dir)?;
     // v1.5.0: skip a todo for today only. Cleared on day rollover and when the
@@ -241,7 +247,10 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 back TEXT NOT NULL,
 
                 support TEXT,
-                imported_support TEXT, -- read-only support from mapped Anki fields (Anki HTML)
+                -- imported_x: read-only Anki HTML from import; x is the user's own text
+                imported_front TEXT,
+                imported_back TEXT,
+                imported_support TEXT,
                 front_image TEXT,
                 back_image TEXT,
                 front_audio TEXT,
@@ -449,12 +458,12 @@ mod tests {
 
         conn.execute(
             &format!(
-                "INSERT INTO card (id, group_id, front, back, imported_support, front_image, back_image, front_audio, back_audio, is_uploaded)
+                "INSERT INTO card (id, group_id, front, back, imported_front, imported_back, imported_support, front_image, back_image, front_audio, back_audio, is_uploaded)
                  VALUES
-                 (1, 1, 'plain front mentioning /home/alice/x.png', 'back', NULL,
+                 (1, 1, 'plain front mentioning /home/alice/x.png', 'back', NULL, NULL, NULL,
                   '{cur}/cards/images/a.png', '{stale}/cards/images/b.png',
                   '{cur}/cards/audio/c.mp3', NULL, FALSE),
-                 (2, 1, '<img src=\"{cur}/cards/images/d.png\">', '<audio controls src=\"{stale}/cards/audio/e.mp3\"></audio>',
+                 (2, 1, '', '', '<img src=\"{cur}/cards/images/d.png\">', '<audio controls src=\"{stale}/cards/audio/e.mp3\"></audio>',
                   '<img src=\"{cur}/cards/images/f.png\">', NULL, NULL, NULL, NULL, TRUE)"
             ),
             [],
@@ -488,7 +497,7 @@ mod tests {
 
         let (ufront, uback, usupport): (String, String, String) = conn
             .query_row(
-                "SELECT front, back, imported_support FROM card WHERE id = 2",
+                "SELECT imported_front, imported_back, imported_support FROM card WHERE id = 2",
                 [],
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )
@@ -515,6 +524,190 @@ mod tests {
             .query_row("SELECT content FROM page WHERE id = 1", [], |r| r.get(0))
             .unwrap();
         assert_eq!(content, content2);
+    }
+
+    #[test]
+    fn moves_uploaded_html_into_imported_columns() {
+        let conn = setup();
+        let stale = "/home/renamed/.local/share/com.toast.app";
+        conn.execute(
+            &format!(
+                "INSERT INTO card (id, group_id, front, back, is_uploaded)
+                 VALUES
+                 (1, 1, '<img src=\"{stale}/cards/images/a.png\">', 'back html', TRUE),
+                 (2, 1, 'custom front', 'custom back', FALSE)"
+            ),
+            [],
+        )
+        .unwrap();
+
+        migrate_schema(&conn, &app_dir()).unwrap();
+
+        let (front, back, ifront, iback): (String, String, String, String) = conn
+            .query_row(
+                "SELECT front, back, imported_front, imported_back FROM card WHERE id = 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(front, "");
+        assert_eq!(back, "");
+        // moved and relativized in the same startup
+        assert_eq!(ifront, "<img src=\"cards/images/a.png\">");
+        assert_eq!(iback, "back html");
+
+        let (cfront, cifront): (String, Option<String>) = conn
+            .query_row(
+                "SELECT front, imported_front FROM card WHERE id = 2",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(cfront, "custom front");
+        assert!(cifront.is_none());
+
+        // a user front typed after migration must survive the next startup
+        conn.execute("UPDATE card SET front = 'my note' WHERE id = 1", [])
+            .unwrap();
+        migrate_schema(&conn, &app_dir()).unwrap();
+        let front2: String = conn
+            .query_row("SELECT front FROM card WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(front2, "my note");
+    }
+
+    #[test]
+    fn upgrades_a_real_pre_imported_columns_database() {
+        // The card table as released before imported_front/imported_back existed.
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            r#"
+            CREATE TABLE card (
+                id INTEGER PRIMARY KEY,
+                group_id INTEGER NOT NULL,
+                front TEXT NOT NULL,
+                back TEXT NOT NULL,
+                support TEXT,
+                imported_support TEXT,
+                front_image TEXT,
+                back_image TEXT,
+                front_audio TEXT,
+                back_audio TEXT,
+                tier INTEGER NOT NULL DEFAULT 0,
+                ease FLOAT NOT NULL DEFAULT 0,
+                sequence INTEGER NOT NULL DEFAULT 0,
+                is_searchable BOOLEAN NOT NULL DEFAULT FALSE,
+                is_uploaded BOOLEAN NOT NULL DEFAULT FALSE,
+                is_overdue BOOLEAN DEFAULT NULL,
+                is_due BOOLEAN NOT NULL DEFAULT FALSE,
+                is_paused BOOLEAN NOT NULL DEFAULT FALSE,
+                position INTEGER DEFAULT NULL
+            );
+            INSERT INTO card (id, group_id, front, back, imported_support, support, tier, is_uploaded)
+            VALUES
+              (1, 1, '<img src="/home/renamed/.local/share/com.toast.app/cards/images/a.png">',
+                     '<b>anki back</b>', '<i>anki support</i>', NULL, 3, TRUE),
+              (2, 1, 'custom front', 'custom back', NULL, 'my support', 5, FALSE);
+            "#,
+        )
+        .unwrap();
+
+        init_schema(&conn, &app_dir()).unwrap();
+
+        let (front, back, ifront, iback, isupport, tier): (
+            String,
+            String,
+            String,
+            String,
+            String,
+            i64,
+        ) = conn
+            .query_row(
+                "SELECT front, back, imported_front, imported_back, imported_support, tier
+                 FROM card WHERE id = 1",
+                [],
+                |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                    ))
+                },
+            )
+            .unwrap();
+        assert_eq!(front, "");
+        assert_eq!(back, "");
+        assert_eq!(ifront, "<img src=\"cards/images/a.png\">");
+        assert_eq!(iback, "<b>anki back</b>");
+        assert_eq!(isupport, "<i>anki support</i>");
+        assert_eq!(tier, 3, "SRS state must survive the column move");
+
+        let (cfront, cback, cifront, csupport): (String, String, Option<String>, String) = conn
+            .query_row(
+                "SELECT front, back, imported_front, support FROM card WHERE id = 2",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(cfront, "custom front");
+        assert_eq!(cback, "custom back");
+        assert!(cifront.is_none());
+        assert_eq!(csupport, "my support");
+
+        // A second launch must be a no-op and not affect the db again
+        conn.execute("UPDATE card SET front = 'my note' WHERE id = 1", [])
+            .unwrap();
+        init_schema(&conn, &app_dir()).unwrap();
+        let front2: String = conn
+            .query_row("SELECT front FROM card WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(front2, "my note");
+    }
+
+    /// The column move must carry media references with it: cleanup only scans
+    /// imported_*, so anything still sitting in front/back would look orphaned.
+    #[test]
+    fn migrated_html_media_survives_cleanup() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path();
+        std::fs::create_dir_all(dir.join("cards/images")).unwrap();
+        std::fs::create_dir_all(dir.join("cards/audio")).unwrap();
+        std::fs::write(dir.join("cards/images/pic.png"), "x").unwrap();
+        std::fs::write(dir.join("cards/audio/say.mp3"), "x").unwrap();
+        std::fs::write(dir.join("cards/images/orphan.png"), "x").unwrap();
+
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            r#"
+            CREATE TABLE card (
+                id INTEGER PRIMARY KEY, group_id INTEGER NOT NULL,
+                front TEXT NOT NULL, back TEXT NOT NULL,
+                support TEXT, imported_support TEXT,
+                front_image TEXT, back_image TEXT, front_audio TEXT, back_audio TEXT,
+                tier INTEGER NOT NULL DEFAULT 0, ease FLOAT NOT NULL DEFAULT 0,
+                sequence INTEGER NOT NULL DEFAULT 0,
+                is_searchable BOOLEAN NOT NULL DEFAULT FALSE,
+                is_uploaded BOOLEAN NOT NULL DEFAULT FALSE,
+                is_overdue BOOLEAN DEFAULT NULL, is_due BOOLEAN NOT NULL DEFAULT FALSE,
+                is_paused BOOLEAN NOT NULL DEFAULT FALSE, position INTEGER DEFAULT NULL
+            );
+            INSERT INTO card (id, group_id, front, back, is_uploaded) VALUES
+              (1, 1, '<img src="cards/images/pic.png">',
+                     '<audio controls src="cards/audio/say.mp3"></audio>', TRUE);
+            "#,
+        )
+        .unwrap();
+
+        init_schema(&conn, dir).unwrap();
+        let deleted = crate::crud::delete::cleanup_orphaned_media(&conn, dir).unwrap();
+
+        assert_eq!(deleted, 1, "only the genuine orphan should go");
+        assert!(dir.join("cards/images/pic.png").exists(), "front media wiped");
+        assert!(dir.join("cards/audio/say.mp3").exists(), "back media wiped");
+        assert!(!dir.join("cards/images/orphan.png").exists());
     }
 
     #[test]

@@ -651,13 +651,17 @@ pub fn import_anki_deck(
             Some(rewrite_media(&support_html, &sources, app_dir, &mut card_media))
         };
 
+        // imported_front/back are always Some, even when empty: the migration in
+        // db.rs treats a NULL pair as an unmigrated row and would clobber front/back.
         let new_card = NewCard {
             group_id: new_deck.id,
-            front: front_clean,
-            back: back_clean,
+            front: String::new(),
+            back: String::new(),
             is_searchable: is_searchable,
             is_uploaded: true,
             support: None,
+            imported_front: Some(front_clean),
+            imported_back: Some(back_clean),
             imported_support: support_clean,
             front_image: None,
             back_image: None,
@@ -681,11 +685,13 @@ pub fn import_anki_deck(
 
             let flipped = NewCard {
                 group_id: new_deck.id,
-                front: flipped_front,
-                back: flipped_back,
+                front: String::new(),
+                back: String::new(),
                 is_searchable: is_searchable,
                 is_uploaded: true,
                 support: None,
+                imported_front: Some(flipped_front),
+                imported_back: Some(flipped_back),
                 imported_support: flipped_support,
                 front_image: None,
                 back_image: None,
@@ -845,7 +851,7 @@ mod tests {
         assert_eq!(count, 3);
 
         let mut stmt = conn
-            .prepare("SELECT front, back FROM card WHERE group_id = ?1 ORDER BY id")
+            .prepare("SELECT imported_front, imported_back FROM card WHERE group_id = ?1 ORDER BY id")
             .unwrap();
         let cards: Vec<(String, String)> = stmt
             .query_map([deck_id], |r| Ok((r.get(0)?, r.get(1)?)))

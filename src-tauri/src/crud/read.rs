@@ -117,7 +117,8 @@ pub fn get_decks(conn: &Connection) -> Result<Vec<Group>> {
 
 // Column order is load-bearing: card_from_row indexes into it.
 const CARD_COLUMNS: &str = r#"
-    id, group_id, front, back, is_searchable, support, imported_support,
+    id, group_id, front, back, is_searchable, support,
+    imported_front, imported_back, imported_support,
     front_image, back_image, front_audio, back_audio, is_uploaded,
     tier, ease, sequence, is_due, is_overdue, is_paused, position
 "#;
@@ -130,19 +131,21 @@ fn card_from_row(row: &rusqlite::Row) -> Result<Card> {
         back: row.get(3)?,
         is_searchable: row.get(4)?,
         support: row.get(5)?,
-        imported_support: row.get(6)?,
-        front_image: row.get(7)?,
-        back_image: row.get(8)?,
-        front_audio: row.get(9)?,
-        back_audio: row.get(10)?,
-        is_uploaded: row.get(11)?,
-        tier: row.get(12)?,
-        ease: row.get(13)?,
-        sequence: row.get(14)?,
-        is_due: row.get(15)?,
-        is_overdue: row.get(16)?,
-        is_paused: row.get(17)?,
-        position: row.get(18)?,
+        imported_front: row.get(6)?,
+        imported_back: row.get(7)?,
+        imported_support: row.get(8)?,
+        front_image: row.get(9)?,
+        back_image: row.get(10)?,
+        front_audio: row.get(11)?,
+        back_audio: row.get(12)?,
+        is_uploaded: row.get(13)?,
+        tier: row.get(14)?,
+        ease: row.get(15)?,
+        sequence: row.get(16)?,
+        is_due: row.get(17)?,
+        is_overdue: row.get(18)?,
+        is_paused: row.get(19)?,
+        position: row.get(20)?,
     })
 }
 

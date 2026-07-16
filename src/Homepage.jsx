@@ -211,12 +211,14 @@ function GradeButtons({ onGrade, card }) {
 // Similar Items Navigator
 
 function SimilarFace({ item, side }) {
+    const imported = item[`imported_${side}`];
     return (
         <div className={`hp-similar-face hp-similar-face-${side}`}>
-            {item.is_uploaded ? (
-                <div dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(item[side])) }} />
-            ) : (
-                <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{item[side]}</div>
+            {imported && (
+                <div dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(imported)) }} />
+            )}
+            {item[side] && (
+                <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", marginTop: imported ? 6 : 0 }}>{item[side]}</div>
             )}
         </div>
     );

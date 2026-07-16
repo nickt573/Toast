@@ -30,7 +30,7 @@ async function pickFile(extensions) {
 }
 
 function emptyNewCard(groupId) {
-  return { group_id: groupId, front: "", back: "", is_searchable: true, is_uploaded: false, support: "", imported_support: null, front_image: null, back_image: null, front_audio: null, back_audio: null };
+  return { group_id: groupId, front: "", back: "", is_searchable: true, is_uploaded: false, support: "", imported_front: null, imported_back: null, imported_support: null, front_image: null, back_image: null, front_audio: null, back_audio: null };
 }
 
 const parseFile = (file) => {
@@ -572,13 +572,16 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
         {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
       </div>
 
+      {form.imported_front && (
+        <div className="dk-field">
+          <label>Anki Front <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span></label>
+          <UploadedHtmlField html={form.imported_front} />
+        </div>
+      )}
+
       <div className="dk-field">
-        <label>Front {form.is_uploaded && <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span>}</label>
-        {form.is_uploaded ? (
-          <UploadedHtmlField html={form.front} />
-        ) : (
-          <textarea rows={3} value={form.front} onChange={(e) => set("front", e.target.value)} />
-        )}
+        <label>{form.imported_front ? "Your Front" : "Front"} {form.imported_front && <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(optional, shown with the Anki front)</span>}</label>
+        <textarea rows={3} value={form.front} onChange={(e) => set("front", e.target.value)} />
       </div>
 
       <div className="dk-field">
@@ -606,13 +609,16 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
         </button>
       </div>
 
+      {form.imported_back && (
+        <div className="dk-field">
+          <label>Anki Back <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span></label>
+          <UploadedHtmlField html={form.imported_back} />
+        </div>
+      )}
+
       <div className="dk-field">
-        <label>Back {form.is_uploaded && <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span>}</label>
-        {form.is_uploaded ? (
-          <UploadedHtmlField html={form.back} />
-        ) : (
-          <textarea rows={3} value={form.back} onChange={(e) => set("back", e.target.value)} />
-        )}
+        <label>{form.imported_back ? "Your Back" : "Back"} {form.imported_back && <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(optional, shown with the Anki back)</span>}</label>
+        <textarea rows={3} value={form.back} onChange={(e) => set("back", e.target.value)} />
       </div>
 
       <div className="dk-field">
@@ -648,7 +654,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
       )}
 
       <div className="dk-field">
-        <label>{form.imported_support ? "Your Support" : "Support"} <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>{form.imported_support ? "(optional, shown after flip together with Anki support)" : "(optional, shown after flip)"}</span></label>
+        <label>{form.imported_support ? "Your Support" : "Support"} <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>{form.imported_support ? "(optional, shown with the Anki support)" : "(optional, shown after flip)"}</span></label>
         <textarea rows={2} value={form.support} onChange={(e) => set("support", e.target.value)}/>
       </div>
 
@@ -984,11 +990,15 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   let filtered = cards.filter((c) => {
     if (!search.trim()) return true;
     const q = normalizeSearchText(search).toLowerCase();
-    const front = c.is_uploaded ? stripHtml(c.front) : normalizeSearchText(c.front);
-    const back = c.is_uploaded ? stripHtml(c.back) : normalizeSearchText(c.back);
-    const support = normalizeSearchText(c.support ?? "");
-    const importedSupport = stripHtml(c.imported_support ?? "");
-    return [front, back, support, importedSupport].some((t) => t.toLowerCase().includes(q));
+    const fields = [
+      normalizeSearchText(c.front),
+      normalizeSearchText(c.back),
+      normalizeSearchText(c.support ?? ""),
+      stripHtml(c.imported_front ?? ""),
+      stripHtml(c.imported_back ?? ""),
+      stripHtml(c.imported_support ?? ""),
+    ];
+    return fields.some((t) => t.toLowerCase().includes(q));
   });
 
   if (filter === "paused") filtered = filtered.filter(c => c.is_paused);
@@ -1128,8 +1138,8 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                   <colgroup><col /><col /><col className="dk-col-due" /><col className="dk-col-paused" /></colgroup>
                   <tbody>
                     {filtered.map((card) => {
-                    const front = card.is_uploaded ? stripHtml(card.front) : card.front;
-                    const back = card.is_uploaded ? stripHtml(card.back) : card.back;
+                    const front = [stripHtml(card.imported_front ?? ""), card.front].filter(Boolean).join(" · ");
+                    const back = [stripHtml(card.imported_back ?? ""), card.back].filter(Boolean).join(" · ");
                     return (
                       <tr key={card.id}
                         className={[

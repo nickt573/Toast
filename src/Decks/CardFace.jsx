@@ -225,9 +225,9 @@ const audioWrapStyle = {
 const audioStyle = { width: "100%", maxWidth: 320 };
 
 export function CardFace({ card, showBack }) {
-    const frontAudioSrcs = card.is_uploaded ? extractRawAudioSrcs(card.front) : [];
-    const backAudioSrcs  = card.is_uploaded ? extractRawAudioSrcs(card.back)  : [];
-    const supportAudioSrcs = card.is_uploaded && card.imported_support ? extractRawAudioSrcs(card.imported_support) : [];
+    const frontAudioSrcs = extractRawAudioSrcs(card.imported_front);
+    const backAudioSrcs  = extractRawAudioSrcs(card.imported_back);
+    const supportAudioSrcs = extractRawAudioSrcs(card.imported_support);
 
     // Anki-embedded audio first, then any audio added in the editor
     const frontAudio = [
@@ -243,11 +243,12 @@ export function CardFace({ card, showBack }) {
     return (
         <div style={{ width: "100%" }}>
             <div style={{ textAlign: "center" }}>
-                {card.is_uploaded ? (
+                {card.imported_front && (
                     <div style={{ fontSize: 16, fontWeight: 600, color: "var(--t-text)", fontFamily: "inherit" }}
-                        dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(card.front)) }} />
-                ) : (
-                    <div style={{ fontSize: 16, fontWeight: 600, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--t-text)" }}>
+                        dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(card.imported_front)) }} />
+                )}
+                {card.front && (
+                    <div style={{ fontSize: 16, fontWeight: 600, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--t-text)", marginTop: card.imported_front ? 8 : 0 }}>
                         <LinkifiedText text={card.front} />
                     </div>
                 )}
@@ -265,11 +266,12 @@ export function CardFace({ card, showBack }) {
                 <>
                     <hr style={{ border: "none", borderTop: "1px solid var(--t-border)", margin: "14px 0" }} />
                     <div style={{ textAlign: "center" }}>
-                        {card.is_uploaded ? (
+                        {card.imported_back && (
                             <div style={{ fontSize: 15, color: "var(--t-text)", fontFamily: "inherit" }}
-                                dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(card.back)) }} />
-                        ) : (
-                            <div style={{ fontSize: 15, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--t-text)" }}>
+                                dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(card.imported_back)) }} />
+                        )}
+                        {card.back && (
+                            <div style={{ fontSize: 15, whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--t-text)", marginTop: card.imported_back ? 8 : 0 }}>
                                 <LinkifiedText text={card.back} />
                             </div>
                         )}
