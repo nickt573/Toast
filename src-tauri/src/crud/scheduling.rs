@@ -331,7 +331,8 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
 
     // Floor depends on graduation status: graduated cards clamp at tier 1, ungraduated at tier 0
     let floor = if old_tier > 0 { 1 } else { 0 };
-    let new_tier = (old_tier + tier_delta).max(floor).min(30);
+    // Cap at tier 10, roughly a 1.4 year interval. Beyond that a card is effectively retired.
+    let new_tier = (old_tier + tier_delta).max(floor).min(10);
     // Fine (grade 2) never pushes ease below 0 or deepens an already-negative ease.
     let ease_floor = if grade == 2 { old_ease.min(0.0) } else { -0.35 };
     let new_ease = (old_ease + ease_delta).max(ease_floor).min(0.35);
@@ -340,7 +341,16 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
         old_sequence
     } else {
         let raw = 2f64.powi(new_tier - 1) * (1.0 + new_ease);
-        raw.round() as i32
+        let base = raw.round() as i32;
+        // Scatter same-day gradings by +-15% so cards stop advancing in tandem but stay within the tier.
+        let span = (raw * 0.15).round() as i32;
+        let jitter = if span > 0 {
+            let r: i64 = tx.query_row("SELECT random()", [], |row| row.get(0))?;
+            (r.rem_euclid(2 * span as i64 + 1)) as i32 - span
+        } else {
+            0
+        };
+        (base + jitter).max(1)
     };
 
     let is_due = new_sequence <= 0;

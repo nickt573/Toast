@@ -175,12 +175,14 @@ function GradeButtons({ onGrade, card }) {
 
     function calcNextSequence(tierDelta, easeDelta, easeFloorZero) {
         if (!card) return null;
-        const newTier = Math.min(30, Math.max(card.tier === 0 ? 0 : 1, card.tier + tierDelta));
+        const newTier = Math.min(10, Math.max(card.tier === 0 ? 0 : 1, card.tier + tierDelta));
         // Fine never pushes ease below 0 or deepens an already-negative ease.
         const easeFloor = easeFloorZero ? Math.min(0, card.ease) : -0.35;
         const newEase = Math.max(easeFloor, Math.min(0.35, card.ease + easeDelta));
-        if (newTier === 0) return 0;
-        return Math.round(Math.pow(2, newTier - 1) * (1 + newEase));
+        if (newTier === 0) return { base: 0, span: 0 };
+        const raw = Math.pow(2, newTier - 1) * (1 + newEase);
+        // Mirror the backend +-15% fuzz so the preview shows the range, not a false exact day.
+        return { base: Math.round(raw), span: Math.round(raw * 0.15) };
     }
 
     return (
@@ -192,7 +194,11 @@ function GradeButtons({ onGrade, card }) {
                         <span>{label}</span>
                         {nextSeq !== null && (
                             <span className="hp-grade-btn-interval">
-                                {nextSeq === 0 ? "Again" : `${nextSeq}d`}
+                                {nextSeq.base === 0
+                                    ? "Again"
+                                    : nextSeq.span > 0
+                                        ? `${Math.max(1, nextSeq.base - nextSeq.span)}-${nextSeq.base + nextSeq.span}d`
+                                        : `${nextSeq.base}d`}
                             </span>
                         )}
                     </button>
