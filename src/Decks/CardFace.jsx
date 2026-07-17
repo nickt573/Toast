@@ -208,7 +208,7 @@ const imgStyle = {
     maxWidth: "100%",
     maxHeight: 280,
     objectFit: "contain",
-    borderRadius: 6,
+    borderRadius: "var(--t-r)",
     display: "block",
     margin: "10px auto 0",
     border: "1px solid var(--t-border)",

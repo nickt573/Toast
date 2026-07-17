@@ -1,13 +1,15 @@
-/* Toast Design System: */
+/* Toast Design System: the Workbook. Paper, rules, ink, tabs. */
 
 :root {
-  /* Backgrounds: peachy Neapolitan cream + warm surfaces */
-  --t-bg:            #FDE6D8;   /* main app background, peach cream */
+  /* Backgrounds: peachy Neapolitan cream + warm paper surfaces */
+  --t-bg:            #FDEEE3;   /* main app background, peach cream */
   --t-surface:       #FFF9F4;   /* card / surface fill, warm off-white */
   --t-surface-2:     #FBEAE0;   /* muted: read-only fields, form zones */
   --t-surface-3:     #F7D9C4;   /* deep peach: table/section headers over white bodies */
+  --t-surface-4:     #EFCBB4;   /* darker peach: panels that sit against surface-3 hover tints */
+  --t-row-stripe:    #FAE8DA;   /* card-table zebra stripe, kept independent of the background */
   --t-border:        #F0D9CC;   /* default dividers */
-  --t-border-2:      #E8CDBD;   /* card / input / secondary-button borders */
+  --t-border-2:      #E8CDBD;   /* input / hairline rule color */
 
   /* Text: chocolate-plum */
   --t-text:          #4A3A3D;   /* primary */
@@ -20,7 +22,7 @@
   --t-accent-h:      #B5854E;
   --t-accent-bg:     #F3E4CF;
   --t-accent-bdr:    #DFC59C;
-  --t-accent-fg:     #FFF9F4;   /* text on caramel fill */
+  --t-accent-fg:     #FFF9F4;   /* text on ink fills */
 
   /* Todos: sunflower yellow (incomplete / pending) */
   --t-yellow:        #E0A92E;
@@ -35,16 +37,17 @@
 
   /* Destructive: red */
   --t-red:           #B85454;
+  --t-red-h:         #A34646;   /* danger ink hover deepens */
   --t-red-bg:        #F5E0E0;
-  --t-red-bg-h:      #EFCBCB;   /* danger hover (deepened) */
+  --t-red-bg-h:      #EFCBCB;
   --t-red-bdr:       #D8AEAE;
 
-  /* Stat reds (demoted / poor retention): warmer than the danger fill so metrics don't read as delete buttons */
+  /* Stat reds (demoted / poor retention): warmer than the danger ink */
   --t-red-2:         #B04A42;
   --t-red-2-bg:      #F7D3C9;
   --t-red-2-bdr:     #E0A99C;
 
-  /* Decks / Cards: slate blue (softened to harmonize) */
+  /* Decks / Cards: slate blue */
   --t-blue:          #5A7A90;
   --t-blue-bg:       #DDE7EC;
   --t-blue-bdr:      #AEC4D0;
@@ -54,7 +57,7 @@
   --t-amber-bg:      #F5EAD2;
   --t-amber-bdr:     #D8C088;
 
-  /* Notebooks: plum (softened to harmonize) */
+  /* Notebooks: plum */
   --t-plum:          #8A6A96;
   --t-plum-bg:       #ECE0F0;
   --t-plum-bdr:      #C8B4D2;
@@ -73,7 +76,7 @@
   /* Toast to Go: silver. A utility tab, not a feature family */
   --t-silver:        #A4A6A7;
   --t-silver-bg:     #EAEBEB;
-  --t-silver-bdr:    #C9CBCC;
+  --t-silver-bdr:    #ADB0B1;   /* deeper than the rest of the silver family so it holds up against the peach background */
 
   /* Strawberry pink: homepage identity + decorative accent */
   --t-pink:          #F6A7B8;
@@ -81,11 +84,11 @@
   --t-pink-bg:       #FDE0E6;
   --t-pink-bdr:      #F2B8C4;
 
-  /* Neutral (maintenance) buttons: rich mauve pulled from the nav family */
+  /* Neutral (maintenance) buttons: rich mauve ink from the nav family */
   --t-btn:           #8B5F6B;
   --t-btn-h:         #784E5A;   /* hover deepens */
   --t-btn-bdr:       #7D5461;
-  --t-btn-fg:        #FFF9F4;   /* text on mauve fill */
+  --t-btn-fg:        #FFF9F4;   /* text on mauve ink */
 
   /* Nav: chocolate */
   --t-nav-bg:        #4A3A3D;
@@ -94,22 +97,22 @@
 
   /* Typography */
   --t-font-head:     'Bitter', Georgia, 'Times New Roman', serif;
-  --t-font-body:     'Schibsted Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --t-font-body:     'Atkinson Hyperlegible Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
   /* Spacing / shape */
   --t-nav-h:         54px;
   --t-page-pad:      24px;
-  --t-r:             3px;
-  --t-r-btn:         6px;   /* non-pill buttons, slightly softer */
-  --t-r-lg:          5px;
-  --t-r-xl:          8px;
-  --t-r-pill:        999px;
+  --t-r:             4px;
+  --t-r-btn:         4px;
+  --t-r-lg:          6px;
+  --t-r-xl:          8px;   /* true paper sheets only */
+  --t-r-tab:         5px 5px 1px 1px;   /* index-divider tab badges */
   --t-ease:          0.12s ease;
 
-  /* Shadows */
-  --t-shadow-sm:     0 1px 3px rgba(26,18,8,0.05);
-  --t-shadow:        0 2px 8px rgba(26,18,8,0.09);
-  --t-shadow-lg:     0 6px 20px rgba(26,18,8,0.13);
+  /* Shadows: crisp paper edges, no glow */
+  --t-shadow-sm:     0 1px 0 rgba(74,58,61,0.12);
+  --t-shadow:        0 1px 0 rgba(74,58,61,0.16), 0 3px 5px -3px rgba(74,58,61,0.18);
+  --t-shadow-lg:     0 2px 0 rgba(74,58,61,0.12), 0 10px 16px -10px rgba(74,58,61,0.30);
 }
 
 /* Reset: */
@@ -129,14 +132,14 @@ html, body, #root {
 
 a { color: var(--t-blue); text-decoration: underline; }
 
-/* Universal button: */
+/* Universal button: solid ink, presses down instead of lifting */
 button {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.5;
   padding: 4px 11px;
-  border: 1px solid var(--t-btn-bdr);
+  border: 1px solid var(--t-btn);
   border-radius: var(--t-r-btn);
   background: var(--t-btn);
   color: var(--t-btn-fg);
@@ -144,43 +147,42 @@ button {
   white-space: nowrap;
   -webkit-user-select: none;
   user-select: none;
-  transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease), box-shadow var(--t-ease);
+  transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease), transform var(--t-ease);
 }
-/* Neutral hover deepens the mauve, never switches to a page background */
 button:hover  { background: var(--t-btn-h); color: var(--t-btn-fg); border-color: var(--t-btn-h); }
-button:active { background: var(--t-btn-h); filter: brightness(0.95); }
+button:active { background: var(--t-btn-h); transform: translateY(1px); box-shadow: inset 0 1px 2px rgba(0,0,0,0.18); }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
 
-/* Primary: copper fill */
-button.primary { background: var(--t-accent); color: var(--t-accent-fg); border-color: var(--t-accent); box-shadow: var(--t-shadow-sm); }
+/* Primary: caramel ink */
+button.primary { background: var(--t-accent); color: var(--t-accent-fg); border-color: var(--t-accent); }
 button.primary:hover { background: var(--t-accent-h); border-color: var(--t-accent-h); color: var(--t-accent-fg); }
 
-/* Destructive: soft red fill at rest, deepens on hover (never transparent) */
-button.danger { color: var(--t-red); border-color: var(--t-red-bdr); background: var(--t-red-bg); }
-button.danger:hover { background: var(--t-red-bg-h); border-color: var(--t-red); color: var(--t-red); }
+/* Destructive: brick ink, deepens on hover */
+button.danger { color: var(--t-accent-fg); border-color: var(--t-red); background: var(--t-red); }
+button.danger:hover { background: var(--t-red-h); border-color: var(--t-red-h); color: var(--t-accent-fg); }
 
 /* Quiet: alias of the neutral mauve (kept for Back/Cancel/Hide semantics) */
-button.quiet { background: var(--t-btn); border-color: var(--t-btn-bdr); color: var(--t-btn-fg); box-shadow: none; }
+button.quiet { background: var(--t-btn); border-color: var(--t-btn); color: var(--t-btn-fg); box-shadow: none; }
 button.quiet:hover { background: var(--t-btn-h); border-color: var(--t-btn-h); color: var(--t-btn-fg); }
 
-button.btn-amber { background: var(--t-amber-bg); border-color: var(--t-amber-bdr); color: var(--t-amber); }
-button.btn-amber:hover { border-color: var(--t-amber); background: var(--t-amber-bg); filter: brightness(0.95); }
+button.btn-amber { background: var(--t-amber); border-color: var(--t-amber); color: var(--t-accent-fg); }
+button.btn-amber:hover { border-color: var(--t-amber); background: var(--t-amber); color: var(--t-accent-fg); filter: brightness(0.93); }
 
-/* Audio pill: quiet surface look so playback reads as media, not actions */
-button.audio-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--t-r-lg); border: 1px solid var(--t-border); background: var(--t-surface); font-size: 13px; color: var(--t-text-2); box-shadow: none; }
+/* Audio chip: quiet paper look so playback reads as media, not actions */
+button.audio-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--t-r); border: 1px solid var(--t-border-2); background: var(--t-surface); font-size: 13px; color: var(--t-text-2); box-shadow: none; }
 button.audio-btn:hover { background: var(--t-surface); border-color: var(--t-text-3); color: var(--t-text-2); filter: brightness(0.98); }
-button.audio-btn:active { background: var(--t-surface); filter: brightness(0.95); }
+button.audio-btn:active { background: var(--t-surface); filter: brightness(0.95); transform: none; box-shadow: none; }
 /* Compact variant for dense rows like the notebook toolbar */
 button.audio-btn.sm { padding: 2px 10px; font-size: 12px; border-radius: var(--t-r); gap: 5px; flex-shrink: 0; }
-button.btn-blue  { background: var(--t-blue-bg);  border-color: var(--t-blue-bdr);  color: var(--t-blue);  }
-button.btn-blue:hover  { border-color: var(--t-blue);  background: var(--t-blue-bg); filter: brightness(0.95); }
+button.btn-blue  { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-accent-fg); }
+button.btn-blue:hover  { border-color: var(--t-blue); background: var(--t-blue); color: var(--t-accent-fg); filter: brightness(0.93); }
 
 /* Checkbox pills/labels: double-click shouldn't text-select them */
 label:has(input[type="checkbox"]),
 input[type="checkbox"] + label { user-select: none; }
 
-/* Universal inputs: */
+/* Universal inputs: quiet ruled boxes, no glow ring */
 input, textarea, select {
   font-family: inherit;
   font-size: 13px;
@@ -190,13 +192,12 @@ input, textarea, select {
   border-radius: var(--t-r);
   padding: 5px 9px;
   line-height: 1.5;
-  box-shadow: inset 0 1px 2px rgba(58,48,36,0.05);
   transition: border-color var(--t-ease), box-shadow var(--t-ease);
 }
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--t-accent);
-  box-shadow: 0 0 0 3px var(--t-accent-bg);
+  box-shadow: 0 0 0 1px var(--t-accent);
 }
 input::placeholder, textarea::placeholder { color: var(--t-placeholder); }
 textarea { resize: vertical; }
@@ -212,7 +213,7 @@ input[type="checkbox"] {
   display: inline-block;
   vertical-align: middle;
   border: 1px solid var(--t-btn-bdr);
-  border-radius: 4px;
+  border-radius: var(--t-r);
   background: var(--t-surface);
   box-shadow: none;
   cursor: pointer;
@@ -230,7 +231,7 @@ input[type="checkbox"]:checked {
 /* Ring only for keyboard focus. Mouse clicks shouldn't leave a glow behind */
 input[type="checkbox"]:focus { outline: none; border-color: var(--t-btn-bdr); box-shadow: none; }
 input[type="checkbox"]:checked:focus { border-color: currentColor; }
-input[type="checkbox"]:focus-visible { border-color: var(--t-accent); box-shadow: 0 0 0 3px var(--t-accent-bg); }
+input[type="checkbox"]:focus-visible { border-color: var(--t-accent); box-shadow: 0 0 0 1px var(--t-accent); }
 
 /* Read-only field: muted fill, no focus affordance */
 .input-readonly,
@@ -274,7 +275,7 @@ textarea { overflow-y: scroll; }
   height: var(--t-nav-h);
   background: var(--t-nav-bg);
   border-bottom: none;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.25);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 2px 0 rgba(0,0,0,0.14);
 }
 
 .app-nav-logo {
@@ -320,10 +321,10 @@ textarea { overflow-y: scroll; }
   transition: color var(--t-ease), background var(--t-ease);
 }
 .app-nav-tab:hover  { background: rgba(255,255,255,0.06); border-color: transparent; color: var(--t-nav-fg); box-shadow: none; }
-.app-nav-tab:active { background: rgba(255,255,255,0.03); box-shadow: none; }
+.app-nav-tab:active { background: rgba(255,255,255,0.03); box-shadow: none; transform: none; }
 .app-nav-tab.active { color: var(--t-nav-fg); background: none; }
-/* Home: soft rounded pink pill instead of an underline */
-.app-nav-tab--home { height: 36px; align-self: center; border-radius: var(--t-r-xl); }
+/* Home: soft pink paper chip instead of an underline */
+.app-nav-tab--home { height: 36px; align-self: center; border-radius: var(--t-r); }
 .app-nav-tab--home.active { background: rgba(246,167,184,0.16); }
 .app-nav-tab--home.active::after { display: none; }
 .app-nav-tab.active::after {
@@ -334,7 +335,7 @@ textarea { overflow-y: scroll; }
   right: 0;
   height: 3px;
   background: var(--tab-underline, var(--t-accent));
-  border-radius: 3px 3px 0 0;
+  border-radius: 0;
 }
 /* Above the how-to overlay (z 900), pointer-events off so it still blocks nav.
    Inset ring, the window top clips an outer shadow. */
@@ -342,7 +343,7 @@ textarea { overflow-y: scroll; }
   z-index: 901;
   pointer-events: none;
   background: rgba(255,255,255,0.12);
-  border-radius: var(--t-r-lg);
+  border-radius: var(--t-r);
   box-shadow: inset 0 0 0 2px var(--tab-underline, var(--t-accent));
   color: var(--t-nav-fg);
 }
@@ -378,8 +379,8 @@ textarea { overflow-y: scroll; }
   padding: 8px 16px;
   background: var(--t-text);
   color: var(--t-bg);
-  border-radius: var(--t-r-lg);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  border-radius: var(--t-r);
+  box-shadow: var(--t-shadow-lg);
   font-size: 12px;
   font-weight: 500;
   pointer-events: none;
@@ -408,9 +409,9 @@ textarea { overflow-y: scroll; }
   gap: 12px;
   padding: 26px 34px;
   background: var(--t-surface);
-  border: 1px solid var(--t-border-2);
+  border: none;
   border-radius: var(--t-r-xl);
-  box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+  box-shadow: var(--t-shadow-lg);
   max-width: 320px;
   text-align: center;
 }
@@ -433,7 +434,7 @@ textarea { overflow-y: scroll; }
   color: var(--t-text-3);
 }
 
-/* Pill badges: */
+/* Badges: solid ink index-divider tabs */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -441,26 +442,26 @@ textarea { overflow-y: scroll; }
   font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: var(--t-r);
-  border: 1px solid;
+  border-radius: var(--t-r-tab);
+  border: none;
   line-height: 1.4;
   white-space: nowrap;
   -webkit-user-select: none;
   user-select: none;
 }
-.pill-green  { background: var(--t-green-bg);  color: var(--t-green);  border-color: var(--t-green-bdr);  }
-.pill-blue   { background: var(--t-blue-bg);   color: var(--t-blue);   border-color: var(--t-blue-bdr);   }
-.pill-plum   { background: var(--t-plum-bg);   color: var(--t-plum);   border-color: var(--t-plum-bdr);   }
-.pill-clay   { background: var(--t-clay-bg);   color: var(--t-clay);   border-color: var(--t-clay-bdr);   }
-.pill-pink   { background: var(--t-pink-bg);   color: var(--t-clay);   border-color: var(--t-pink-bdr);   }
-.pill-neutral { background: var(--t-surface-2); color: var(--t-text-2); border-color: var(--t-border-2); }
+.pill-green  { background: var(--t-green); color: var(--t-accent-fg); }
+.pill-blue   { background: var(--t-blue);  color: var(--t-accent-fg); }
+.pill-plum   { background: var(--t-plum);  color: var(--t-accent-fg); }
+.pill-clay   { background: var(--t-clay);  color: var(--t-accent-fg); }
+.pill-pink   { background: var(--t-pink);  color: var(--t-text); }
+.pill-neutral { background: var(--t-text-3); color: var(--t-surface); }
 .pill-dead    { opacity: 0.45; cursor: default; }
 
-/* Clickable pill: */
+/* Clickable tab: */
 .pill-clickable { cursor: pointer; }
-.pill-clickable:hover { filter: brightness(0.94); }
+.pill-clickable:hover { filter: brightness(0.92); }
 
-/* Picker pills: the one checkbox-pill control shared by every form/popup */
+/* Picker chips: the one checkbox-chip control shared by every form/popup */
 .picker-pill {
   display: inline-flex;
   align-items: center;
@@ -468,7 +469,7 @@ textarea { overflow-y: scroll; }
   font-size: 12px;
   cursor: pointer;
   padding: 3px 10px;
-  border-radius: var(--t-r-pill);
+  border-radius: var(--t-r);
   border: 1px solid var(--t-border-2);
   background: var(--t-surface);
   color: var(--t-text-2);
@@ -476,10 +477,11 @@ textarea { overflow-y: scroll; }
   user-select: none;
   transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease);
 }
-.picker-pill.active-deck     { border-color: var(--t-blue-bdr);   background: var(--t-blue-bg);   color: var(--t-blue); }
-.picker-pill.active-notebook { border-color: var(--t-plum-bdr);   background: var(--t-plum-bg);   color: var(--t-plum); }
-.picker-pill.active-resource { border-color: var(--t-clay-bdr);   background: var(--t-clay-bg);   color: var(--t-clay); }
-.picker-pill.active-accent   { border-color: var(--t-accent-bdr); background: var(--t-accent-bg); color: var(--t-accent); }
+.picker-pill.active-deck     { border-color: var(--t-blue);   background: var(--t-blue);   color: var(--t-accent-fg); }
+.picker-pill.active-notebook { border-color: var(--t-plum);   background: var(--t-plum);   color: var(--t-accent-fg); }
+.picker-pill.active-resource { border-color: var(--t-clay);   background: var(--t-clay);   color: var(--t-accent-fg); }
+/* Lighter than the caramel confirm buttons so a picked frequency never reads as a CTA */
+.picker-pill.active-accent   { border-color: var(--t-accent-bdr); background: var(--t-accent-bdr); color: var(--t-text); }
 
 /* Shared new-card form (Decks + Notebooks): */
 .dk-new-card {
@@ -552,14 +554,14 @@ textarea { overflow-y: scroll; }
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
-/* Unified landing pages (Plans / Decks / Notebooks): */
+/* Unified landing pages (Plans / Decks / Notebooks): white-to-family gradient bands */
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: var(--t-surface); flex-shrink: 0; }
 .landing-hdr--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 72%); }
 .landing-hdr--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 72%); }
 .landing-hdr--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 72%); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
 .landing-body { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
-.landing-footer { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
+.landing-footer { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-3); flex-shrink: 0; }
 .landing-footer input { flex: 1; }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
 
@@ -567,7 +569,7 @@ textarea { overflow-y: scroll; }
 .empty-bubble {
   background: var(--t-surface);
   border: 1px dashed var(--t-border-2);
-  border-radius: var(--t-r-xl);
+  border-radius: var(--t-r-lg);
   padding: 22px 16px;
   margin-bottom: 12px;
   text-align: center;
@@ -576,7 +578,8 @@ textarea { overflow-y: scroll; }
   font-style: italic;
 }
 
-/* Shared card look for all list items */
+/* Shared card look for all list items: gradient wash, crisp edge, no box border.
+   Hover only deepens the wash, never moves or grows a shadow. */
 .landing-card {
   display: flex;
   align-items: center;
@@ -584,23 +587,18 @@ textarea { overflow-y: scroll; }
   padding: 22px 24px;
   background: var(--t-surface);
   border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r-xl);
+  border-radius: var(--t-r-lg);
   cursor: pointer;
   box-shadow: var(--t-shadow-sm);
-  transition: border-color var(--t-ease), background var(--t-ease), box-shadow var(--t-ease), transform var(--t-ease);
+  transition: background var(--t-ease);
 }
-.landing-card:hover {
-  border-color: var(--t-text-3);
-  box-shadow: var(--t-shadow);
-  transform: translateY(-1px);
-}
-/* Per-feature gradient washes */
-.landing-card--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 45%); }
-.landing-card--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 45%); }
-.landing-card--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 45%); }
-.landing-card--plan:hover     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 62%); }
-.landing-card--deck:hover     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 62%); }
-.landing-card--notebook:hover { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 62%); }
+/* Per-feature gradient washes and edges */
+.landing-card--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 55%); border-color: var(--t-accent-bdr); }
+.landing-card--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 55%); border-color: var(--t-blue-bdr); }
+.landing-card--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 55%); border-color: var(--t-plum-bdr); }
+.landing-card--plan:hover     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 95%); }
+.landing-card--deck:hover     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 95%); }
+.landing-card--notebook:hover { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 95%); }
 .landing-card-body { flex: 1; min-width: 0; }
 .landing-card-body > input { width: 100%; box-sizing: border-box; }
 .landing-card-name { font-family: var(--t-font-head); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--t-text); }
@@ -612,14 +610,14 @@ textarea { overflow-y: scroll; }
 /* Fixed min-width so counts line up column-wise across cards */
 .landing-stat { --stat-c: var(--t-text-2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 64px; }
 .landing-stat b { font-family: var(--t-font-head); font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; color: var(--stat-c); font-variant-numeric: tabular-nums; }
-.landing-stat > span { font-size: 10px; font-weight: 600; color: var(--t-text-3); }
+.landing-stat > span { font-size: 14px; font-weight: 600; color: var(--t-text-3); }
 /* Text values (e.g. a plan name) instead of a count */
 .landing-stat--text { min-width: 0; }
-.landing-stat--text b { font-size: 15px; line-height: 1.2; letter-spacing: 0; }
-.landing-stat-divider { width: 1px; height: 30px; background: var(--t-border); margin: 0 16px; flex-shrink: 0; align-self: center; }
-.landing-card--plan     .landing-stat-divider { background: var(--t-accent-bdr); }
-.landing-card--deck     .landing-stat-divider { background: var(--t-blue-bdr); }
-.landing-card--notebook .landing-stat-divider { background: var(--t-plum-bdr); }
+.landing-stat--text b { font-size: 24px; line-height: 1; letter-spacing: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.landing-stat-divider { width: 2px; height: 30px; background: var(--t-border); margin: 0 16px; flex-shrink: 0; align-self: center; }
+.landing-card--plan     .landing-stat-divider { background: var(--t-accent); }
+.landing-card--deck     .landing-stat-divider { background: var(--t-blue); }
+.landing-card--notebook .landing-stat-divider { background: var(--t-plum); }
 .landing-stat--todos     { --stat-c: var(--t-yellow); }
 .landing-stat--resources { --stat-c: var(--t-clay); }
 .landing-stat--deck      { --stat-c: var(--t-blue); }
@@ -663,12 +661,11 @@ textarea { overflow-y: scroll; }
 .nb-editor-scroll .ProseMirror ol { padding-left: 1.5em; margin: 0.4em 0 0.8em; }
 .nb-editor-scroll .ProseMirror li { margin-bottom: 0.2em; }
 .nb-editor-scroll .ProseMirror blockquote {
-  border-left: 3px solid var(--t-plum-bdr);
   margin: 0.8em 0;
-  padding: 0.3em 0 0.3em 1em;
+  padding: 0.5em 1em;
   color: var(--t-text-2);
   background: var(--t-plum-bg);
-  border-radius: 0 var(--t-r) var(--t-r) 0;
+  border-radius: var(--t-r);
 }
 .nb-editor-scroll .ProseMirror img {
   display: block;
@@ -702,10 +699,10 @@ textarea { overflow-y: scroll; }
 
 /* Resource card (name / type / url / notes), shared by Stats + study page: */
 .st-resource-cards { display: flex; flex-direction: column; gap: 6px; }
-.st-resource-card { border: 1px solid var(--t-clay-bdr); background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 45%); border-radius: var(--t-r); padding: 7px 11px; }
+.st-resource-card { border: 1px solid var(--t-clay-bdr); background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); border-radius: var(--t-r); padding: 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-text); }
-.st-resource-card-type { font-size: 9px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-clay); background: var(--t-clay-bg); border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r-pill); padding: 1px 7px; user-select: none; }
+.st-resource-card-type { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
 .st-resource-card-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 3px; cursor: pointer; }
 .st-resource-card-url:hover { filter: brightness(0.8); }
 .st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }

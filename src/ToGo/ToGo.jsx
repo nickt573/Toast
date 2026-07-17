@@ -10,9 +10,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 const DOTS = "••••••••-••••-••••-••••-••••••••••••";
 
 const CLOSE_OPTIONS = [
-  { value: "always", label: "Always push",   hint: "Push automatically when Toast closes" },
-  { value: "ask",    label: "Ask me",        hint: "Offer a push each time Toast closes" },
-  { value: "never",  label: "Never push",         hint: "Only push when I press the button" },
+  { value: "always", label: "Always push",   hint: "Push every time Toast closes." },
+  { value: "ask",    label: "Ask me",        hint: "Offer a push each time Toast closes." },
+  { value: "never",  label: "Never push",         hint: "Only push when I press the button." },
 ];
 
 // Clipboard API is unreliable in WebKitGTK; fall back to a scratch textarea.

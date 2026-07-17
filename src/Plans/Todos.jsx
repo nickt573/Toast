@@ -80,7 +80,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
     if (!editing) {
         return (
-            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", opacity: todo.is_disabled && !todo.is_skipped ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 45%)" }}>
+            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r)", padding: "12px", marginBottom: "10px", opacity: todo.is_disabled && !todo.is_skipped ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 17, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
@@ -135,7 +135,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
     }
 
     return (
-        <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r-lg)", padding: "12px", marginBottom: "10px", background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%)" }}>
+        <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r)", padding: "12px", marginBottom: "10px", background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 62%)" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div>
                     <div style={{ fontSize: 12, marginBottom: 4 }}>Order</div>
@@ -144,7 +144,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                             onChange={(e) => setOrderNum(e.target.value)}
                             placeholder="None" style={{ width: 70 }} />
                         <span style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-                            Numbered todos are listed first; the rest follow alphabetically.
+                            Numbered todos are listed first and the rest follow alphabetically.
                         </span>
                     </div>
                 </div>
@@ -157,13 +157,13 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                 </div>
 
                 <div>
-                    <div style={{ fontSize: 12, marginBottom: 4 }}>Categories</div>
+                    <div style={{ fontSize: 12, marginBottom: 2 }}>Categories</div>
                     <CategoryPicker categoryMap={categoryMap} onChange={toggleCategory} />
                 </div>
 
                 {planResources && planResources.length > 0 && (
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4 }}>Resources</div>
+                        <div style={{ fontSize: 12, marginBottom: 2 }}>Resources</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {planResources.map(r => (
                                 <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
@@ -178,7 +178,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
                 {allGroups && allGroups.length > 0 && (
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4 }}>Decks / Notebooks</div>
+                        <div style={{ fontSize: 12, marginBottom: 2 }}>Decks / Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             {allGroups.map(g => {
                                 const active = selectedGroupIds.includes(g.id);
@@ -197,7 +197,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
                 )}
 
                 <div>
-                    <div style={{ fontSize: 12, marginBottom: 4 }}>Frequency</div>
+                    <div style={{ fontSize: 12, marginBottom: 2 }}>Frequency</div>
                     <FrequencyPicker frequency={frequency} onChange={toggleFrequency} />
                 </div>
 

@@ -4,7 +4,7 @@
 .nb-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
 .nb-notebook-name { font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-text); }
 .nb-notebook-name-input { flex: 1; }
-.nb-new-notebook { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
+.nb-new-notebook { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-3); flex-shrink: 0; }
 .nb-new-notebook input { flex: 1; }
 
 .nb-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border-2); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
@@ -57,8 +57,9 @@
 
 .nb-editor-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; max-width: 700px; margin: 0 auto 6px; width: 100%; box-sizing: border-box; padding: 0 20px; min-height: 0; }
 .nb-view-content .nb-editor-wrap { max-width: 100%; padding: 0; }
-.nb-editor-scroll { flex: 1; overflow-y: scroll; padding-bottom: 16px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; }
-.nb-view-content .nb-editor-scroll { border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
+/* The page itself: a sheet of paper, crisp edge instead of a boxed border */
+.nb-editor-scroll { flex: 1; overflow-y: scroll; padding-bottom: 16px; border: none; border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; box-shadow: var(--t-shadow-sm); }
+.nb-view-content .nb-editor-scroll { border: none; border-radius: var(--t-r-lg); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
 
 /* Toolbar: no-wrap so groups stay together */
 .nb-toolbar {
@@ -88,7 +89,7 @@
 .nb-tb-btn {
   font-size: 12px;
   padding: 2px 7px;
-  border: 1px solid var(--t-btn-bdr);
+  border: 1px solid var(--t-btn);
   border-radius: var(--t-r);
   background: var(--t-btn);
   color: var(--t-btn-fg);
@@ -101,7 +102,7 @@
   transition: background var(--t-ease), border-color var(--t-ease);
 }
 .nb-tb-btn:hover { background: var(--t-btn-h); border-color: var(--t-btn-h); color: var(--t-btn-fg); box-shadow: none; }
-.nb-tb-btn.active, .nb-tb-btn.active:hover { background: var(--t-plum-bg); border-color: var(--t-plum); color: var(--t-plum); }
+.nb-tb-btn.active, .nb-tb-btn.active:hover { background: var(--t-plum); border-color: var(--t-plum); color: var(--t-btn-fg); }
 .nb-tb-btn.record, .nb-tb-btn.record:hover { background: var(--t-red-bg); border-color: var(--t-red); color: var(--t-red); }
 .nb-tb-btn.record.recording, .nb-tb-btn.record.recording:hover { background: var(--t-red); border-color: var(--t-red); color: var(--t-btn-fg); }
 .nb-tb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -161,14 +162,14 @@
 /* Edit body: also the clip/positioning frame for the card panel */
 .nb-edit-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; position: relative; }
 
-/* Card creator: when open it detaches into an absolute overlay anchored to the bottom, purple bar at top */
+/* Card creator: when open it detaches into an absolute overlay anchored to the bottom */
 .nb-card-creator { position: relative; flex-shrink: 0; max-width: 660px; width: calc(100% - 40px); margin: 8px auto 12px; box-sizing: border-box; }
 .nb-card-creator.open {
   position: absolute; left: 0; right: 0; bottom: 6px; margin: 0 auto;
-  display: flex; flex-direction: column; max-height: 58vh;
+  display: flex; flex-direction: column;
   background: var(--t-surface-2);
-  border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg);
-  box-shadow: 0 8px 28px rgba(26,18,8,0.2);
+  border: none; border-radius: var(--t-r-lg);
+  box-shadow: var(--t-shadow-lg);
   overflow: hidden; z-index: 5;
 }
 
@@ -177,18 +178,23 @@
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   cursor: pointer; user-select: none;
   padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--t-text);
-  background: var(--t-surface-3);
-  border: 1px solid var(--t-border-2);
+  background: var(--t-surface-4);
+  border: none;
   border-radius: var(--t-r-lg);
+  box-shadow: var(--t-shadow-sm);
 }
 .nb-card-toggle:hover { filter: brightness(0.97); }
+/* Open header doubles as the drag handle for resizing the panel */
 .nb-card-creator.open .nb-card-toggle {
   flex-shrink: 0; border: none; border-bottom: 1px solid var(--t-border-2);
   border-radius: var(--t-r-lg) var(--t-r-lg) 0 0;
+  box-shadow: none;
+  cursor: ns-resize;
 }
 
 /* The body: hidden when closed, scrolls below the header when open */
 .nb-card-body { display: none; }
+/* Always reserve the scroll track (like .dk-new-card-dark) so content never shifts */
 .nb-card-creator.open .nb-card-body { display: block; flex: 1; min-height: 0; overflow-y: scroll; }
 .nb-card-creator.open .dk-new-card { background: var(--t-surface-2); border-top: none; }
 

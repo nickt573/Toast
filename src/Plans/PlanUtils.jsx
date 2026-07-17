@@ -76,8 +76,8 @@ export function CategoryPills({ mask, style }) {
         <span style={{ display: "inline-flex", gap: 5, flexWrap: "wrap", ...style }}>
             {cats.map(({ label, color }) => (
                 <span key={label} style={{
-                    display: "inline-block", padding: "2px 8px", borderRadius: "var(--t-r-pill)",
-                    fontSize: 10, fontWeight: 500, background: color, color: "var(--t-btn-fg)",
+                    display: "inline-block", padding: "2px 8px", borderRadius: "var(--t-r-tab)",
+                    fontSize: 10, fontWeight: 600, background: color, color: "var(--t-btn-fg)",
                 }}>
                     {label}
                 </span>
@@ -93,7 +93,7 @@ export function CategoryPicker({ categoryMap, onChange }) {
                 const active = !!categoryMap[bit];
                 // Category colors are per-item, so the active state stays inline
                 const style = active
-                    ? { borderColor: color, background: `${color}1F`, color }
+                    ? { borderColor: color, background: color, color: "var(--t-btn-fg)" }
                     : undefined;
                 return (
                     <label key={bit} className="picker-pill" style={style}>

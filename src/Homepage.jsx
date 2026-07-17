@@ -448,7 +448,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                 {/* Keyed per mode: reusing the scrolled DOM node skews the short prescreen */}
                 <div className="hp-popup" key="choose">
                     <div className="hp-popup-title">Log Extra Activity</div>
-                    <button className="primary" onClick={startBlank}>Create My Own</button>
+                    <button className="primary" onClick={startBlank}>+ Create My Own</button>
                     <div>
                         <div className="hp-popup-label">Or choose an existing todo</div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 260, overflowY: "scroll" }}>

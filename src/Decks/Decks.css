@@ -4,9 +4,9 @@
 .dk-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
 .dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-text); }
 .dk-deck-name-input { width: 100%; }
-.dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent); background: var(--t-accent-bg); border: 1px solid var(--t-accent-bdr); border-radius: var(--t-r-pill); padding: 1px 8px; user-select: none; }
+.dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 
-.dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-2); flex-shrink: 0; }
+.dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-3); flex-shrink: 0; }
 .dk-new-deck input { flex: 1; }
 
 .dk-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border-2); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
@@ -16,7 +16,7 @@
 /* Header sits outside the scroll box, so it must reserve the same gutter width
    (the 10px ::-webkit-scrollbar in App.css) or its columns drift off the checkboxes */
 .dk-anki-head { display: flex; align-items: center; padding-right: 10px; }
-.dk-anki-row { display: flex; align-items: center; border-radius: 4px; padding: 3px 0; }
+.dk-anki-row { display: flex; align-items: center; border-radius: var(--t-r); padding: 3px 0; }
 .dk-anki-row--alt { background: rgba(26, 18, 8, 0.03); }
 .dk-anki-field-info { flex: 1; min-width: 0; }
 .dk-anki-field-name { font-size: 13px; color: var(--t-text); }
@@ -24,8 +24,8 @@
 .dk-anki-field-count { color: var(--t-text-3); font-size: 11px; margin-left: 6px; }
 .dk-anki-sample { display: flex; align-items: center; gap: 6px; margin: 3px 0 1px; min-width: 0; }
 .dk-anki-pager { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; }
-/* Bare button: inherits the neutral mauve fill, matching the notebook page nav */
-.dk-anki-arrow { width: 17px; height: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 12px; line-height: 1; }
+/* Bare button: inherits the neutral mauve ink, matching the notebook page nav */
+.dk-anki-arrow { width: 17px; height: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--t-r); font-size: 12px; line-height: 1; }
 .dk-anki-sample-pos { min-width: 22px; text-align: center; font-size: 10px; color: var(--t-text-3); font-variant-numeric: tabular-nums; }
 .dk-anki-sample-quote { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 5px; overflow: hidden; }
 .dk-anki-sample-label { flex-shrink: 0; font-size: 11px; color: var(--t-text-3); }
@@ -38,17 +38,17 @@
 
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
 .dk-cards-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); flex-shrink: 0; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 72%); }
-.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
-.dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent); background: var(--t-accent-bg); border: 1px solid var(--t-accent-bdr); border-radius: var(--t-r-pill); padding: 1px 8px; user-select: none; }
+.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
+.dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
 .dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); }
-.dk-table-search { flex-shrink: 0; padding: 8px 10px; border-bottom: 1px solid var(--t-border-2); display: flex; flex-direction: column; gap: 5px; background: var(--t-surface-3); }
+.dk-table-search { flex-shrink: 0; padding: 8px 10px; border-bottom: 1px solid var(--t-border-2); display: flex; flex-direction: column; gap: 5px; background: var(--t-surface-4); }
 .dk-table-search > input { width: 100%; box-sizing: border-box; background: var(--t-surface); }
 
 .dk-sort-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .dk-sort-seg { display: flex; gap: 4px; flex-shrink: 0; }
-.dk-sort-seg button { padding: 3px 11px; font-size: 11px; border: 1px solid var(--t-btn-bdr); border-radius: var(--t-r-pill); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; box-shadow: none; user-select: none; }
+.dk-sort-seg button { padding: 3px 11px; font-size: 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; box-shadow: none; user-select: none; }
 .dk-sort-seg button:hover { background: var(--t-btn-h); box-shadow: none; }
 .dk-sort-seg button.active,
 .dk-sort-seg button.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); filter: brightness(1); }
@@ -61,12 +61,12 @@
 .dk-date-clear { font-size: 13px; line-height: 1; padding: 0 2px; border: none; background: none; box-shadow: none; color: var(--t-text-3); cursor: pointer; }
 .dk-date-clear:hover { background: none; box-shadow: none; color: var(--t-text); }
 
-.dk-filter-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 8px; background: var(--t-bg); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); }
+.dk-filter-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 8px; background: var(--t-bg); border: 1px solid var(--t-border); border-radius: var(--t-r); }
 .dk-filter-bar > span { flex-basis: 100%; height: 0; }
-.dk-filter-toggle { font-size: 11px; padding: 3px 11px; border-radius: var(--t-r-pill); flex-shrink: 0; user-select: none; }
+.dk-filter-toggle { font-size: 11px; padding: 3px 11px; border-radius: var(--t-r); flex-shrink: 0; user-select: none; }
 .dk-filter-toggle.active,
 .dk-filter-toggle.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
-.dk-filter-btn { font-size: 11px; padding: 3px 11px; border: 1px solid var(--t-btn-bdr); border-radius: var(--t-r-pill); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; font-family: inherit; font-weight: 500; transition: background var(--t-ease), border-color var(--t-ease); box-shadow: none; user-select: none; }
+.dk-filter-btn { font-size: 11px; padding: 3px 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; font-family: inherit; font-weight: 600; transition: background var(--t-ease), border-color var(--t-ease); box-shadow: none; user-select: none; }
 .dk-filter-btn:hover { color: var(--t-btn-fg); background: var(--t-btn-h); box-shadow: none; }
 .dk-filter-btn.active,
 .dk-filter-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
@@ -80,6 +80,8 @@
 .dk-card-table th { background: var(--t-surface-3); text-align: center; padding: 5px 8px; border-bottom: 1px solid var(--t-border); font-size: 11px; color: var(--t-text-3); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: calc(2.9em + 10px); }
 .dk-card-table tr { cursor: pointer; }
+/* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. */
+.dk-card-table tr:nth-child(even) td { background: var(--t-row-stripe); }
 /* Row height lives on the td so single-line entries center vertically. The clamp just caps at 2 lines. */
 .dk-cell-clamp {
   display: -webkit-box;
@@ -89,7 +91,7 @@
   line-height: 1.45;
   max-height: 2.9em;
 }
-.dk-card-table tr:hover td { background: var(--t-surface-2); }
+.dk-card-table tr:hover td { background: var(--t-surface-3); }
 /* Every due state shares one golden highlight, distinct hue from the peachy headers so it reads lighter. */
 .dk-card-table tr.is-new-due td,
 .dk-card-table tr.is-review-due td,
@@ -109,20 +111,19 @@
 .dk-table-empty { padding: 16px; color: var(--t-text-3); font-style: italic; font-size: 13px; }
 
 /* Creator toggle row, also the drag handle for resizing the panel below it */
-.dk-creator-toggle-row { border-top: 1px solid var(--t-border); padding: 8px 10px; background: var(--t-surface-3); color: var(--t-text-2); cursor: ns-resize; user-select: none; }
+.dk-creator-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--t-border); padding: 8px 14px; background: var(--t-surface-4); color: var(--t-text); font-weight: 500; cursor: ns-resize; user-select: none; }
+.dk-creator-toggle-row:hover { filter: brightness(0.97); }
 .dk-creator-toggle-row.open { border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border-2); }
-.dk-creator-toggle-row .dk-filter-toggle { background: var(--t-btn); border-color: var(--t-btn-bdr); color: var(--t-btn-fg); border-radius: var(--t-r-pill); }
-.dk-creator-toggle-row .dk-filter-toggle:hover { background: var(--t-btn-h); color: var(--t-btn-fg); }
 
 /* Muted backdrop so bright editable inputs read as real fields and read-only fields read as locked. */
-.dk-editor-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; gap: 12px; background: var(--t-surface-2); }
+.dk-editor-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; gap: 12px; background: #FEF4EC; }
 .dk-editor-pane textarea, .dk-editor-pane input[type="text"] { background: var(--t-surface); }
 .dk-editor-none { color: var(--t-text-3); font-style: italic; padding: 16px; font-size: 13px; }
 .dk-editor-topbar { display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
 
 .dk-field { display: flex; flex-direction: column; gap: 4px; }
 .dk-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); }
-.dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 11px; font-size: 13px; background: var(--t-bg); box-shadow: inset 0 1px 2px rgba(58,48,36,0.06); line-height: 1.6; color: var(--t-text-2); }
+.dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 11px; font-size: 13px; background: var(--t-bg); line-height: 1.6; color: var(--t-text-2); }
 .dk-field-row { display: flex; align-items: center; gap: 4px; }
 /* Searchable / Pause: each group snug internally (via .dk-new-card-check), with
    generous space between the two groups. */
@@ -136,7 +137,8 @@
 .dk-log-review { color: var(--t-green); font-weight: 700; }
 .dk-priority-star { color: #D9A521; margin-left: 3px; font-size: 11px; }
 
-.dk-uploaded-badge { font-size: 11px; background: var(--t-blue-bg); color: var(--t-blue); border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r); padding: 2px 7px; font-weight: 600; user-select: none; }
+/* Anki import tab on cards */
+.dk-uploaded-badge { font-size: 11px; background: var(--t-blue); color: var(--t-accent-fg); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; font-weight: 600; user-select: none; }
 
 /* Capped at half the pane and scrollable: Front/Back textareas are user-resizable,
    so without the cap a grown form would push its Add Card button off the bottom. */
@@ -148,24 +150,26 @@
 .dk-new-card-dark input::placeholder,
 .dk-new-card-dark textarea::placeholder { color: var(--t-placeholder); }
 .dk-new-card-dark label { color: var(--t-text-2); }
-.dk-new-card-dark button { background: var(--t-surface); border-color: var(--t-border-2); color: var(--t-text-2); }
-.dk-new-card-dark button:hover { background: var(--t-bg); box-shadow: none; }
+.dk-new-card-dark button { background: var(--t-btn); border-color: var(--t-btn); color: var(--t-btn-fg); }
+.dk-new-card-dark button:hover { background: var(--t-btn-h); border-color: var(--t-btn-h); box-shadow: none; }
 .dk-new-card-dark button.primary { background: var(--t-accent); border-color: var(--t-accent); color: var(--t-accent-fg); }
 .dk-new-card-dark button.primary:hover { background: var(--t-accent-h); border-color: var(--t-accent-h); }
 .dk-new-card-dark .dk-file-row input[type="text"] { background: var(--t-surface); color: var(--t-text); border-color: var(--t-border-2); }
+/* File pickers stay muted like the editor pane's, outranks the input rule above */
+.dk-new-card-dark input.input-readonly { background: var(--t-surface-2); }
 .dk-new-card-dark .dk-field label { color: var(--t-text-3); }
 
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
-.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: 1px solid var(--t-border-2); border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: 0 2px 8px rgba(26,18,8,0.06); }
+.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
 
-.dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: 0 6px 20px rgba(0,0,0,0.12); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
+.dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
 /* Square (radius 0) so hover highlights sit flush inside the menu container,
    whose own border radius clips the outer corners */
 .dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }
 .dk-menu-item:hover { background: var(--t-surface-2); color: var(--t-text); box-shadow: none; }
 /* Outranks the global button.danger fill. Flat like its siblings, red tint on hover only. */
-.dk-actions-menu .dk-menu-item.danger { background: none; border-radius: 0; color: var(--t-red); }
+.dk-actions-menu .dk-menu-item.danger { background: none; border: none; border-radius: 0; color: var(--t-red); }
 .dk-actions-menu .dk-menu-item.danger:hover { background: var(--t-red-bg); color: var(--t-red); }
 
 .dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); border-bottom: 1px solid var(--t-red-bdr); font-size: 13px; color: var(--t-red); flex-shrink: 0; }

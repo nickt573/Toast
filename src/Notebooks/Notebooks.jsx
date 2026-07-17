@@ -220,7 +220,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
                 <input type="text" placeholder="New notebook name..." value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && createNotebook()} />
-                <button className="primary" onClick={createNotebook}>Create</button>
+                <button className="primary" onClick={createNotebook}>+ Create</button>
             </div>
         </>
     );
@@ -581,6 +581,46 @@ function CardCreatorPanel({ setToast }) {
     const [open, setOpen] = useState(false);
     const [decks, setDecks] = useState([]);
     const [deckId, setDeckId] = useState(null);
+    // Dragged panel height, null means size to fit the form
+    const [creatorHeight, setCreatorHeight] = useState(null);
+    const creatorRef = useRef(null);
+    const dragMovedRef = useRef(false);
+
+    // Panel can't shrink below this while dragging
+    const CREATOR_MIN_PX = 90;
+
+    // The open header doubles as a drag handle: clicks still toggle, drags resize
+    const startDrag = (e) => {
+        if (e.button !== 0 || !open) return;
+        const panel = creatorRef.current;
+        const frame = panel?.offsetParent;
+        if (!panel || !frame) return;
+        const maxHeight = frame.getBoundingClientRect().height - 12;
+        const startHeight = panel.offsetHeight;
+        const startY = e.clientY;
+        let moved = false;
+        dragMovedRef.current = false;
+
+        const heightAt = (ev) => Math.min(maxHeight, Math.max(CREATOR_MIN_PX, startHeight + (startY - ev.clientY)));
+        const onMove = (ev) => {
+            if (!moved && Math.abs(ev.clientY - startY) < 4) return;
+            moved = true;
+            dragMovedRef.current = true;
+            setCreatorHeight(heightAt(ev));
+        };
+        const onUp = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+        };
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+        e.preventDefault();
+    };
+
+    const toggle = () => {
+        if (dragMovedRef.current) { dragMovedRef.current = false; return; }
+        setOpen((o) => !o);
+    };
 
     useEffect(() => {
         loggedInvoke("get_groups")
@@ -599,8 +639,12 @@ function CardCreatorPanel({ setToast }) {
     );
 
     return (
-        <div className={`nb-card-creator${open ? " open" : ""}`}>
-            <div className="nb-card-toggle" onClick={() => setOpen((o) => !o)}>
+        <div
+            ref={creatorRef}
+            className={`nb-card-creator${open ? " open" : ""}`}
+            style={open && creatorHeight != null ? { height: creatorHeight } : undefined}
+        >
+            <div className="nb-card-toggle" onMouseDown={startDrag} onClick={toggle}>
                 <span style={{ fontSize: 13, fontWeight: 500 }}>Create a card</span>
                 <span style={{ fontSize: 10, color: "var(--t-text-3)" }}>{open ? "▾" : "▸"}</span>
             </div>

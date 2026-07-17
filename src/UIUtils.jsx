@@ -68,12 +68,11 @@ export function GroupTypeBadge({ type }) {
   const nb = type === "notebook";
   return (
     <span style={{
-      marginLeft: 4, fontSize: 9, fontWeight: 700, padding: "0 5px",
-      borderRadius: "var(--t-r-pill)",
-      border: `1px solid ${nb ? "var(--t-plum-bdr)" : "var(--t-blue-bdr)"}`,
-      background: nb ? "var(--t-plum-bg)" : "var(--t-blue-bg)",
-      color: nb ? "var(--t-plum)" : "var(--t-blue)",
-      lineHeight: 1.3, letterSpacing: "0.03em",
+      marginLeft: 4, fontSize: 9, fontWeight: 600, padding: "1px 5px",
+      borderRadius: "var(--t-r-tab)",
+      background: nb ? "var(--t-plum)" : "var(--t-blue)",
+      color: "var(--t-accent-fg)",
+      lineHeight: 1.3,
     }}>
       {nb ? "nb" : "dk"}
     </span>
@@ -111,7 +110,7 @@ export function BusyOverlay({ title, note }) {
 
 export function ConfirmDelete({ onConfirm, label = "Delete", small = false }) {
   const [confirming, setConfirming] = useState(false);
-  const s = small ? { fontSize: 12, padding: "2px 7px" } : {};
+  const s = small ? { fontSize: 12, padding: "4px 9px" } : {};
   if (confirming) return (
     <span style={{ display: "inline-flex", gap: 4, alignItems: "center", whiteSpace: "nowrap", flexShrink: 0 }}>
       <button className="danger" style={s} onClick={() => { onConfirm(); setConfirming(false); }}>Yes</button>

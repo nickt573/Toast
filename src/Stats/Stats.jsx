@@ -545,7 +545,7 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
           return (
             <button
               key={n}
-              className={`st-pill${isActive ? " active" : ""}${deleted && !isActive ? " st-deck-pill-deleted" : ""}`}
+              className={`st-pill${isActive ? " active" : ""}${deleted ? " st-deck-pill-deleted" : ""}`}
               onClick={() => setDeckFilter(n)}>
               {n}
             </button>
@@ -616,9 +616,9 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                     return dateRows.map(r => (
                       <tr key={r.id} style={tinted ? { background: "var(--t-surface-2)" } : {}}>
                         <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{r.date}</td>
-                        <td><span className="st-badge" style={{ background: "var(--t-blue-bg)", color: "var(--t-blue)" }}>{r.num_new}</span></td>
-                        <td><span className="st-badge" style={{ background: "var(--t-green-bg)", color: "var(--t-green)" }}>{r.num_promote}</span></td>
-                        <td><span className="st-badge" style={{ background: "var(--t-red-bg)", color: "var(--t-red)" }}>{r.num_demote}</span></td>
+                        <td><span className="st-badge" style={{ background: "var(--t-blue)", color: "var(--t-accent-fg)" }}>{r.num_new}</span></td>
+                        <td><span className="st-badge" style={{ background: "var(--t-green)", color: "var(--t-accent-fg)" }}>{r.num_promote}</span></td>
+                        <td><span className="st-badge" style={{ background: "var(--t-red)", color: "var(--t-accent-fg)" }}>{r.num_demote}</span></td>
                         <td>
                           {(r.num_promote + r.num_demote) === 0 ? (
                             <div className="st-ret-bar-wrap">
@@ -668,7 +668,7 @@ function fmtDayLabel(dateStr) {
 
 const SEARCH_SCOPES = [
   { key: "all",       label: "All" },
-  { key: "name",      label: "Name" },
+  { key: "description", label: "Description" },
   { key: "details",   label: "Details" },
   { key: "resources", label: "Resources" },
   { key: "groups",    label: "Decks / Notebooks" },
@@ -717,7 +717,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     const has = s => (s || "").toLowerCase().includes(query);
     const inScope = key => scopes.has("all") || scopes.has(key);
     visible = visible.filter(r =>
-      (inScope("name") && has(r.text)) ||
+      (inScope("description") && has(r.text)) ||
       (scopes.has("all") && has(r.num_unit)) ||
       (inScope("details") && has(r.details)) ||
       // Resources match on name and description only, never the type or link
@@ -731,9 +731,9 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   const deleteRow = async (id) => {
     try {
       await loggedInvoke("delete_todo_stat", { id });
-      setToast("Todo entry deleted.");
+      setToast("Entry deleted.");
       onDeleted();
-    } catch (e) { logError("catch", e); setToast("Failed to delete todo entry.", "error"); }
+    } catch (e) { logError("catch", e); setToast("Failed to delete entry.", "error"); }
   };
 
   const startEdit = (r) => {
@@ -778,9 +778,9 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
       });
       setEditingId(null);
       setEditForm(null);
-      setToast("Todo entry updated.");
+      setToast("Entry updated.");
       onDeleted();
-    } catch (e) { logError("catch", e); setToast("Failed to update todo entry.", "error"); }
+    } catch (e) { logError("catch", e); setToast("Failed to update entry.", "error"); }
   };
 
   if (todoStats.length === 0) {
@@ -925,7 +925,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
               {isEditing && editForm && (
                 <div className="st-todo-expanded" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Name</div>
+                    <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Description</div>
                     <input
                       value={editForm.text}
                       autoFocus

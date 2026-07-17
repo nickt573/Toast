@@ -314,8 +314,11 @@ function DeckList({ setToast, onOpenDeck }) {
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiMakeSearchable} onChange={(e) => setAnkiMakeSearchable(e.target.checked)} />
-            Make all searchable
-            <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas or semicolons and ignore anything in parentheses." />
+            {/* 4px text-to-tip gap matches .dk-new-card-check */}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              Make all searchable
+              <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas or semicolons and ignore anything in parentheses." />
+            </span>
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiCreateFlipped} onChange={(e) => setAnkiCreateFlipped(e.target.checked)} />
@@ -364,7 +367,7 @@ function DeckList({ setToast, onOpenDeck }) {
                       <>
                         <span className="landing-stat-divider" />
                         <span className="landing-stat landing-stat--plan landing-stat--text">
-                          <b>{getPlanName(deck.plan_id)}</b>
+                          <b title={getPlanName(deck.plan_id)}>{getPlanName(deck.plan_id)}</b>
                           <span>plan</span>
                         </span>
                       </>
@@ -393,7 +396,7 @@ function DeckList({ setToast, onOpenDeck }) {
         <input type="text" placeholder="New deck name..." value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && createDeck()} />
-        <button className="primary" onClick={createDeck}>Create</button>
+        <button className="primary" onClick={createDeck}>+ Create</button>
       </div>
     </>
   );
@@ -595,18 +598,12 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
 
       <div className="dk-field">
         <label>Front Audio</label>
-        {form.front_audio && (
-          <div style={{ marginBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-            <AudioPlayer path={form.front_audio} style={{ alignSelf: "flex-start" }} />
-            <div className="dk-file-row">
-              <input type="text" value={parseFile(form.front_audio)} readOnly style={{ flex: 1 }} />
-              <button onClick={() => set("front_audio", null)}>Clear</button>
-            </div>
-          </div>
-        )}
-        <button onClick={pickFrontAudio} style={{ alignSelf: "flex-start" }}>
-          {form.front_audio ? "Replace" : "+ Add Front Audio"}
-        </button>
+        <div className="dk-file-row">
+          <input type="text" value={parseFile(form.front_audio ?? "")} readOnly placeholder="No file selected" />
+          <button onClick={pickFrontAudio}>Browse</button>
+          {form.front_audio && <button onClick={() => set("front_audio", null)}>Clear</button>}
+        </div>
+        {form.front_audio && <AudioPlayer path={form.front_audio} style={{ alignSelf: "flex-start" }} />}
       </div>
 
       {form.imported_back && (
@@ -632,18 +629,12 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
 
       <div className="dk-field">
         <label>Back Audio</label>
-        {form.back_audio && (
-          <div style={{ marginBottom: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-            <AudioPlayer path={form.back_audio} style={{ alignSelf: "flex-start" }} />
-            <div className="dk-file-row">
-              <input type="text" value={parseFile(form.back_audio)} readOnly style={{ flex: 1 }} />
-              <button onClick={() => set("back_audio", null)}>Clear</button>
-            </div>
-          </div>
-        )}
-        <button onClick={pickBackAudio} style={{ alignSelf: "flex-start" }}>
-          {form.back_audio ? "Replace" : "+ Add Back Audio"}
-        </button>
+        <div className="dk-file-row">
+          <input type="text" value={parseFile(form.back_audio ?? "")} readOnly placeholder="No file selected" />
+          <button onClick={pickBackAudio}>Browse</button>
+          {form.back_audio && <button onClick={() => set("back_audio", null)}>Clear</button>}
+        </div>
+        {form.back_audio && <AudioPlayer path={form.back_audio} style={{ alignSelf: "flex-start" }} />}
       </div>
 
       {form.imported_support && (
@@ -764,26 +755,26 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
       <div className="dk-new-card-row"><label>Front</label><textarea rows={2} value={form.front} onChange={(e) => set("front", e.target.value)} /></div>
       <div className="dk-new-card-row">
         <label>Front Image</label>
-        <input type="text" value={parseFile(form.front_image ?? "")} readOnly placeholder="No file" style={{ flex: 1 }} />
+        <input type="text" className="input-readonly" value={parseFile(form.front_image ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickFrontImage}>Browse</button>
         {form.front_image && <button onClick={() => set("front_image", null)}>Clear</button>}
       </div>
       <div className="dk-new-card-row">
         <label>Front Audio</label>
-        <input type="text" value={parseFile(form.front_audio ?? "")} readOnly placeholder="No file" style={{ flex: 1 }} />
+        <input type="text" className="input-readonly" value={parseFile(form.front_audio ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickFrontAudio}>Browse</button>
         {form.front_audio && <button onClick={() => set("front_audio", null)}>Clear</button>}
       </div>
       <div className="dk-new-card-row"><label>Back</label><textarea rows={2} value={form.back} onChange={(e) => set("back", e.target.value)} /></div>
       <div className="dk-new-card-row">
         <label>Back Image</label>
-        <input type="text" value={parseFile(form.back_image ?? "")} readOnly placeholder="No file" style={{ flex: 1 }} />
+        <input type="text" className="input-readonly" value={parseFile(form.back_image ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickBackImage}>Browse</button>
         {form.back_image && <button onClick={() => set("back_image", null)}>Clear</button>}
       </div>
       <div className="dk-new-card-row">
         <label>Back Audio</label>
-        <input type="text" value={parseFile(form.back_audio ?? "")} readOnly placeholder="No file" style={{ flex: 1 }} />
+        <input type="text" className="input-readonly" value={parseFile(form.back_audio ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickBackAudio}>Browse</button>
         {form.back_audio && <button onClick={() => set("back_audio", null)}>Clear</button>}
       </div>
@@ -822,7 +813,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
             </div>
           </div>
         </div>
-        <button className="primary" onClick={submit}>Add Card</button>
+        <button className="primary" onClick={submit}>+ Add Card</button>
       </div>
     </div>
   );
@@ -1045,7 +1036,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
         )}
         <h2>{deck.name}</h2>
         {planName && <span className="dk-cards-plan">{planName}</span>}
-        <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>{cards.length} card{cards.length !== 1 ? "s" : ""}</span>
+        <span style={{ fontSize: 12, color: "var(--t-text-3)", marginLeft: "auto" }}>{cards.length} card{cards.length !== 1 ? "s" : ""}</span>
         <DeckActions onPauseAll={pauseAll} onUnpauseAll={unpauseAll}
           onAllSearchable={() => setAllSearchable(true)} onAllNotSearchable={() => setAllSearchable(false)}
           onResetRequest={() => setConfirmReset(true)} />
@@ -1171,11 +1162,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
             </>
           )}
 
-          <div className={`dk-creator-toggle-row${creatorOpen ? " open" : ""}`} ref={toggleRowRef} onMouseDown={startCreatorDrag}>
-            <button className="dk-filter-toggle" onClick={toggleCreator}>
-              {creatorOpen ? "Hide New Card" : "New Card"}
-              <span style={{ fontSize: 10, marginLeft: 5 }}>{creatorOpen ? "▾" : "▸"}</span>
-            </button>
+          <div className={`dk-creator-toggle-row${creatorOpen ? " open" : ""}`} ref={toggleRowRef} onMouseDown={startCreatorDrag} onClick={toggleCreator}>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>Create a card</span>
+            <span style={{ fontSize: 10, color: "var(--t-text-3)" }}>{creatorOpen ? "▾" : "▸"}</span>
           </div>
           {creatorOpen && (
             <div className="dk-new-card-dark" style={creatorHeight != null ? { height: creatorHeight, maxHeight: "none" } : undefined}>

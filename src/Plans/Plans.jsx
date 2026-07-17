@@ -65,21 +65,8 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                 </span>
             </div>
             <div className="plan-srs-actions">
-                <span className="plan-srs-tip-wrap">
-                    <button className="btn-amber" onClick={onClamp}>Trim</button>
-                    <Tip text="Updates the due queue to the max minus cards already studied today. Note that overflow cards may be unscheduled." />
-                </span>
-                <span className="plan-srs-tip-wrap">
-                    <button className="btn-blue" onClick={onClampMax}>Fill</button>
-                    <Tip text="Resets the due queue to the full max, ignoring cards already studied today. Note that overflow cards may be unscheduled." />
-                </span>
-                <button onClick={() => setEditing((e) => !e)}>{editing ? "Cancel" : "Settings"}</button>
-                <button className="danger" onClick={() => setRemoving(true)}>Remove</button>
-            </div>
-
-            {editing && (
-                <div className="plan-srs-settings">
-                    <div className="plan-srs-settings-fields">
+                {editing && (
+                    <div className="plan-srs-settings">
                         <label className="plan-srs-settings-label">
                             Max New
                             <Tip text="Maximum new (unseen) cards introduced per study session, excluding overdue cards" />
@@ -102,26 +89,29 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                             Overflow
                             <Tip text="When enabled, leftover cards that weren't studied today carry over to tomorrow without counting towards tomorrow's scheduled maximum. When disabled, the total due cards tomorrow will not exceed the set max." />
                         </label>
-                    </div>
-                    <div className="plan-srs-settings-actions">
                         <button className="primary" onClick={saveSettings}>Save</button>
                     </div>
-                </div>
-            )}
-
-            {removing && (
-                <div className="plan-srs-confirm">
-                    <div className="plan-srs-confirm-message">Remove <strong>{group.name}</strong> from this plan?</div>
-                    <div className="plan-srs-confirm-sub">
-                        Preserve maintains all progress. Reset wipes all progress.
-                    </div>
-                    <div className="plan-srs-confirm-actions">
+                )}
+                {removing && (
+                    <div className="plan-srs-confirm">
+                        <span className="plan-srs-confirm-sub">
+                            Preserve maintains all progress. Reset wipes all progress.
+                        </span>
                         <button onClick={() => { onRemove(false); setRemoving(false); }}>Remove &amp; Preserve</button>
                         <button className="danger" onClick={() => { onRemove(true); setRemoving(false); }}>Remove &amp; Reset</button>
-                        <button onClick={() => setRemoving(false)}>Cancel</button>
                     </div>
-                </div>
-            )}
+                )}
+                <span className="plan-srs-tip-wrap">
+                    <button className="btn-amber" onClick={onClamp}>Trim</button>
+                    <Tip text="Updates the due queue to the max minus cards already studied today. Note that overflow cards may be unscheduled." />
+                </span>
+                <span className="plan-srs-tip-wrap">
+                    <button className="btn-blue" onClick={onClampMax}>Fill</button>
+                    <Tip text="Resets the due queue to the full max, ignoring cards already studied today. Note that overflow cards may be unscheduled." />
+                </span>
+                <button onClick={() => { setEditing((e) => !e); setRemoving(false); }}>{editing ? "Cancel" : "Settings"}</button>
+                <button className="danger" onClick={() => { setRemoving((r) => !r); setEditing(false); }}>{removing ? "Cancel" : "Remove"}</button>
+            </div>
         </div>
     );
 }
@@ -239,7 +229,7 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
                         </label>
                     </div>
                     <div className="plan-form-actions">
-                        <button className="primary" onClick={addGroup}>Add</button>
+                        <button className="primary" onClick={addGroup}>+ Add</button>
                         <button onClick={() => setAdding(false)}>Cancel</button>
                     </div>
                 </div>
@@ -387,7 +377,7 @@ function ResourcesSection({ planId, setToast, onChanged }) {
                     <textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="Notes (optional)" rows={2}
                         style={{ fontFamily: "inherit", resize: "none" }} />
                     <div className="plan-form-actions">
-                        <button className="primary" onClick={createResource}>Add</button>
+                        <button className="primary" onClick={createResource}>+ Add</button>
                         <button onClick={() => { setAdding(false); setNewName(""); setNewType(""); setNewUrl(""); setNewNotes(""); }}>Cancel</button>
                     </div>
                 </div>
@@ -469,7 +459,7 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
                                 onChange={(e) => setOrderNum(e.target.value)}
                                 placeholder="None" style={{ width: 70 }} />
                             <span style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-                                Numbered todos are listed first; the rest follow alphabetically.
+                                Numbered todos are listed first and the rest follow alphabetically.
                             </span>
                         </div>
                     </div>
@@ -526,7 +516,7 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
                     </div>
 
                     <div className="plan-form-actions">
-                        <button className="primary" onClick={submit}>Add</button>
+                        <button className="primary" onClick={submit}>+ Add</button>
                         <button onClick={() => setOpen(false)}>Cancel</button>
                     </div>
                 </div>
@@ -753,7 +743,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                 <input placeholder="New plan name..." value={name}
                     onChange={(e) => setName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && createPlan()} />
-                <button className="primary" onClick={createPlan}>Create</button>
+                <button className="primary" onClick={createPlan}>+ Create</button>
             </div>
         </div>
     );

@@ -17,7 +17,7 @@
   background: var(--t-surface);
   border-radius: var(--t-r-xl);
   padding: 20px 22px 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  box-shadow: var(--t-shadow-lg);
 }
 
 button.howto-close {
