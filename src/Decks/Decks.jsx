@@ -638,6 +638,8 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
         {form.front_audio && <AudioPlayer path={form.front_audio} style={{ alignSelf: "flex-start" }} />}
       </div>
 
+      <div className="dk-field-divider" />
+
       {form.imported_back && (
         <div className="dk-field">
           <label>Anki Back <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span></label>
@@ -669,6 +671,8 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
         {form.back_audio && <AudioPlayer path={form.back_audio} style={{ alignSelf: "flex-start" }} />}
       </div>
 
+      <div className="dk-field-divider" />
+
       {form.imported_support && (
         <div className="dk-field">
           <label>Anki Support <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>(read-only)</span></label>
@@ -680,6 +684,8 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
         <label>{form.imported_support ? "Your Support" : "Support"} <span style={{ fontWeight: 400, textTransform: "none", fontSize: 11, color: "var(--t-text-3)" }}>{form.imported_support ? "(optional, shown with the Anki support)" : "(optional, shown after flip)"}</span></label>
         <textarea rows={2} value={form.support} onChange={(e) => set("support", e.target.value)}/>
       </div>
+
+      <div className="dk-field-divider" />
 
       <div className="dk-field-row dk-field-checks">
         <div className="dk-new-card-check">
@@ -888,6 +894,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
+  // Which fields the text search matches. At least one stays on at all times.
+  const [scopeMain, setScopeMain] = useState(true);
+  const [scopeSupport, setScopeSupport] = useState(true);
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("id");
   const [plans, setPlans] = useState([]);
@@ -1010,17 +1019,30 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     } catch (e) { logError("catch", e); setToast("Failed to reset deck.", "error"); }
   };
 
+  // Turning a scope off is blocked when it's the last one selected.
+  const toggleScope = (which) => {
+    if (which === "main") { if (scopeMain && !scopeSupport) return; setScopeMain(v => !v); }
+    else { if (scopeSupport && !scopeMain) return; setScopeSupport(v => !v); }
+  };
+
   let filtered = cards.filter((c) => {
     if (!search.trim()) return true;
     const q = normalizeSearchText(search).toLowerCase();
-    const fields = [
-      normalizeSearchText(c.front),
-      normalizeSearchText(c.back),
-      normalizeSearchText(c.support ?? ""),
-      stripHtml(c.imported_front ?? ""),
-      stripHtml(c.imported_back ?? ""),
-      stripHtml(c.imported_support ?? ""),
-    ];
+    const fields = [];
+    if (scopeMain) {
+      fields.push(
+        normalizeSearchText(c.front),
+        normalizeSearchText(c.back),
+        stripHtml(c.imported_front ?? ""),
+        stripHtml(c.imported_back ?? ""),
+      );
+    }
+    if (scopeSupport) {
+      fields.push(
+        normalizeSearchText(c.support ?? ""),
+        stripHtml(c.imported_support ?? ""),
+      );
+    }
     return fields.some((t) => t.toLowerCase().includes(q));
   });
 
@@ -1085,8 +1107,16 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
       <div className="dk-cards-body">
         <div className="dk-table-pane" ref={tablePaneRef}>
           <div className="dk-table-search">
-            <input type="text" placeholder="Search cards..." value={search} onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Escape") setSearch(""); }} />
+            <div className="dk-search-row">
+              <input type="text" placeholder="Search cards..." value={search} onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Escape") setSearch(""); }} />
+              <div className="dk-search-scope">
+                <button className={`dk-scope-btn${scopeMain ? " active" : ""}`}
+                  onClick={() => toggleScope("main")} title="Search the front and back of cards">Front / Back</button>
+                <button className={`dk-scope-btn${scopeSupport ? " active" : ""}`}
+                  onClick={() => toggleScope("support")} title="Search the support field of cards">Support</button>
+              </div>
+            </div>
             <div className="dk-sort-filter-row">
               <div className="dk-sort-seg">
                 <button className={sort === "id" ? "active" : ""} onClick={() => setSort("id")}>Created Date</button>

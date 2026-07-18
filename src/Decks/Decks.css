@@ -45,6 +45,15 @@
 .dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); }
 .dk-table-search { flex-shrink: 0; padding: 8px 10px; border-bottom: 1px solid var(--t-border-2); display: flex; flex-direction: column; gap: 5px; background: var(--t-surface-4); }
 .dk-table-search > input { width: 100%; box-sizing: border-box; background: var(--t-surface); }
+/* Search input shares its row with the field-scope toggles, so it shrinks to fit */
+.dk-search-row { display: flex; gap: 6px; align-items: center; }
+.dk-search-row > input { flex: 1; min-width: 0; box-sizing: border-box; background: var(--t-surface); }
+.dk-dup-label { font-size: 11px; color: var(--t-text-3); align-self: center; margin-right: 2px; }
+.dk-search-scope { display: flex; gap: 4px; flex-shrink: 0; }
+.dk-scope-btn { font-size: 11px; padding: 3px 10px; border: 1px solid var(--t-btn); border-radius: var(--t-r); background: var(--t-btn); color: var(--t-btn-fg); cursor: pointer; white-space: nowrap; box-shadow: none; user-select: none; }
+.dk-scope-btn:hover { background: var(--t-btn-h); box-shadow: none; }
+.dk-scope-btn.active,
+.dk-scope-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
 
 .dk-sort-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .dk-sort-seg { display: flex; gap: 4px; flex-shrink: 0; }
@@ -72,14 +81,15 @@
 .dk-filter-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
 
 /* Card table uses a native overlay scrollbar (excluded from App.css rules): no track, floating thumb, takes no layout space. */
-.dk-table-head { flex-shrink: 0; background: var(--t-surface-3); }
-.dk-table-scroll { flex: 1; overflow-y: auto; background: var(--t-surface-2); }
+.dk-table-head { flex-shrink: 0; background: var(--t-surface-4); }
+/* Empty gap below a short card list matches the editor pane on the right, so it reads as blank space rather than the form zone (which shares --t-surface-2 with the panel below) */
+.dk-table-scroll { flex: 1; overflow-y: auto; background: #FEF4EC; }
 .dk-card-table { width: 100%; border-collapse: collapse; background: var(--t-bg); table-layout: fixed; }
 .dk-card-table col.dk-col-due { width: 64px; }
 .dk-card-table col.dk-col-paused { width: 64px; }
-.dk-card-table th { background: var(--t-surface-3); text-align: center; padding: 5px 8px; border-bottom: 1px solid var(--t-border); font-size: 11px; color: var(--t-text-3); font-weight: 700; }
+.dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; border-bottom: 1px solid var(--t-border); font-size: 11px; color: var(--t-text-3); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: calc(2.9em + 10px); }
-.dk-card-table tr { cursor: pointer; }
+.dk-card-table tbody tr { cursor: pointer; }
 /* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. */
 .dk-card-table tr:nth-child(even) td { background: var(--t-row-stripe); }
 /* Row height lives on the td so single-line entries center vertically. The clamp just caps at 2 lines. */
@@ -118,10 +128,11 @@
 /* Muted backdrop so bright editable inputs read as real fields and read-only fields read as locked. */
 .dk-editor-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; gap: 12px; background: #FEF4EC; }
 .dk-editor-pane textarea, .dk-editor-pane input[type="text"] { background: var(--t-surface); }
-.dk-editor-none { color: var(--t-text-3); font-style: italic; padding: 16px; font-size: 13px; }
+.dk-editor-none { flex: 1; background: #FEF4EC; color: var(--t-text-3); font-style: italic; padding: 16px; font-size: 13px; }
 .dk-editor-topbar { display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
 
 .dk-field { display: flex; flex-direction: column; gap: 4px; }
+.dk-field-divider { height: 1px; background: var(--t-border-2); margin: 4px 0; flex-shrink: 0; }
 .dk-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); }
 .dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 11px; font-size: 13px; background: var(--t-bg); line-height: 1.6; color: var(--t-text-2); }
 .dk-field-row { display: flex; align-items: center; gap: 4px; }
@@ -131,7 +142,7 @@
 .dk-field-row label { font-size: 13px; color: var(--t-text-2); }
 .dk-file-row { display: flex; gap: 6px; align-items: center; }
 .dk-file-row input[type="text"] { flex: 1; font-size: 12px; background: var(--t-surface-2); }
-.dk-editor-actions { display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid var(--t-border); flex-shrink: 0; align-items: center; flex-wrap: wrap; }
+.dk-editor-actions { display: flex; gap: 8px; padding-top: 12px; flex-shrink: 0; align-items: center; flex-wrap: wrap; }
 .dk-card-log { font-size: 11px; color: var(--t-text-3); padding: 8px 10px; margin-top: 2px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r); }
 .dk-log-new    { color: #6BA6CE;  font-weight: 700; }   /* sky blue, apart from the deck slate */
 .dk-log-review { color: var(--t-green); font-weight: 700; }
