@@ -1,6 +1,6 @@
 /* Plans subcomponents */
 
-.plan-srs-row { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 55%); }
+.plan-srs-row { border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 55%); }
 .plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .plan-srs-name { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
 .plan-srs-name.clickable { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
@@ -20,7 +20,7 @@
 /* One line, same layout as .plan-srs-settings on existing decks */
 .plan-srs-settings-fields { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
-.plan-resource-row { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); }
+.plan-resource-row { border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); }
 .plan-resource-edit-form { display: flex; flex-direction: column; gap: 6px; }
 .plan-resource-edit-actions { display: flex; gap: 6px; }
 .plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
@@ -49,4 +49,4 @@
 .plan-resources-indent { margin-left: 10px; padding-left: 14px; border-left: 2px solid var(--t-clay); }
 
 /* Previously used but undefined */
-.plan-section-title { font-size: 11px; font-weight: 600; color: var(--t-text-2); margin-bottom: 2px; }
+.plan-section-title { font-size: 11px; font-weight: 600; color: var(--t-label); margin-bottom: 2px; }

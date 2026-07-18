@@ -6,18 +6,23 @@
 .dk-deck-name-input { width: 100%; }
 .dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 
-.dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-border-2); background: var(--t-surface-3); flex-shrink: 0; }
-.dk-new-deck input { flex: 1; }
+.dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-blue-bdr); background: var(--t-blue-bg); flex-shrink: 0; }
+.dk-new-deck input { flex: 1; border-color: var(--t-blue-bdr); }
+.dk-new-deck input:focus { border-color: var(--t-accent); }
 
-.dk-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-border-2); background: var(--t-surface-2); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+/* Merge and Anki panels extend the landing header so the two read as one band */
+.landing-hdr:has(+ .dk-merge-panel) { border-bottom: none; }
+.dk-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-blue-bdr); background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 72%); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.dk-merge-panel input:not([type="checkbox"]), .dk-merge-panel select { border-color: var(--t-blue-bdr); }
+.dk-merge-panel input:focus, .dk-merge-panel select:focus { border-color: var(--t-accent); }
 
 /* Anki field mapping. Long decks scroll instead of pushing the panel offscreen (scrollbar is app-wide). */
-.dk-anki-field-scroll { max-height: 38vh; overflow-y: scroll; display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid var(--t-border); }
+.dk-anki-field-scroll { max-height: 38vh; overflow-y: scroll; display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid var(--t-blue-bdr); }
 /* Header sits outside the scroll box, so it must reserve the same gutter width
    (the 10px ::-webkit-scrollbar in App.css) or its columns drift off the checkboxes */
 .dk-anki-head { display: flex; align-items: center; padding-right: 10px; }
-.dk-anki-row { display: flex; align-items: center; border-radius: var(--t-r); padding: 3px 0; }
-.dk-anki-row--alt { background: rgba(26, 18, 8, 0.03); }
+.dk-anki-row { display: flex; align-items: center; padding: 3px 0; }
+.dk-anki-row--alt { background: rgba(26, 18, 8, 0.04); }
 .dk-anki-field-info { flex: 1; min-width: 0; }
 .dk-anki-field-name { font-size: 13px; color: var(--t-text); }
 .dk-anki-field-num { color: var(--t-text-3); font-size: 11px; margin-right: 6px; font-variant-numeric: tabular-nums; }
@@ -37,13 +42,13 @@
 .dk-merge-row select { flex: 1; }
 
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
-.dk-cards-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); flex-shrink: 0; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 72%); }
+.dk-cards-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-blue-bdr); flex-shrink: 0; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 72%); }
 .dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
 .dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
 .dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); }
-.dk-table-search { flex-shrink: 0; padding: 8px 10px; border-bottom: 1px solid var(--t-border-2); display: flex; flex-direction: column; gap: 5px; background: var(--t-surface-4); }
+.dk-table-search { flex-shrink: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; background: var(--t-surface-4); }
 .dk-table-search > input { width: 100%; box-sizing: border-box; background: var(--t-surface); }
 /* Search input shares its row with the field-scope toggles, so it shrinks to fit */
 .dk-search-row { display: flex; gap: 6px; align-items: center; }
@@ -87,7 +92,7 @@
 .dk-card-table { width: 100%; border-collapse: collapse; background: var(--t-bg); table-layout: fixed; }
 .dk-card-table col.dk-col-due { width: 64px; }
 .dk-card-table col.dk-col-paused { width: 64px; }
-.dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; border-bottom: 1px solid var(--t-border); font-size: 11px; color: var(--t-text-3); font-weight: 700; }
+.dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; font-size: 11px; color: var(--t-label); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: calc(2.9em + 10px); }
 .dk-card-table tbody tr { cursor: pointer; }
 /* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. */
@@ -121,7 +126,7 @@
 .dk-table-empty { padding: 16px; color: var(--t-text-3); font-style: italic; font-size: 13px; }
 
 /* Creator toggle row, also the drag handle for resizing the panel below it */
-.dk-creator-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--t-border); padding: 8px 14px; background: var(--t-surface-4); color: var(--t-text); font-weight: 500; cursor: ns-resize; user-select: none; }
+.dk-creator-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--t-border); padding: 8px 14px; background: var(--t-surface-4); color: var(--t-label); font-weight: 500; cursor: ns-resize; user-select: none; }
 .dk-creator-toggle-row:hover { filter: brightness(0.97); }
 .dk-creator-toggle-row.open { border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border-2); }
 
@@ -133,7 +138,7 @@
 
 .dk-field { display: flex; flex-direction: column; gap: 4px; }
 .dk-field-divider { height: 1px; background: var(--t-border-2); margin: 4px 0; flex-shrink: 0; }
-.dk-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); }
+.dk-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); }
 .dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 11px; font-size: 13px; background: var(--t-bg); line-height: 1.6; color: var(--t-text-2); }
 .dk-field-row { display: flex; align-items: center; gap: 4px; }
 /* Searchable / Pause: each group snug internally (via .dk-new-card-check), with
@@ -168,11 +173,10 @@
 .dk-new-card-dark .dk-file-row input[type="text"] { background: var(--t-surface); color: var(--t-text); border-color: var(--t-border-2); }
 /* File pickers stay muted like the editor pane's, outranks the input rule above */
 .dk-new-card-dark input.input-readonly { background: var(--t-surface-2); }
-.dk-new-card-dark .dk-field label { color: var(--t-text-3); }
 
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
 .dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
-.dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
+.dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-label); }
 
 .dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
 /* Square (radius 0) so hover highlights sit flush inside the menu container,

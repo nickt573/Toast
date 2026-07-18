@@ -1,6 +1,6 @@
 /* Stats view */
 .st-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.st-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: linear-gradient(280deg, #F4BF95 0%, var(--t-surface) 72%); flex-shrink: 0; } /* deeper orange than --t-stat-bg so it doesn't blend into the peach page */
+.st-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-stat-bdr); background: linear-gradient(280deg, #F4BF95 0%, var(--t-surface) 72%); flex-shrink: 0; } /* deeper orange than --t-stat-bg so it doesn't blend into the peach page */
 .st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
 .st-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
@@ -17,7 +17,7 @@
   box-shadow: var(--t-shadow-sm);
 }
 .st-metric-value { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; color: var(--t-text); }
-.st-metric-label { font-size: 11px; color: var(--t-text-3); font-weight: 600; }
+.st-metric-label { font-size: 11px; color: var(--t-label); font-weight: 600; }
 
 .st-chart-panel { background: var(--t-surface); border: 1px solid var(--t-stat-bdr); border-radius: var(--t-r-lg); padding: 14px; margin-bottom: 16px; box-shadow: var(--t-shadow-sm); }
 .st-chart-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -65,7 +65,7 @@
 
 .st-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 /* No bottom border on the header row, the card frames the table */
-.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-text-2); background: #EDCBAC; border-bottom: none; font-weight: 700; }
+.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-label); background: #EDCBAC; border-bottom: none; font-weight: 700; }
 .st-table th:first-child { text-align: left; }
 .st-table td { padding: 6px 10px; border-bottom: 1px solid var(--t-border); vertical-align: middle; text-align: center; color: var(--t-text-2); overflow: hidden; }
 .st-table td:first-child { text-align: left; }
@@ -114,7 +114,7 @@
 .st-todo-list { display: flex; flex-direction: column; gap: 5px; }
 /* Day sections: labeled rule replaces per-row dates */
 .st-day-group { display: flex; flex-direction: column; gap: 5px; }
-.st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 11px; font-weight: 700; color: var(--t-text-3); user-select: none; }
+.st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 11px; font-weight: 700; color: var(--t-label); user-select: none; }
 .st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 2px; background: var(--t-border-2); }
 .st-day-group:first-child .st-day-divider { margin-top: 0; }
 .st-todo-row { background: var(--t-surface); border: 1px solid var(--t-stat-bdr); border-radius: var(--t-r-lg); overflow: hidden; box-shadow: var(--t-shadow-sm); }
@@ -160,7 +160,7 @@
 .st-todo-section { margin-bottom: 10px; }
 /* Resource names stay compact inside the expanded todo, the 15px size is for full-width lists */
 .st-todo-expanded .st-resource-card-name { font-size: 13px; }
-.st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-text-3); margin-bottom: 5px; }
+.st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
 
 .st-btn-sm { padding: 3px 8px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-btn-fg); box-shadow: none; }
 .st-btn-sm:hover { background: var(--t-btn-h); box-shadow: none; }

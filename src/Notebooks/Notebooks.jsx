@@ -663,7 +663,7 @@ function CardCreatorPanel({ setToast }) {
             style={open && creatorHeight != null ? { height: creatorHeight } : undefined}
         >
             <div className="nb-card-toggle" onMouseDown={startDrag} onClick={toggle}>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>Create a card</span>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>Create a card</span>
                 <span style={{ fontSize: 10, color: "var(--t-text-3)" }}>{open ? "▾" : "▸"}</span>
             </div>
             {/* Kept mounted while closed so in-progress input survives toggling. */}

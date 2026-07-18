@@ -155,6 +155,7 @@ function DeckList({ setToast, onOpenDeck }) {
     if (!path) return;
     try {
       const { fields, total_notes } = await loggedInvoke("peek_anki_fields", { path });
+      setMerging(false);
       setAnkiPending({ path, fields, noteCount: total_notes });
       setAnkiFrontFields(fields.length > 0 ? [fields[0].name] : []);
       setAnkiBackFields(fields.length > 1 ? [fields[1].name] : []);
@@ -239,6 +240,7 @@ function DeckList({ setToast, onOpenDeck }) {
   };
 
   const startMerge = () => {
+    setAnkiPending(null);
     setMerging(true);
     setMergeDeckA(decks.length > 0 ? decks[0].id : null);
     setMergeDeckB(decks.length > 1 ? decks[1].id : null);
@@ -310,7 +312,7 @@ function DeckList({ setToast, onOpenDeck }) {
         <div className="dk-merge-panel">
           <div style={{ fontSize: 13, fontWeight: 500, color: "var(--t-text)" }}>Map fields</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <div className="dk-anki-head" style={{ fontSize: 11, color: "var(--t-text-3)", paddingBottom: 4, borderBottom: "1px solid var(--t-border)" }}>
+            <div className="dk-anki-head" style={{ fontSize: 11, color: "var(--t-label)", paddingBottom: 4, borderBottom: "1px solid var(--t-blue-bdr)" }}>
               <span style={{ flex: 1 }}>Field</span>
               <span style={{ width: 50, textAlign: "center" }}>Front</span>
               <span style={{ width: 50, textAlign: "center" }}>Back</span>
@@ -1225,7 +1227,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
           )}
 
           <div className={`dk-creator-toggle-row${creatorOpen ? " open" : ""}`} ref={toggleRowRef} onMouseDown={startCreatorDrag} onClick={toggleCreator}>
-            <span style={{ fontSize: 13, fontWeight: 500 }}>Create a card</span>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>Create a card</span>
             <span style={{ fontSize: 10, color: "var(--t-text-3)" }}>{creatorOpen ? "▾" : "▸"}</span>
           </div>
           {creatorOpen && (

@@ -7,7 +7,7 @@
   gap: 8px;
   height: 44px;
   padding: 0 var(--t-page-pad);
-  border-bottom: 1px solid var(--t-border);
+  border-bottom: 1px solid var(--t-silver-bdr);
   background: linear-gradient(280deg, #DCDDDE 0%, var(--t-surface) 72%);
   flex-shrink: 0;
 }
