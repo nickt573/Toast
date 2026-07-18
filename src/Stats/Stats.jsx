@@ -1051,7 +1051,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       </div>
                     );
                   })()}
-                  <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+                  <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
                     Resources, decks, and notebooks that have been deleted can be removed here, but they cannot be added back.
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
