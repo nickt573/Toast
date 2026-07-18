@@ -110,6 +110,23 @@ function NotebookList({ setToast, onOpenNotebook }) {
         setEditingId(null);
     };
 
+    const duplicateNotebook = async (nb) => {
+        const existing = new Set(notebooks.map((n) => n.name));
+        let name = `${nb.name} (copy)`;
+        let n = 2;
+        while (existing.has(name)) { name = `${nb.name} (copy ${n})`; n++; }
+        try {
+            const copy = await loggedInvoke("duplicate_notebook", { notebookId: nb.id, newName: name });
+            const [updated, counts] = await Promise.all([
+                loggedInvoke("get_notebooks"),
+                loggedInvoke("get_notebook_page_counts"),
+            ]);
+            setNotebooks(updated);
+            setPageCounts(Object.fromEntries(counts));
+            setToast(`${copy.name} created.`);
+        } catch (e) { logError("catch", e); setToast("Failed to duplicate notebook.", "error"); }
+    };
+
     const deleteNotebook = async (id) => {
         const target = notebooks.find((n) => n.id === id);
         try {
@@ -209,6 +226,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
                             ) : (
                                 <>
                                     <button onClick={(e) => startEdit(nb, e)}>Edit</button>
+                                    <button onClick={(e) => { e.stopPropagation(); duplicateNotebook(nb); }}>Duplicate</button>
                                     <ConfirmDelete onConfirm={() => deleteNotebook(nb.id)} small />
                                 </>
                             )}

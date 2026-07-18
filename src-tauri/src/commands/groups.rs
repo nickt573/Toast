@@ -32,6 +32,18 @@ pub fn merge_decks(
 }
 
 #[tauri::command]
+pub fn duplicate_deck(
+    deck_id: i64,
+    new_name: String,
+    reset: bool,
+    state: tauri::State<AppState>,
+) -> Result<Group, String> {
+    let mut conn = state.conn.lock().unwrap();
+    create::duplicate_deck(deck_id, new_name, reset, &mut conn, &state.app_dir)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn get_decks(state: tauri::State<AppState>) -> Result<Vec<Group>, String> {
     let mut conn = state.conn.lock().unwrap();
     read::get_decks(&mut conn).map_err(|e| e.to_string())
@@ -78,6 +90,17 @@ pub fn merge_notebooks(
 ) -> Result<Group, String> {
     let mut conn = state.conn.lock().unwrap();
     create::merge_notebooks(notebook_a_id, notebook_b_id, new_name, &mut conn)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn duplicate_notebook(
+    notebook_id: i64,
+    new_name: String,
+    state: tauri::State<AppState>,
+) -> Result<Group, String> {
+    let mut conn = state.conn.lock().unwrap();
+    create::duplicate_notebook(notebook_id, new_name, &mut conn, &state.app_dir)
         .map_err(|e| e.to_string())
 }
 

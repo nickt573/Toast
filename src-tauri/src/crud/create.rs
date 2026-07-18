@@ -1,9 +1,13 @@
+use crate::app_utils::duplicate_media::{
+    copy_html_media, copy_media_opt, copy_page_content_media, remove_copied_files,
+};
 use crate::app_utils::{manage_img::*, save_audio::*, save_img::*};
 use crate::crud::{
     models::*,
     scheduling::{fill_group, get_date, on_item_added},
 };
 use rusqlite::{Connection, Result};
+use std::collections::HashMap;
 use std::path::Path;
 
 pub fn create_plan(name: &str, conn: &mut Connection) -> Result<Plan> {
@@ -157,6 +161,180 @@ pub fn merge_decks(
     }
 
     tx.commit()?;
+
+    Ok(Group {
+        id: new_deck_id,
+        plan_id: None,
+        name: new_name,
+        group_type: GroupType::Deck,
+    })
+}
+
+// One source card's copyable columns for duplicate_deck. SRS state is carried
+// so an exact clone can keep it; a fresh copy overwrites it at insert time.
+struct DupCardRow {
+    front: String,
+    back: String,
+    is_searchable: bool,
+    support: Option<String>,
+    imported_front: Option<String>,
+    imported_back: Option<String>,
+    imported_support: Option<String>,
+    front_image: Option<String>,
+    back_image: Option<String>,
+    front_audio: Option<String>,
+    back_audio: Option<String>,
+    is_uploaded: bool,
+    tier: i32,
+    ease: f32,
+    sequence: i32,
+    is_due: bool,
+    is_overdue: Option<bool>,
+    is_paused: bool,
+    position: Option<i64>,
+}
+
+// Copies a deck and all its cards into a new, unassigned deck. Every referenced
+// media file is copied under a fresh name so the two decks never share files.
+// `reset` wipes SRS state on the copy (fresh start); otherwise it is an exact
+// clone. The new deck is unassigned from any plan, since schedulers are per
+// plan-deck.
+pub fn duplicate_deck(
+    deck_id: i64,
+    new_name: String,
+    reset: bool,
+    conn: &mut Connection,
+    app_dir: &Path,
+) -> Result<Group> {
+    let tx = conn.transaction()?;
+
+    let group_type: String = tx.query_row(
+        r#"SELECT group_type FROM "group" WHERE id = ?1"#,
+        [deck_id],
+        |r| r.get(0),
+    )?;
+    if group_type != "deck" {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "That group is not a deck.".to_string(),
+        ));
+    }
+
+    tx.execute(
+        r#"INSERT INTO "group" (name, group_type) VALUES (?1, 'deck')"#,
+        rusqlite::params![new_name],
+    )?;
+    let new_deck_id = tx.last_insert_rowid();
+
+    let cards: Vec<DupCardRow> = {
+        let mut stmt = tx.prepare(
+            r#"
+            SELECT front, back, is_searchable, support,
+                   imported_front, imported_back, imported_support,
+                   front_image, back_image, front_audio, back_audio, is_uploaded,
+                   tier, ease, sequence, is_due, is_overdue, is_paused, position
+            FROM card WHERE group_id = ?1
+            ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, id ASC
+            "#,
+        )?;
+        let rows = stmt
+            .query_map([deck_id], |r| {
+            Ok(DupCardRow {
+                front: r.get(0)?,
+                back: r.get(1)?,
+                is_searchable: r.get(2)?,
+                support: r.get(3)?,
+                imported_front: r.get(4)?,
+                imported_back: r.get(5)?,
+                imported_support: r.get(6)?,
+                front_image: r.get(7)?,
+                back_image: r.get(8)?,
+                front_audio: r.get(9)?,
+                back_audio: r.get(10)?,
+                is_uploaded: r.get(11)?,
+                tier: r.get(12)?,
+                ease: r.get(13)?,
+                sequence: r.get(14)?,
+                is_due: r.get(15)?,
+                is_overdue: r.get(16)?,
+                is_paused: r.get(17)?,
+                position: r.get(18)?,
+            })
+        })?
+            .collect::<Result<Vec<_>>>()?;
+        rows
+    };
+
+    // If anything fails after files start landing, the copies made so far are
+    // deleted and the transaction rolls back, so no half-made deck survives.
+    let mut cache: HashMap<String, String> = HashMap::new();
+    let inserted = (|| -> Result<()> {
+        let mut insert = tx.prepare(
+            r#"
+            INSERT INTO card (
+                group_id, front, back, is_searchable, support,
+                imported_front, imported_back, imported_support,
+                front_image, back_image, front_audio, back_audio, is_uploaded,
+                tier, ease, sequence, is_due, is_overdue, is_paused, position
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
+            "#,
+        )?;
+        for c in &cards {
+            let front_image = copy_media_opt(&c.front_image, app_dir, &mut cache)?;
+            let back_image = copy_media_opt(&c.back_image, app_dir, &mut cache)?;
+            let front_audio = copy_media_opt(&c.front_audio, app_dir, &mut cache)?;
+            let back_audio = copy_media_opt(&c.back_audio, app_dir, &mut cache)?;
+            let imported_front = copy_html_media(&c.imported_front, app_dir, &mut cache)?;
+            let imported_back = copy_html_media(&c.imported_back, app_dir, &mut cache)?;
+            let imported_support = copy_html_media(&c.imported_support, app_dir, &mut cache)?;
+
+            let (tier, ease, sequence, is_due, is_overdue, is_paused) = if reset {
+                (0i32, 0.0f32, 0i32, false, None::<bool>, false)
+            } else {
+                (
+                    c.tier,
+                    c.ease,
+                    c.sequence,
+                    c.is_due,
+                    c.is_overdue,
+                    c.is_paused,
+                )
+            };
+
+            insert.execute(rusqlite::params![
+                new_deck_id,
+                c.front,
+                c.back,
+                c.is_searchable,
+                c.support,
+                imported_front,
+                imported_back,
+                imported_support,
+                front_image,
+                back_image,
+                front_audio,
+                back_audio,
+                c.is_uploaded,
+                tier,
+                ease,
+                sequence,
+                is_due,
+                is_overdue,
+                is_paused,
+                c.position,
+            ])?;
+        }
+        Ok(())
+    })();
+    if let Err(e) = inserted {
+        remove_copied_files(&cache, app_dir);
+        return Err(e);
+    }
+
+    if let Err(e) = tx.commit() {
+        remove_copied_files(&cache, app_dir);
+        return Err(e);
+    }
 
     Ok(Group {
         id: new_deck_id,
@@ -336,6 +514,92 @@ pub fn merge_notebooks(
 
     Ok(Group {
         id: new_notebook_id,
+        plan_id: None,
+        name: new_name,
+        group_type: GroupType::Notebook,
+    })
+}
+
+// Copies a notebook and all its pages into a new, unassigned notebook. Page
+// images and audio are copied under fresh names so the two notebooks never
+// share files. Created dates are preserved so page ordering matches the source.
+pub fn duplicate_notebook(
+    notebook_id: i64,
+    new_name: String,
+    conn: &mut Connection,
+    app_dir: &Path,
+) -> Result<Group> {
+    let tx = conn.transaction()?;
+
+    let group_type: String = tx.query_row(
+        r#"SELECT group_type FROM "group" WHERE id = ?1"#,
+        [notebook_id],
+        |r| r.get(0),
+    )?;
+    if group_type != "notebook" {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "That group is not a notebook.".to_string(),
+        ));
+    }
+
+    tx.execute(
+        r#"INSERT INTO "group" (name, group_type) VALUES (?1, 'notebook')"#,
+        rusqlite::params![new_name],
+    )?;
+    let new_id = tx.last_insert_rowid();
+
+    let pages: Vec<(String, Option<String>, String, Option<String>, String)> = {
+        let mut stmt = tx.prepare(
+            r#"
+            SELECT title, description, content, audio_file, created_date
+            FROM page WHERE group_id = ?1
+            ORDER BY created_date ASC, id ASC
+            "#,
+        )?;
+        let rows = stmt
+            .query_map([notebook_id], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+            })?
+            .collect::<Result<Vec<_>>>()?;
+        rows
+    };
+
+    // Same unwind rule as duplicate_deck: a failed copy deletes the new files
+    // and rolls back, never a notebook that shares media with the source.
+    let mut cache: HashMap<String, String> = HashMap::new();
+    let inserted = (|| -> Result<()> {
+        let mut insert = tx.prepare(
+            r#"
+            INSERT INTO page (group_id, title, description, content, audio_file, created_date)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            "#,
+        )?;
+        for (title, description, content, audio_file, created_date) in &pages {
+            let new_content = copy_page_content_media(content, app_dir, &mut cache)?;
+            let new_audio = copy_media_opt(audio_file, app_dir, &mut cache)?;
+            insert.execute(rusqlite::params![
+                new_id,
+                title,
+                description,
+                new_content,
+                new_audio,
+                created_date,
+            ])?;
+        }
+        Ok(())
+    })();
+    if let Err(e) = inserted {
+        remove_copied_files(&cache, app_dir);
+        return Err(e);
+    }
+
+    if let Err(e) = tx.commit() {
+        remove_copied_files(&cache, app_dir);
+        return Err(e);
+    }
+
+    Ok(Group {
+        id: new_id,
         plan_id: None,
         name: new_name,
         group_type: GroupType::Notebook,

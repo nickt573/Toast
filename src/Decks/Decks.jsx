@@ -119,6 +119,7 @@ function DeckList({ setToast, onOpenDeck }) {
   const [mergeDeckB, setMergeDeckB] = useState(null);
   const [mergeName, setMergeName] = useState("");
   const [mergeReset, setMergeReset] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   const loadSrsSummaries = () =>
     loggedInvoke("get_deck_srs_summaries")
@@ -211,6 +212,30 @@ function DeckList({ setToast, onOpenDeck }) {
       setDecks((d) => d.filter((dk) => dk.id !== id));
       setToast(`${target?.name ?? "Deck"} successfully deleted.`);
     } catch (e) { logError("catch", e); setToast(`Failed to delete ${target?.name ?? "Deck"}.`, "error"); }
+  };
+
+  // "<name> (copy)", bumping a counter until the name is free
+  const uniqueCopyName = (base) => {
+    const existing = new Set(decks.map((d) => d.name));
+    let name = `${base} (copy)`;
+    let n = 2;
+    while (existing.has(name)) { name = `${base} (copy ${n})`; n++; }
+    return name;
+  };
+
+  const duplicateDeck = async (deck, reset) => {
+    setDuplicatingId(null);
+    try {
+      const copy = await loggedInvoke("duplicate_deck", { deckId: deck.id, newName: uniqueCopyName(deck.name), reset });
+      const [updatedDecks, counts] = await Promise.all([
+        loggedInvoke("get_decks"),
+        loggedInvoke("get_deck_card_counts"),
+        loadSrsSummaries(),
+      ]);
+      setDecks(updatedDecks);
+      setCardCounts(Object.fromEntries(counts));
+      setToast(`${copy.name} created.`);
+    } catch (e) { logError("catch", e); setToast("Failed to duplicate deck.", "error"); }
   };
 
   const startMerge = () => {
@@ -382,9 +407,16 @@ function DeckList({ setToast, onOpenDeck }) {
                   <button className="primary" onMouseDown={(e) => e.preventDefault()} onClick={() => confirmEdit(deck.id)}>Save</button>
                   <button onMouseDown={(e) => e.preventDefault()} onClick={() => setEditingId(null)}>Cancel</button>
                 </>
+              ) : duplicatingId === deck.id ? (
+                <>
+                  <button onClick={() => duplicateDeck(deck, true)} title="Copy the cards but reset all SRS progress">Fresh</button>
+                  <button onClick={() => duplicateDeck(deck, false)} title="Copy the cards and keep their SRS progress">Clone</button>
+                  <button className="quiet" onClick={() => setDuplicatingId(null)}>Cancel</button>
+                </>
               ) : (
                 <>
                   <button onClick={(e) => startEdit(deck, e)}>Edit</button>
+                  <button onClick={(e) => { e.stopPropagation(); setDuplicatingId(deck.id); }}>Duplicate</button>
                   <ConfirmDelete onConfirm={() => deleteDeck(deck.id)} small />
                 </>
               )}

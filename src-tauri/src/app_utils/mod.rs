@@ -1,4 +1,5 @@
 pub mod delete_img;
+pub mod duplicate_media;
 pub mod import_anki;
 pub mod manage_audio;
 pub mod manage_img;
