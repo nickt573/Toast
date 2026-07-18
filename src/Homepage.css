@@ -432,7 +432,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-grade-btn-interval { font-size: 10px; font-weight: 400; opacity: 0.75; }
 
 .hp-grade-nope   { background: var(--t-red);   color: var(--t-accent-fg); }
-.hp-grade-rough  { background: var(--t-amber); color: var(--t-text); }
+.hp-grade-rough  { background: var(--t-amber); color: var(--t-accent-fg); }
 .hp-grade-fine   { background: var(--t-blue);  color: var(--t-accent-fg); }
 .hp-grade-easy   { background: var(--t-green); color: var(--t-accent-fg); }
 
@@ -442,7 +442,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* Hover darkens the ink (must out-specify base button:hover so it isn't erased) */
 .hp-grade-bar .hp-grade-nope:hover,
 .hp-grade-bar .hp-grade-omt:hover    { background: var(--t-red);   color: var(--t-accent-fg); filter: brightness(0.92); }
-.hp-grade-bar .hp-grade-rough:hover  { background: var(--t-amber); color: var(--t-text);      filter: brightness(0.92); }
+.hp-grade-bar .hp-grade-rough:hover  { background: var(--t-amber); color: var(--t-accent-fg); filter: brightness(0.92); }
 .hp-grade-bar .hp-grade-fine:hover   { background: var(--t-blue);  color: var(--t-accent-fg); filter: brightness(0.92); }
 .hp-grade-bar .hp-grade-easy:hover,
 .hp-grade-bar .hp-grade-gotit:hover  { background: var(--t-green); color: var(--t-accent-fg); filter: brightness(0.92); }
