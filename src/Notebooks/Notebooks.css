@@ -17,7 +17,7 @@
 .nb-merge-row select { flex: 1; }
 
 .nb-pages-root { display: flex; flex-direction: column; height: 100%; }
-.nb-pages-header { display: flex; align-items: center; gap: 8px; padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-plum-bdr); background: linear-gradient(280deg, var(--t-plum-bg) 0%, var(--t-surface) 72%); flex-shrink: 0; }
+.nb-pages-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-plum-bdr); background: linear-gradient(280deg, var(--t-plum-bg) 0%, var(--t-surface) 72%); flex-shrink: 0; }
 .nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
 
 /* Search bar extends the page header so the two read as one band */
