@@ -9,6 +9,10 @@ import "./Plans.css";
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
 
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const activeOnDay = (todo, day) => (todo.frequency & (1 << day)) !== 0;
+
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
@@ -240,10 +244,16 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
 
 // Resources Section
 
-function ResourcesSection({ planId, setToast, onChanged }) {
+function ResourcesSection({ planId, plans, setToast, onChanged }) {
     const [resources, setResources] = useState([]);
     const [adding, setAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    // Resources on every other plan, offered as autofill templates in the add
+    // form so a resource can be copied into this plan from wherever it lives
+    const [otherResources, setOtherResources] = useState([]);
+    const [copyFrom, setCopyFrom] = useState("");
+
+    const otherPlans = (plans ?? []).filter((p) => p.id !== planId);
     const [newName, setNewName] = useState("");
     const [newType, setNewType] = useState("");
     const [newUrl, setNewUrl] = useState("");
@@ -254,6 +264,16 @@ function ResourcesSection({ planId, setToast, onChanged }) {
     const [editNotes, setEditNotes] = useState("");
 
     useEffect(() => { loadResources(); }, [planId]);
+
+    useEffect(() => {
+        if (!adding || otherPlans.length === 0) return;
+        (async () => {
+            try {
+                const lists = await Promise.all(otherPlans.map((p) => loggedInvoke("get_resources", { planId: p.id })));
+                setOtherResources(lists.flat());
+            } catch (e) { logError("catch", e); }
+        })();
+    }, [adding, planId]);
 
     async function loadResources() {
         try {
@@ -274,8 +294,7 @@ function ResourcesSection({ planId, setToast, onChanged }) {
                     notes: newNotes.trim() || null,
                 }
             });
-            setNewName(""); setNewType(""); setNewUrl(""); setNewNotes("");
-            setAdding(false);
+            closeAdd();
             setToast("Resource created.");
             await loadResources();
             onChanged?.();
@@ -317,6 +336,25 @@ function ResourcesSection({ planId, setToast, onChanged }) {
             await loadResources();
             onChanged?.();
         } catch (e) { logError("catch", e); setToast("Failed to delete resource.", "error"); }
+    }
+
+    function pickCopyFrom(value) {
+        setCopyFrom(value);
+        const src = otherResources.find((r) => r.id === Number(value));
+        if (src) {
+            setNewName(src.name);
+            setNewType(src.resource_type ?? "");
+            setNewUrl(src.url ?? "");
+            setNewNotes(src.notes ?? "");
+        } else {
+            setNewName(""); setNewType(""); setNewUrl(""); setNewNotes("");
+        }
+    }
+
+    function closeAdd() {
+        setAdding(false);
+        setCopyFrom("");
+        setNewName(""); setNewType(""); setNewUrl(""); setNewNotes("");
     }
 
     return (
@@ -368,17 +406,33 @@ function ResourcesSection({ planId, setToast, onChanged }) {
             ) : (
                 <div className="plan-resource-add">
                     <div className="plan-section-title">New Resource</div>
+                    {otherResources.length > 0 && (
+                        <div className="plan-resource-copyfrom">
+                            <span>Copy from</span>
+                            <select value={copyFrom} onChange={(e) => pickCopyFrom(e.target.value)}>
+                                <option value="">None (new)</option>
+                                {otherPlans.map((p) => {
+                                    const rs = otherResources.filter((r) => r.plan_id === p.id);
+                                    return rs.length > 0 && (
+                                        <optgroup key={p.id} label={p.name}>
+                                            {rs.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                        </optgroup>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                    )}
                     <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name (e.g. Duolingo, Genki I)" autoFocus
-                        onKeyDown={(e) => { if (e.key === "Enter") createResource(); if (e.key === "Escape") { setAdding(false); setNewName(""); setNewType(""); setNewUrl(""); setNewNotes(""); } }} />
+                        onKeyDown={(e) => { if (e.key === "Enter") createResource(); if (e.key === "Escape") closeAdd(); }} />
                     <input value={newType} onChange={(e) => setNewType(e.target.value)} placeholder="Type (e.g. book, website, video)"
-                        onKeyDown={(e) => { if (e.key === "Enter") createResource(); if (e.key === "Escape") setAdding(false); }} />
+                        onKeyDown={(e) => { if (e.key === "Enter") createResource(); if (e.key === "Escape") closeAdd(); }} />
                     <input value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="URL (optional)"
-                        onKeyDown={(e) => { if (e.key === "Enter") createResource(); if (e.key === "Escape") setAdding(false); }} />
+                        onKeyDown={(e) => { if (e.key === "Enter") createResource(); if (e.key === "Escape") closeAdd(); }} />
                     <textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="Notes (optional)" rows={2}
                         style={{ fontFamily: "inherit", resize: "none" }} />
                     <div className="plan-form-actions">
                         <button className="primary" onClick={createResource}>+ Add</button>
-                        <button onClick={() => { setAdding(false); setNewName(""); setNewType(""); setNewUrl(""); setNewNotes(""); }}>Cancel</button>
+                        <button onClick={closeAdd}>Cancel</button>
                     </div>
                 </div>
             )}
@@ -539,6 +593,10 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     const [editingName, setEditingName] = useState("");
     const [collapsed, setCollapsed] = useState({});
     const [summaries, setSummaries] = useState({});
+    // null = full week; 0..6 previews only that day's active todos
+    const [weekDay, setWeekDay] = useState(null);
+    // "only" hides todos off that day; "all" keeps them but dims them
+    const [dayMode, setDayMode] = useState("only");
 
     const toggleSection = (key) => setCollapsed(c => ({ ...c, [key]: !c[key] }));
 
@@ -572,6 +630,8 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
 
     async function loadPlanData(plan) {
         setEditingPlan(plan);
+        setWeekDay(null);
+        setDayMode("only");
         try {
             const [t, r] = await Promise.all([
                 loggedInvoke("get_todos", { planId: plan.id }),
@@ -632,6 +692,9 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
           })
         : onNavigateToGroup;
 
+    // A day preview hides todos disabled that day, or keeps them dimmed in "all" mode.
+    const displayTodos = weekDay === null || dayMode === "all" ? todos : todos.filter((t) => activeOnDay(t, weekDay));
+
     if (editingPlan) {
         return (
             <div className="plans-root">
@@ -642,15 +705,35 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                 <div className="plans-scroll">
                     <div className="plan-builder-cols">
                         <div className="plan-col-main">
-                            <div className="plan-col-label plan-col-label--todos plan-col-label--toggle" onClick={() => toggleSection("todos")}>
+                            <div className="plan-col-label plan-col-label--todos plan-col-label--toggle" onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("todos")}>
                                 Todos <span className="plan-col-label-caret">{collapsed.todos ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.todos && <>
                                 {todos.length === 0 && <div className="empty-bubble">No todos yet.</div>}
-                                {todos.map(todo => (
+                                {todos.length > 0 && (
+                                    <div className="todo-filters">
+                                        <div className="todo-filter-seg">
+                                            <button className={weekDay === null ? "active" : ""} onClick={() => setWeekDay(null)}>All</button>
+                                            {DAY_LABELS.map((d, i) => (
+                                                <button key={d} className={weekDay === i ? "active" : ""} onClick={() => setWeekDay(i)}>{d}</button>
+                                            ))}
+                                        </div>
+                                        {weekDay !== null && (
+                                            <div className="todo-filter-seg">
+                                                <button className={dayMode === "only" ? "active" : ""} onClick={() => setDayMode("only")}>Active only</button>
+                                                <button className={dayMode === "all" ? "active" : ""} onClick={() => setDayMode("all")}>Show all</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {todos.length > 0 && displayTodos.length === 0 && (
+                                    <div className="empty-bubble">No todos on {DAY_NAMES[weekDay]}.</div>
+                                )}
+                                {displayTodos.map(todo => (
                                     <Todos
                                         key={todo.id}
                                         todo={todo}
+                                        dimmed={weekDay !== null && dayMode === "all" && !activeOnDay(todo, weekDay)}
                                         setToast={setToast}
                                         refresh={() => getTodos(editingPlan.id)}
                                         onNavigateToGroup={navigateFromPlan}
@@ -667,18 +750,18 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                     onCreated={() => getTodos(editingPlan.id)}
                                 />
                             </>}
-                            <div className="plan-col-label plan-col-label--resources plan-col-label--toggle" style={{ marginTop: 24 }} onClick={() => toggleSection("resources")}>
+                            <div className="plan-col-label plan-col-label--resources plan-col-label--toggle" style={{ marginTop: 24 }} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("resources")}>
                                 Resources <span className="plan-col-label-caret">{collapsed.resources ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.resources && (
                                 <div className="plan-resources-indent">
-                                    <ResourcesSection planId={editingPlan.id} setToast={setToast} onChanged={refreshResources} />
+                                    <ResourcesSection planId={editingPlan.id} plans={plans} setToast={setToast} onChanged={refreshResources} />
                                 </div>
                             )}
                         </div>
 
                         <div className="plan-col-side">
-                            <div className="plan-col-label plan-col-label--srs plan-col-label--toggle" onClick={() => toggleSection("srs")}>
+                            <div className="plan-col-label plan-col-label--srs plan-col-label--toggle" onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("srs")}>
                                 Decks <span className="plan-col-label-caret">{collapsed.srs ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.srs && <SrsSection planId={editingPlan.id} setToast={setToast} onNavigateToGroup={navigateFromPlan} />}

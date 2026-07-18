@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { computeFrequency, maskToArray, computeCategory, maskToCategories, FrequencyPicker, CategoryPicker, CategoryPills } from "./PlanUtils";
 import { ConfirmDelete, GroupTypeBadge } from "../UIUtils";
 
-export default function Todos({ todo, setToast, refresh, onNavigateToGroup, planResources, allGroups, planName }) {
+export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGroup, planResources, allGroups, planName }) {
     const [editing, setEditing] = useState(false);
     const [text, setText] = useState(todo.text);
     const [orderNum, setOrderNum] = useState(todo.position ?? "");
@@ -80,7 +80,7 @@ export default function Todos({ todo, setToast, refresh, onNavigateToGroup, plan
 
     if (!editing) {
         return (
-            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r)", padding: "12px", marginBottom: "10px", opacity: todo.is_disabled && !todo.is_skipped ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%)" }}>
+            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r)", padding: "12px", marginBottom: "10px", opacity: dimmed ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 17, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
