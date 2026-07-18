@@ -181,7 +181,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
                     <input type="text" placeholder="New notebook name..." value={mergeName}
                         onChange={(e) => setMergeName(e.target.value)} />
                     <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-                        The two source notebooks will be deleted after their pages move into the new notebook. Pages are ordered by date created. If either notebook is linked to a plan, that link will be removed.
+                        The two source notebooks will be deleted after their pages move into the new notebook. Pages are ordered by date created. If either notebook is linked to a todo, that link will be removed.
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                         <button className="primary" onClick={confirmMerge}>Merge</button>

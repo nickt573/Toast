@@ -297,7 +297,7 @@ function DeckList({ setToast, onOpenDeck }) {
             Reset progress on merged cards
           </label>
           <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-            The two source decks will be deleted after their cards move into the new deck. Stats history is preserved.
+          The two source decks will be deleted after their cards move into the new deck. Cards are ordered in alternating order. If either deck is linked to a plan, that link will be removed.
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="primary" onClick={confirmMerge}>Merge</button>
