@@ -1111,7 +1111,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
             <div className="hp-home">
                 <div className="hp-greeting-row">
                     <div>
-                        <div className="hp-greeting">{firstLaunch ? "Welcome" : "Welcome back"}</div>
+                        <div className="hp-greeting">{firstLaunch ? "Welcome!" : "Welcome back"}</div>
                         <div className="hp-date">{displayDate}</div>
                     </div>
                     {onRefreshDay && (
