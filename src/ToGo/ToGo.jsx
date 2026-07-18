@@ -43,8 +43,7 @@ function timeAgo(iso) {
   if (secs < 60) return "just now";
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-  const days = Math.floor(secs / 86400);
-  return days === 1 ? "yesterday" : `${days}d ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
 }
 
 function fmtSize(bytes) {

@@ -437,6 +437,13 @@ pub fn bundle(
     Ok((tmp, zip_path))
 }
 
+/// Parses "1.5.0" into a comparable (major, minor, patch) triple.
+fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
+    let mut parts = v.trim().split('.').map(|p| p.parse::<u64>().ok());
+    let triple = (parts.next()??, parts.next()??, parts.next()??);
+    parts.next().is_none().then_some(triple)
+}
+
 fn read_manifest(zip_path: &Path, stage: &Path) -> Result<Manifest, String> {
     let file = fs::File::open(zip_path).map_err(|e| e.to_string())?;
     let mut archive = zip::ZipArchive::new(file).map_err(|_| "Not a valid package.".to_string())?;
@@ -496,18 +503,25 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
         .map_err(|e| e.to_string())?;
     let manifest = read_manifest(zip_path, staged.path())?;
 
-    if manifest.format != MANIFEST_FORMAT {
-        return Err("This package was made by a newer version of Toast.".into());
+    // Newer packages are refused; older ones are migrated by init_schema below.
+    if manifest.format > MANIFEST_FORMAT {
+        return Err("This package was made by a newer version of Toast. Update Toast on this machine to pull it.".into());
     }
     let ours = env!("CARGO_PKG_VERSION");
-    if manifest.app_version != ours {
-        return Err(format!(
-            "That package was made by Toast {} while you're on {}. Both machines must run the same version.",
-            manifest.app_version, ours
-        ));
+    match (parse_version(&manifest.app_version), parse_version(ours)) {
+        (Some(theirs), Some(mine)) if theirs > mine => {
+            return Err(format!(
+                "That package was made by Toast {} while you're on {}. Update Toast on this machine to pull it.",
+                manifest.app_version, ours
+            ));
+        }
+        (None, _) | (_, None) => {
+            return Err("That package's version can't be read.".into());
+        }
+        _ => {}
     }
-    if manifest.schema_version != db::SCHEMA_VERSION {
-        return Err("That package's data format doesn't match this version of Toast.".into());
+    if manifest.schema_version > db::SCHEMA_VERSION {
+        return Err("That package's data format is newer than this version of Toast. Update Toast on this machine to pull it.".into());
     }
 
     // Reject a package dated ahead of local: pulling it would import stats and
@@ -726,7 +740,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_version_mismatch() {
+    fn rejects_newer_app_version() {
         let (src, conn) = make_app("2026-07-14");
         let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
         let bad = tamper(&zip, |m| m.app_version = "9.9.9".into());
@@ -737,13 +751,62 @@ mod tests {
     }
 
     #[test]
-    fn rejects_schema_mismatch() {
+    fn rejects_newer_schema() {
         let (src, conn) = make_app("2026-07-14");
         let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
         let bad = tamper(&zip, |m| m.schema_version = db::SCHEMA_VERSION + 1);
 
         let (dst, mut dconn) = make_app("2026-07-14");
         assert!(restore(dst.path(), &bad, &mut dconn).is_err());
+    }
+
+    #[test]
+    fn rejects_newer_format() {
+        let (src, conn) = make_app("2026-07-14");
+        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let bad = tamper(&zip, |m| m.format = MANIFEST_FORMAT + 1);
+
+        let (dst, mut dconn) = make_app("2026-07-14");
+        assert!(restore(dst.path(), &bad, &mut dconn).is_err());
+    }
+
+    /// A pull from an older release must succeed; init_schema migrates the
+    /// staged database before the swap.
+    #[test]
+    fn accepts_older_version_package() {
+        let (src, conn) = make_app("2026-07-14");
+        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let old = tamper(&zip, |m| {
+            m.app_version = "0.9.0".into();
+            m.schema_version = 1;
+        });
+
+        let (dst, mut dconn) = make_app("2026-07-14");
+        restore(dst.path(), &old, &mut dconn).unwrap();
+        let front: String = dconn
+            .query_row("SELECT front FROM card WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(front, "f");
+    }
+
+    #[test]
+    fn rejects_unreadable_version() {
+        let (src, conn) = make_app("2026-07-14");
+        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let bad = tamper(&zip, |m| m.app_version = "garbage".into());
+
+        let (dst, mut dconn) = make_app("2026-07-14");
+        assert!(restore(dst.path(), &bad, &mut dconn).is_err());
+    }
+
+    #[test]
+    fn parses_versions_in_order() {
+        assert!(parse_version("2.0.0") > parse_version("1.9.9"));
+        assert!(parse_version("1.10.0") > parse_version("1.9.0"));
+        assert_eq!(parse_version("1.5.0"), Some((1, 5, 0)));
+        assert_eq!(parse_version("1.5"), None);
+        assert_eq!(parse_version("1.5.0.1"), None);
+        assert_eq!(parse_version("abc"), None);
     }
 
     #[test]
