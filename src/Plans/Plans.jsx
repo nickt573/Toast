@@ -3,7 +3,7 @@ import { loggedInvoke, logError } from "../logger";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 import Todos from "./Todos";
-import { computeFrequency, computeCategory, FrequencyPicker, CategoryPicker } from "./PlanUtils";
+import { computeFrequency, computeCategory, maskToArray, maskToCategories, FrequencyPicker, CategoryPicker } from "./PlanUtils";
 import { Tip, ConfirmDelete, GroupTypeBadge } from "../UIUtils";
 import "./Plans.css";
 
@@ -442,7 +442,7 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
 
 // Todo Creator
 
-function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
+function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated }) {
     const [open, setOpen] = useState(false);
     const [text, setText] = useState("");
     const [orderNum, setOrderNum] = useState("");
@@ -450,6 +450,36 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
     const [selectedResourceIds, setSelectedResourceIds] = useState([]);
     const [frequency, setFrequency] = useState([true, true, true, true, true, true, true]);
     const [categoryMap, setCategoryMap] = useState(DEFAULT_CATEGORY());
+    // Todos on every other plan, offered as autofill templates in the add
+    // form so a todo can be copied into this plan from wherever it lives
+    const [otherTodos, setOtherTodos] = useState([]);
+    const [copyFrom, setCopyFrom] = useState("");
+
+    const otherPlans = (plans ?? []).filter((p) => p.id !== planId);
+
+    useEffect(() => {
+        if (!open || otherPlans.length === 0) return;
+        (async () => {
+            try {
+                const lists = await Promise.all(otherPlans.map((p) => loggedInvoke("get_todos", { planId: p.id })));
+                setOtherTodos(lists.flat());
+            } catch (e) { logError("catch", e); }
+        })();
+    }, [open, planId]);
+
+    function pickCopyFrom(value) {
+        setCopyFrom(value);
+        const src = otherTodos.find((t) => t.id === Number(value));
+        if (src) {
+            setText(src.text);
+            setFrequency(maskToArray(src.frequency ?? 127));
+            setCategoryMap(maskToCategories(src.category ?? 64));
+        } else {
+            setText("");
+            setFrequency([true, true, true, true, true, true, true]);
+            setCategoryMap(DEFAULT_CATEGORY());
+        }
+    }
 
     function toggleFrequency(i) {
         setFrequency(prev => { const c = [...prev]; c[i] = !c[i]; return c; });
@@ -494,6 +524,7 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
             setText(""); setOrderNum(""); setSelectedGroupIds([]); setSelectedResourceIds([]);
             setFrequency([true, true, true, true, true, true, true]);
             setCategoryMap(DEFAULT_CATEGORY());
+            setCopyFrom("");
             setOpen(false);
             onCreated();
         } catch (e) { logError("catch", e); setToast("Failed to create todo.", "error"); }
@@ -506,6 +537,22 @@ function TodoCreator({ planId, groups, planResources, setToast, onCreated }) {
             ) : (
                 <div className="plan-todo-form">
                     <div className="plan-section-title">New Todo</div>
+                    {otherTodos.length > 0 && (
+                        <div className="plan-resource-copyfrom">
+                            <span>Copy from</span>
+                            <select value={copyFrom} onChange={(e) => pickCopyFrom(e.target.value)}>
+                                <option value="">None (new)</option>
+                                {otherPlans.map((p) => {
+                                    const ts = otherTodos.filter((t) => t.plan_id === p.id);
+                                    return ts.length > 0 && (
+                                        <optgroup key={p.id} label={p.name}>
+                                            {ts.map((t) => <option key={t.id} value={t.id}>{t.text}</option>)}
+                                        </optgroup>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                    )}
                     <div>
                         <div className="plan-form-sublabel">Order</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -744,6 +791,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                 ))}
                                 <TodoCreator
                                     planId={editingPlan.id}
+                                    plans={plans}
                                     groups={groups}
                                     planResources={planResources}
                                     setToast={setToast}
