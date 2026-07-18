@@ -171,7 +171,7 @@
 .dk-new-card-dark .dk-field label { color: var(--t-text-3); }
 
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
-.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
+.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
 
 .dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
