@@ -26,11 +26,11 @@ When importing an Anki deck, you can map any of its fields to support. All field
 
 Toast to Go moves your whole Toast between machines without an account. Each install has its own ID. **Push** uploads everything, like decks, notebooks, plans, stats, and media, under your ID, overwriting your previous push. **Pull** takes an ID from another machine and replaces everything on this one with that machine's last push, so it's for moving in, not merging: whatever was on the pulling machine is erased. Toast warns you before it does this and tells you exactly what it found at that ID.
 
-A few rules keep this safe:
+A few rules:
 
-- **Your ID is the key.** Anyone who has it can read and overwrite your data, which is why the app masks IDs like passwords and lets you copy without revealing. Share it only with your other machines.
-- **Both machines must run the same version of Toast.** A package from a different version is refused.
-- **You can't pull from the future.** If a package's study date is ahead of this machine's, the pull is refused.
+- Your ID is the key. Anyone who has it can read and copy your data, which is why the app masks IDs like passwords and lets you copy without revealing. Share it only with your other machines.
+- Any key you pull from must run on the same or an older version of Toast. A package from a newer version is refused.
+- You can't pull from the future. If a package's push date is ahead of this machine's, the pull is refused.
 - You can choose what happens when Toast closes: always push, ask, or never.
 
 Packages are stored in Cloudflare R2 behind a small Worker (see `worker/`), capped at 1 GB each, with rate limits on uploads. If you're building from source you can point the app at your own Worker with the `TOAST_TOGO_ENDPOINT` environment variable at build time, and deploy your own from the `worker/` directory with `npx wrangler deploy`.
