@@ -96,6 +96,7 @@ pub fn merge_decks(
     deck_b_id: i64,
     new_name: String,
     reset: bool,
+    merge_stats: bool,
     conn: &mut Connection,
 ) -> Result<Group> {
     let tx = conn.transaction()?;
@@ -135,6 +136,29 @@ pub fn merge_decks(
         tx.execute(
             "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1",
             [new_deck_id],
+        )?;
+    }
+
+    // Sum both decks' same-day stat rows into a joint history under the new name
+    if merge_stats {
+        tx.execute(
+            r#"
+            INSERT INTO group_stats (group_id, plan_id, plan_name, group_name, date,
+                                     num_promote, num_demote, num_new, time_spent_minutes, retention_rate)
+            SELECT ?1, plan_id, MAX(plan_name), ?2, date,
+                   SUM(num_promote), SUM(num_demote), SUM(num_new), SUM(time_spent_minutes),
+                   CASE WHEN SUM(num_promote) + SUM(num_demote) > 0
+                        THEN CAST(SUM(num_promote) AS REAL) / (SUM(num_promote) + SUM(num_demote))
+                        ELSE 0.0 END
+            FROM group_stats
+            WHERE group_id IN (?3, ?4)
+            GROUP BY plan_id, date
+            "#,
+            rusqlite::params![new_deck_id, new_name, deck_a_id, deck_b_id],
+        )?;
+        tx.execute(
+            "DELETE FROM group_stats WHERE group_id IN (?1, ?2)",
+            rusqlite::params![deck_a_id, deck_b_id],
         )?;
     }
 
