@@ -130,6 +130,12 @@ pub fn merge_decks(
             "#,
             [new_deck_id],
         )?;
+    } else {
+        // The merged deck starts unlinked from any plan, so nothing can be due.
+        tx.execute(
+            "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1",
+            [new_deck_id],
+        )?;
     }
 
     // Delete the two source decks (cards already moved, so no cascade loss)
@@ -171,8 +177,7 @@ pub fn merge_decks(
     })
 }
 
-// One source card's copyable columns for duplicate_deck. SRS state is carried
-// so an exact clone can keep it; a fresh copy overwrites it at insert time.
+// One source card's copyable columns for duplicate_deck.
 struct DupCardRow {
     front: String,
     back: String,
@@ -189,17 +194,14 @@ struct DupCardRow {
     tier: i32,
     ease: f32,
     sequence: i32,
-    is_due: bool,
-    is_overdue: Option<bool>,
     is_paused: bool,
     position: Option<i64>,
 }
 
 // Copies a deck and all its cards into a new, unassigned deck. Every referenced
 // media file is copied under a fresh name so the two decks never share files.
-// `reset` wipes SRS state on the copy (fresh start); otherwise it is an exact
-// clone. The new deck is unassigned from any plan, since schedulers are per
-// plan-deck.
+// `reset` wipes SRS state on the copy; otherwise progress carries over but due
+// flags are cleared since the copy has no plan.
 pub fn duplicate_deck(
     deck_id: i64,
     new_name: String,
@@ -232,7 +234,7 @@ pub fn duplicate_deck(
             SELECT front, back, is_searchable, support,
                    imported_front, imported_back, imported_support,
                    front_image, back_image, front_audio, back_audio, is_uploaded,
-                   tier, ease, sequence, is_due, is_overdue, is_paused, position
+                   tier, ease, sequence, is_paused, position
             FROM card WHERE group_id = ?1
             ORDER BY CASE WHEN position IS NULL THEN 1 ELSE 0 END, position ASC, id ASC
             "#,
@@ -255,10 +257,8 @@ pub fn duplicate_deck(
                 tier: r.get(12)?,
                 ease: r.get(13)?,
                 sequence: r.get(14)?,
-                is_due: r.get(15)?,
-                is_overdue: r.get(16)?,
-                is_paused: r.get(17)?,
-                position: r.get(18)?,
+                is_paused: r.get(15)?,
+                position: r.get(16)?,
             })
         })?
             .collect::<Result<Vec<_>>>()?;
@@ -289,17 +289,11 @@ pub fn duplicate_deck(
             let imported_back = copy_html_media(&c.imported_back, app_dir, &mut cache)?;
             let imported_support = copy_html_media(&c.imported_support, app_dir, &mut cache)?;
 
+            // The copy is unlinked from any plan, so nothing can be due.
             let (tier, ease, sequence, is_due, is_overdue, is_paused) = if reset {
                 (0i32, 0.0f32, 0i32, false, None::<bool>, false)
             } else {
-                (
-                    c.tier,
-                    c.ease,
-                    c.sequence,
-                    c.is_due,
-                    c.is_overdue,
-                    c.is_paused,
-                )
+                (c.tier, c.ease, c.sequence, false, None::<bool>, c.is_paused)
             };
 
             insert.execute(rusqlite::params![
