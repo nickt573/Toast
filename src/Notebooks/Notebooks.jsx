@@ -384,7 +384,8 @@ function AudioControls({ audioFile, audio }) {
 
 export function PageEditor({ content, onChange, editable, audioFile, onAudioChange }) {
     const [linkPrompt, setLinkPrompt] = useState(false);
-    const [linkInput, setLinkInput] = useState("");
+    const [linkText, setLinkText] = useState("");
+    const [linkUrl, setLinkUrl] = useState("");
     const [colorPrompt, setColorPrompt] = useState(false);
     const audio = useAudioRecorder({ audioFile, onAudioChange: onAudioChange ?? (() => {}) });
 
@@ -461,20 +462,23 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         }
     }, [editor]);
 
-    const confirmLink = useCallback(() => {
+    const closeLinkPrompt = useCallback(() => {
         setLinkPrompt(false);
-        const val = linkInput.trim();
-        if (!val) { setLinkInput(""); return; }
-        const mdMatch = val.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-        const text = mdMatch ? mdMatch[1] : val;
-        const url = mdMatch ? mdMatch[2] : val;
+        setLinkText("");
+        setLinkUrl("");
+    }, []);
+
+    const confirmLink = useCallback(() => {
+        const url = linkUrl.trim();
+        if (!url) { closeLinkPrompt(); return; }
+        const text = linkText.trim() || url;
         const href = url.startsWith("http") ? url : `https://${url}`;
         editor.chain().focus()
             .insertContent({ type: "text", marks: [{ type: "link", attrs: { href } }], text })
             .insertContent({ type: "text", text: " " })
             .run();
-        setLinkInput("");
-    }, [editor, linkInput]);
+        closeLinkPrompt();
+    }, [editor, linkText, linkUrl, closeLinkPrompt]);
 
     const insertRevealBlock = useCallback(() => {
         if (!editor) return;
@@ -507,15 +511,23 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                     {linkPrompt && (
                         <div className="nb-inline-prompt">
                             <input type="text" autoFocus
-                                placeholder="[display text](url) or just a URL"
-                                value={linkInput}
-                                onChange={(e) => setLinkInput(e.target.value)}
+                                placeholder="Display text (optional)"
+                                value={linkText}
+                                onChange={(e) => setLinkText(e.target.value)}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter") confirmLink();
-                                    if (e.key === "Escape") { setLinkPrompt(false); setLinkInput(""); }
+                                    if (e.key === "Escape") closeLinkPrompt();
+                                }} />
+                            <input type="text"
+                                placeholder="URL"
+                                value={linkUrl}
+                                onChange={(e) => setLinkUrl(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") confirmLink();
+                                    if (e.key === "Escape") closeLinkPrompt();
                                 }} />
                             <button className="nb-tb-btn" onClick={confirmLink}>Insert</button>
-                            <button className="nb-tb-btn" onClick={() => { setLinkPrompt(false); setLinkInput(""); }}>Cancel</button>
+                            <button className="nb-tb-btn" onClick={closeLinkPrompt}>Cancel</button>
                         </div>
                     )}
                     {/* Swatches on their own row; the toolbar would clip an anchored popover when scrolled. */}

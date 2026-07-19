@@ -66,7 +66,7 @@
 .nb-editor-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; max-width: 700px; margin: 0 auto 6px; width: 100%; box-sizing: border-box; padding: 0 20px; min-height: 0; }
 .nb-view-content .nb-editor-wrap { max-width: 100%; padding: 0; }
 /* The page itself: a sheet of paper, crisp edge instead of a boxed border */
-.nb-editor-scroll { flex: 1; overflow-y: scroll; padding-bottom: 16px; border: none; border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; box-shadow: var(--t-shadow-sm); }
+.nb-editor-scroll { flex: 1; overflow-y: scroll; scrollbar-gutter: stable both-edges; padding-bottom: 16px; border: none; border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; box-shadow: var(--t-shadow-sm); }
 .nb-view-content .nb-editor-scroll { border: none; border-radius: var(--t-r-lg); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
 
 /* Toolbar: no-wrap so groups stay together */

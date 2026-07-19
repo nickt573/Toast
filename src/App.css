@@ -667,7 +667,7 @@ textarea { overflow-y: scroll; }
   margin: 0.8em 0;
   padding: 0.5em 1em;
   color: var(--t-text-2);
-  background: var(--t-plum-bg);
+  background: var(--t-surface-3);
   border-radius: var(--t-r);
 }
 .nb-editor-scroll .ProseMirror img {
