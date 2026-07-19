@@ -47,7 +47,8 @@
 .dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
-.dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); }
+.dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); -webkit-user-select: none; user-select: none; }
+.dk-table-pane input, .dk-table-pane textarea { -webkit-user-select: text; user-select: text; }
 .dk-table-search { flex-shrink: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; background: var(--t-surface-4); }
 .dk-table-search > input { width: 100%; box-sizing: border-box; background: var(--t-surface); }
 /* Search input shares its row with the field-scope toggles, so it shrinks to fit */
@@ -67,7 +68,7 @@
 .dk-sort-seg button.active,
 .dk-sort-seg button.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); filter: brightness(1); }
 
-.dk-date-filter { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-3); flex-wrap: nowrap; }
+.dk-date-filter { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); flex-wrap: nowrap; }
 .dk-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
 /* Windows (WebView2/Chromium) renders a wide calendar icon inside date inputs,
    pushing the filter onto its own line; shrink it to fit the row. */
@@ -89,12 +90,12 @@
 .dk-table-head { flex-shrink: 0; background: var(--t-surface-4); }
 /* Empty gap below a short card list matches the editor pane on the right, so it reads as blank space rather than the form zone (which shares --t-surface-2 with the panel below) */
 .dk-table-scroll { flex: 1; overflow-y: auto; background: #FEF4EC; }
-.dk-card-table { width: 100%; border-collapse: collapse; background: var(--t-bg); table-layout: fixed; }
+.dk-card-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--t-bg); table-layout: fixed; }
 .dk-card-table col.dk-col-due { width: 64px; }
 .dk-card-table col.dk-col-paused { width: 64px; }
 .dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; font-size: 11px; color: var(--t-label); font-weight: 700; }
-/* Border on both edges so the top row draws its own top border under the header; collapse merges the rest */
-.dk-card-table td { padding: 5px 8px; border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: calc(2.9em + 10px); }
+.dk-card-table td { padding: 5px 8px; border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: 45px; }
+.dk-card-table tbody tr:first-child td { border-top: 1px solid var(--t-border); }
 .dk-card-table tbody tr { cursor: pointer; }
 /* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. */
 .dk-card-table tr:nth-child(even) td { background: var(--t-row-stripe); }
@@ -111,7 +112,13 @@
 /* Every due state shares one golden highlight, distinct hue from the peachy headers so it reads lighter. */
 .dk-card-table tr.is-new-due td,
 .dk-card-table tr.is-review-due td,
-.dk-card-table tr.is-review-overdue td       { background: rgba(224, 169, 46, 0.24); border-top-color: rgba(196, 143, 28, 0.45); border-bottom-color: rgba(196, 143, 28, 0.45); }
+.dk-card-table tr.is-review-overdue td       { background: rgba(224, 169, 46, 0.24); border-bottom-color: rgba(196, 143, 28, 0.45); }
+.dk-card-table tbody tr:first-child.is-new-due td,
+.dk-card-table tbody tr:first-child.is-review-due td,
+.dk-card-table tbody tr:first-child.is-review-overdue td { border-top-color: rgba(196, 143, 28, 0.45); }
+.dk-card-table tr:has(+ tr.is-new-due) td,
+.dk-card-table tr:has(+ tr.is-review-due) td,
+.dk-card-table tr:has(+ tr.is-review-overdue) td { border-bottom-color: rgba(196, 143, 28, 0.45); }
 .dk-card-table tr.is-new-due:hover td,
 .dk-card-table tr.is-review-due:hover td,
 .dk-card-table tr.is-review-overdue:hover td { background: rgba(224, 169, 46, 0.34); }
@@ -121,8 +128,10 @@
 .dk-card-table tr.is-overdue-only:hover td { background: rgba(224, 169, 46, 0.17); }
 
 /* Selected: distinct slate-blue fill that wins over the caramel due tint (declared last). */
-.dk-card-table tr.selected td,
-.dk-card-table tr.selected:hover td { background: var(--t-blue-bg); color: var(--t-text); }
+.dk-card-table tbody tr.selected td,
+.dk-card-table tbody tr.selected:hover td { background: var(--t-blue-bg); color: var(--t-text); border-bottom-color: var(--t-blue-bdr); }
+.dk-card-table tbody tr:first-child.selected td { border-top-color: var(--t-blue-bdr); }
+.dk-card-table tr:has(+ tr.selected) td { border-bottom-color: var(--t-blue-bdr); }
 
 .dk-table-empty { padding: 16px; color: var(--t-text-3); font-style: italic; font-size: 13px; }
 

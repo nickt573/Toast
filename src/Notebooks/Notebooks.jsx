@@ -889,7 +889,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                         onChange={(e) => { setQuery(e.target.value); }} />
                     {today && (
                         <div className="nb-date-filter">
-                            <span style={{ fontSize: 12, color: "var(--t-text-3)", fontWeight: 500 }}>Created:</span>
+                            <span style={{ fontSize: 12, color: "var(--t-text-2)", fontWeight: 500 }}>Created:</span>
                             <input type="date" value={dateOn} onChange={e => setDateOn(e.target.value)} />
                             {dateOn && <button className="nb-date-clear" title="Clear" onClick={() => setDateOn("")}>×</button>}
                         </div>

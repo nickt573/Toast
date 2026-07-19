@@ -160,7 +160,7 @@
 .st-todo-section { margin-bottom: 10px; }
 /* Resource names stay compact inside the expanded todo, the 15px size is for full-width lists */
 .st-todo-expanded .st-resource-card-name { font-size: 13px; }
-.st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
+.st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label-pill); margin-bottom: 5px; }
 
 .st-btn-sm { padding: 3px 8px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-btn-fg); box-shadow: none; }
 .st-btn-sm:hover { background: var(--t-btn-h); box-shadow: none; }

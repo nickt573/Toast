@@ -15,7 +15,8 @@
   --t-text:          #4A3A3D;   /* primary */
   --t-text-2:        #6B5458;   /* secondary */
   --t-text-3:        #9A8488;   /* tertiary / quiet */
-  --t-label:         #877074;   /* section heading labels */
+  --t-label:         #9A6B74;   /* section heading labels */
+  --t-label-pill:    #9A6B74;   /* labels over pill groups keep the quieter ink */
   --t-placeholder:   #C0AAAE;
 
   /* Plans / primary accent: wheat / caramel */
@@ -612,7 +613,7 @@ textarea { overflow-y: scroll; }
 /* Fixed min-width so counts line up column-wise across cards */
 .landing-stat { --stat-c: var(--t-text-2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 64px; }
 .landing-stat b { font-family: var(--t-font-head); font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; color: var(--stat-c); font-variant-numeric: tabular-nums; }
-.landing-stat > span { font-size: 14px; font-weight: 600; color: var(--t-text-3); }
+.landing-stat > span { font-size: 14px; font-weight: 600; color: var(--t-text-2); }
 /* Text values (e.g. a plan name) instead of a count */
 .landing-stat--text { min-width: 0; }
 .landing-stat--text b { font-size: 24px; line-height: 1; letter-spacing: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -631,7 +632,7 @@ textarea { overflow-y: scroll; }
 
 /* Todo row subsections, labeled like todo stats entries */
 .todo-section { margin-top: 8px; }
-.todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
+.todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label-pill); margin-bottom: 5px; }
 .todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
 /* Plan builder: */
