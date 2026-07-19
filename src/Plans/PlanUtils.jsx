@@ -69,15 +69,15 @@ export function FrequencyPicker({ frequency, onChange }) {
 }
 
 // Solid colored category pills, matching the todo stats table header.
-export function CategoryPills({ mask, style }) {
+export function CategoryPills({ mask, style, small = false }) {
     const cats = CATEGORIES.filter(({ bit }) => mask & bit);
     if (cats.length === 0) return null;
     return (
-        <span style={{ display: "inline-flex", gap: 5, flexWrap: "wrap", ...style }}>
+        <span style={{ display: "inline-flex", gap: small ? 3 : 5, flexWrap: "wrap", ...style }}>
             {cats.map(({ label, color }) => (
                 <span key={label} style={{
-                    display: "inline-block", padding: "2px 8px", borderRadius: "var(--t-r-tab)",
-                    fontSize: 10, fontWeight: 600, background: color, color: "var(--t-btn-fg)",
+                    display: "inline-block", padding: small ? "0px 5px" : "2px 8px", borderRadius: "var(--t-r-tab)",
+                    fontSize: small ? 8 : 10, fontWeight: 600, background: color, color: "var(--t-btn-fg)",
                 }}>
                     {label}
                 </span>

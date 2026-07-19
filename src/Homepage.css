@@ -268,8 +268,19 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-todo-row:last-child { margin-bottom: 0; }
 
+/* Prescreen todo list, no inner scroll so the whole popup scrolls instead */
+.hp-free-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* Existing-todo options in the Log Extra prescreen, todo-family bars */
 .hp-free-todo-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   text-align: left;
   font-size: 13px;
   padding: 8px 12px;
@@ -279,8 +290,13 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   color: var(--t-text);
   /* Keep full height so the list scrolls instead of squashing rows */
   flex-shrink: 0;
-  /* Global button styling is nowrap. Clamp long todo names so they don't overflow the popup. */
   min-width: 0;
+  overflow: hidden;
+}
+/* Global button styling is nowrap. Clamp long todo names so they don't overflow the popup. */
+.hp-free-todo-text {
+  max-width: 100%;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
