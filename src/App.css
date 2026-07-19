@@ -16,8 +16,8 @@
   --t-text:          #4A3A3D;   /* primary */
   --t-text-2:        #6B5458;   /* secondary */
   --t-text-3:        #9A8488;   /* tertiary / quiet */
-  --t-label:         #9A6B74;   /* section heading labels */
-  --t-label-pill:    #9A6B74;   /* labels over pill groups keep the quieter ink */
+  --t-label:         #8C5E67;   /* section heading labels */
+  --t-label-pill:    #8C5E67;   /* labels over pill groups keep the quieter ink */
   --t-placeholder:   #C0AAAE;
 
   /* Plans / primary accent: wheat / caramel */
