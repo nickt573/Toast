@@ -39,7 +39,7 @@
   gap: 5px;
   align-items: center;
   font-size: 12px;
-  color: var(--t-text-3);
+  color: var(--t-text-2);
   flex-shrink: 0;
   flex-wrap: nowrap;
   margin-top: 0;
@@ -194,7 +194,7 @@
 .nb-card-toggle:hover { filter: brightness(0.97); }
 /* Open header doubles as the drag handle for resizing the panel */
 .nb-card-creator.open .nb-card-toggle {
-  flex-shrink: 0; border: none; border-bottom: 1px solid var(--t-border-2);
+  flex-shrink: 0; border: none;
   border-radius: var(--t-r-lg) var(--t-r-lg) 0 0;
   box-shadow: none;
   cursor: ns-resize;
