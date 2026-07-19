@@ -16,10 +16,13 @@ pub fn get_cards(deck_id: i64, state: tauri::State<AppState>) -> Result<Vec<Card
     read::get_cards(deck_id, &mut conn).map_err(|e| e.to_string())
 }
 
+// Returns the updated card: media paths are regenerated server-side.
 #[tauri::command]
-pub fn update_card(card: Card, state: tauri::State<AppState>) -> Result<(), String> {
+pub fn update_card(card: Card, state: tauri::State<AppState>) -> Result<Card, String> {
     let conn = state.conn.lock().unwrap();
-    update::update_card(card, &conn, &state.app_dir).map_err(|e| e.to_string())
+    let id = card.id;
+    update::update_card(card, &conn, &state.app_dir).map_err(|e| e.to_string())?;
+    read::get_card(id, &conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

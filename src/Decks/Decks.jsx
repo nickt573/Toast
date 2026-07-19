@@ -473,9 +473,11 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
     // Emptied fronts or backs are silently dropped and the stored card stays intact
     if (!f.is_uploaded && (!f.front.trim() || !f.back.trim())) return;
     try {
-      await loggedInvoke("update_card", { card: { ...f, support: f.support || null, front_image: f.front_image || null, back_image: f.back_image || null, front_audio: f.front_audio || null, back_audio: f.back_audio || null } });
-      baselineRef.current = snap;
-      onSaved({ ...target, ...snap, support: f.support });
+      const fresh = await loggedInvoke("update_card", { card: { ...f, support: f.support || null, front_image: f.front_image || null, back_image: f.back_image || null, front_audio: f.front_audio || null, back_audio: f.back_audio || null } });
+      baselineRef.current = snapshotCard(fresh);
+      // Media paths are regenerated server-side, so the form must adopt them or the next diff re-saves the files
+      setForm((prev) => prev && prev.id === fresh.id ? { ...prev, front_image: fresh.front_image, back_image: fresh.back_image, front_audio: fresh.front_audio, back_audio: fresh.back_audio } : prev);
+      onSaved(fresh);
     } catch (e) { logError("catch", e); setToast("Failed to save card changes.", "error"); }
   };
 

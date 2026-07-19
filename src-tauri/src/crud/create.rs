@@ -4,6 +4,7 @@ use crate::app_utils::duplicate_media::{
 use crate::app_utils::{manage_img::*, save_audio::*, save_img::*};
 use crate::crud::{
     models::*,
+    read::get_card,
     scheduling::{fill_group, get_date, on_item_added},
 };
 use rusqlite::{Connection, Result};
@@ -378,29 +379,8 @@ pub fn create_card(card: NewCard, conn: &mut Connection, app_dir: &Path) -> Resu
 
     let id = conn.last_insert_rowid();
     let _ = on_item_added(card.group_id, conn);
-    Ok(Card {
-        id,
-        group_id: card.group_id,
-        front: card.front,
-        back: card.back,
-        tier: 0,
-        ease: 0.0,
-        sequence: 0,
-        is_searchable: card.is_searchable,
-        support: card.support,
-        imported_front: card.imported_front,
-        imported_back: card.imported_back,
-        imported_support: card.imported_support,
-        front_image,
-        back_image,
-        front_audio,
-        back_audio,
-        is_uploaded: card.is_uploaded,
-        is_due: false,
-        is_overdue: None,
-        is_paused: false,
-        position: None,
-    })
+    // Re-read after on_item_added since fill_group may have made the card due.
+    get_card(id, conn)
 }
 
 pub fn create_card_imported(card: NewCard, conn: &Connection) -> Result<Card> {
