@@ -438,7 +438,7 @@ function DeckList({ setToast, onOpenDeck }) {
 
 // Card Editor
 
-function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan }) {
+function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan, logVersion }) {
   const [form, setForm] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewFlipped, setPreviewFlipped] = useState(false);
@@ -493,12 +493,18 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan 
     });
     baselineRef.current = snapshotCard(card);
     skipAutoSaveRef.current = false;
+    return () => { autoSave(card); };
+  }, [card?.id]);
+
+  // logVersion reloads the log after deck actions that wipe it (reset)
+  useEffect(() => {
+    if (!card) return;
     let cancelled = false;
     loggedInvoke("get_card_grade_log", { cardId: card.id })
       .then((log) => { if (!cancelled) setCardLog(log); })
       .catch((e) => { logError("get_card_grade_log", e); if (!cancelled) setCardLog([]); });
-    return () => { cancelled = true; autoSave(card); };
-  }, [card?.id]);
+    return () => { cancelled = true; };
+  }, [card?.id, logVersion]);
 
   // Debounced autosave while editing, so changes survive even if the app
   // closes before the card-switch autosave gets a chance to run
@@ -908,6 +914,8 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [dateSince, setDateSince] = useState("");
   const [today, setToday] = useState(null);
   const [lastSeenMap, setLastSeenMap] = useState({});
+  // Bumped when a deck action wipes grade logs, so the editor refetches
+  const [logVersion, setLogVersion] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   // Dragged panel height remembered while this deck view is open. null means use the CSS default.
@@ -1018,6 +1026,10 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
       await loggedInvoke("reset_deck", { groupId: deck.id });
       const updated = await loggedInvoke("get_cards", { deckId: deck.id });
       setCards(updated);
+      // Reset wipes the grade logs, so the last-seen filter and editor log must reload too
+      const pairs = await loggedInvoke("get_card_last_seen_dates", { deckId: deck.id });
+      setLastSeenMap(Object.fromEntries(pairs));
+      setLogVersion((v) => v + 1);
       setToast("Deck progress reset.");
       setConfirmReset(false);
     } catch (e) { logError("catch", e); setToast("Failed to reset deck.", "error"); }
@@ -1246,6 +1258,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
           onDeleted={handleDeleted}
           onRescheduled={handleRescheduled}
           inPlan={!!deck.plan_id}
+          logVersion={logVersion}
         />
       </div>
     </div>
