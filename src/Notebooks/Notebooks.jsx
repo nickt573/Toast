@@ -793,14 +793,14 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
     }
 
     async function savePage(contentJson) {
-        if (!editTitle.trim()) { setToast("Title is required."); return false; }
+        const title = editTitle.trim() || "Untitled";
         const contentStr = JSON.stringify(rewriteContentForSave(contentJson));
         try {
             if (isNew) {
                 const newPage = await loggedInvoke("create_page", {
                     page: {
                         group_id: notebook.id,
-                        title: editTitle.trim(),
+                        title,
                         description: editDesc.trim() || null,
                         content: contentStr,
                         audio_file: editAudioFile,
@@ -813,7 +813,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 await loggedInvoke("update_page", {
                     page: {
                         ...currentPage,
-                        title: editTitle.trim(),
+                        title,
                         description: editDesc.trim() || null,
                         content: contentStr,
                         audio_file: editAudioFile,
@@ -821,7 +821,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 });
                 setAllPages((prev) => prev.map((p) =>
                     p.id === currentPage.id
-                        ? { ...currentPage, title: editTitle.trim(), description: editDesc.trim() || null, content: contentStr, audio_file: editAudioFile }
+                        ? { ...currentPage, title, description: editDesc.trim() || null, content: contentStr, audio_file: editAudioFile }
                         : p
                 ));
                 // Follow the page if a retitle moved it within the current filter
@@ -835,13 +835,12 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         } catch (e) { logError("catch", e); setToast("Failed to save page.", "error"); return false; }
     }
 
-    // Back autosaves. An untitled page blocks navigation unless it's entirely empty.
+    // Back autosaves. An entirely empty untitled page is discarded instead of saved.
     async function handleBack(navigate) {
         if (editing) {
             const draft = liveContentRef.current;
             const hasContent = !isContentEmpty(draft) || editDesc.trim() || editAudioFile;
-            if (!editTitle.trim()) {
-                if (hasContent) { setToast("Title is required."); return; }
+            if (!editTitle.trim() && !hasContent) {
                 await onCancel();
             } else if (!(await savePage(draft))) {
                 return;
