@@ -95,10 +95,10 @@
 .dk-card-table col.dk-col-paused { width: 64px; }
 .dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; font-size: 11px; color: var(--t-label); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: 45px; }
-.dk-card-table tbody tr:first-child td { border-top: 1px solid var(--t-border); }
+.dk-card-table tbody tr.dk-first td { border-top: 1px solid var(--t-border); }
 .dk-card-table tbody tr { cursor: pointer; }
-/* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. */
-.dk-card-table tr:nth-child(even) td { background: var(--t-row-stripe); }
+/* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. Class-based because only visible rows are rendered. */
+.dk-card-table tr.dk-even td { background: var(--t-row-stripe); }
 /* Row height lives on the td so single-line entries center vertically. The clamp just caps at 2 lines. */
 .dk-cell-clamp {
   display: -webkit-box;
@@ -113,9 +113,9 @@
 .dk-card-table tr.is-new-due td,
 .dk-card-table tr.is-review-due td,
 .dk-card-table tr.is-review-overdue td       { background: rgba(224, 169, 46, 0.24); border-bottom-color: rgba(196, 143, 28, 0.45); }
-.dk-card-table tbody tr:first-child.is-new-due td,
-.dk-card-table tbody tr:first-child.is-review-due td,
-.dk-card-table tbody tr:first-child.is-review-overdue td { border-top-color: rgba(196, 143, 28, 0.45); }
+.dk-card-table tbody tr.dk-first.is-new-due td,
+.dk-card-table tbody tr.dk-first.is-review-due td,
+.dk-card-table tbody tr.dk-first.is-review-overdue td { border-top-color: rgba(196, 143, 28, 0.45); }
 .dk-card-table tr:has(+ tr.is-new-due) td,
 .dk-card-table tr:has(+ tr.is-review-due) td,
 .dk-card-table tr:has(+ tr.is-review-overdue) td { border-bottom-color: rgba(196, 143, 28, 0.45); }
@@ -130,7 +130,7 @@
 /* Selected: distinct slate-blue fill that wins over the caramel due tint (declared last). */
 .dk-card-table tbody tr.selected td,
 .dk-card-table tbody tr.selected:hover td { background: var(--t-blue-bg); color: var(--t-text); border-bottom-color: var(--t-blue-bdr); }
-.dk-card-table tbody tr:first-child.selected td { border-top-color: var(--t-blue-bdr); }
+.dk-card-table tbody tr.dk-first.selected td { border-top-color: var(--t-blue-bdr); }
 .dk-card-table tr:has(+ tr.selected) td { border-bottom-color: var(--t-blue-bdr); }
 
 .dk-table-empty { padding: 16px; color: var(--t-text-3); font-style: italic; font-size: 13px; }

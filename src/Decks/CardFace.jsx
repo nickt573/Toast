@@ -60,19 +60,26 @@ export function normalizeSearchText(str) {
         .trim();
 }
 
+// Cached because the textarea entity decode is slow and card HTML never changes in place.
+const stripHtmlCache = new Map();
+
 export function stripHtml(str) {
     if (!str) return "";
+    const cached = stripHtmlCache.get(str);
+    if (cached !== undefined) return cached;
     const stripped = str
         .replace(/<(?:hr|br)[^>]*>/gi, ", ")
         .replace(/<div[^>]*>/gi, ", ")
         .replace(/<[^>]*>/g, "");
     const txt = document.createElement("textarea");
     txt.innerHTML = stripped;
-    return normalizeSearchText(txt.value)
+    const result = normalizeSearchText(txt.value)
         .replace(/(\s*,\s*){2,}/g, ", ")
         .replace(/^\s*(,\s*)+/, "")
         .replace(/(,\s*)+$/, "")
         .trim();
+    stripHtmlCache.set(str, result);
+    return result;
 }
 
 export function LinkifiedText({ text }) {

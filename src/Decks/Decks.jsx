@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { open } from "@tauri-apps/plugin-dialog";
 import { CardFace, AudioPlayer, renderAnkiHtml, stripHtml, normalizeSearchText, stripAudioTags, extractRawAudioSrcs } from "./CardFace";
@@ -909,6 +909,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [scopeSupport, setScopeSupport] = useState(true);
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("id");
+  const [sortDir, setSortDir] = useState("asc");
   const [plans, setPlans] = useState([]);
   const [confirmReset, setConfirmReset] = useState(false);
   const [dateSince, setDateSince] = useState("");
@@ -923,6 +924,12 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const tablePaneRef = useRef(null);
   const toggleRowRef = useRef(null);
   const dragMovedRef = useRef(false);
+  const tableScrollRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewHeight, setViewHeight] = useState(0);
+
+  // Matches the fixed td height in Decks.css so the row window math stays exact
+  const ROW_H = 45;
 
   // Below this height a released drag snaps the panel closed
   const CREATOR_CLOSE_PX = 60;
@@ -1041,40 +1048,68 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     else { if (scopeSupport && !scopeMain) return; setScopeSupport(v => !v); }
   };
 
-  let filtered = cards.filter((c) => {
-    if (!search.trim()) return true;
-    const q = normalizeSearchText(search).toLowerCase();
-    const fields = [];
-    if (scopeMain) {
-      fields.push(
-        normalizeSearchText(c.front),
-        normalizeSearchText(c.back),
-        stripHtml(c.imported_front ?? ""),
-        stripHtml(c.imported_back ?? ""),
-      );
-    }
-    if (scopeSupport) {
-      fields.push(
-        normalizeSearchText(c.support ?? ""),
-        stripHtml(c.imported_support ?? ""),
-      );
-    }
-    return fields.some((t) => t.toLowerCase().includes(q));
-  });
+  const filtered = useMemo(() => {
+    let result = cards.filter((c) => {
+      if (!search.trim()) return true;
+      const q = normalizeSearchText(search).toLowerCase();
+      const fields = [];
+      if (scopeMain) {
+        fields.push(
+          normalizeSearchText(c.front),
+          normalizeSearchText(c.back),
+          stripHtml(c.imported_front ?? ""),
+          stripHtml(c.imported_back ?? ""),
+        );
+      }
+      if (scopeSupport) {
+        fields.push(
+          normalizeSearchText(c.support ?? ""),
+          stripHtml(c.imported_support ?? ""),
+        );
+      }
+      return fields.some((t) => t.toLowerCase().includes(q));
+    });
 
-  if (filter === "paused") filtered = filtered.filter(c => c.is_paused);
-  else if (filter === "unpaused") filtered = filtered.filter(c => !c.is_paused);
-  else if (filter === "due") filtered = deck.plan_id ? filtered.filter(c => c.is_due) : [];
-  else if (filter === "overdue") filtered = deck.plan_id ? filtered.filter(c => c.is_overdue === true) : [];
-  else if (filter === "new") filtered = filtered.filter(c => c.tier == 0);
-  else if (filter === "review") filtered = filtered.filter(c => c.tier != 0);
-  else if (filter === "custom") filtered = filtered.filter(c => !c.is_uploaded);
-  else if (filter === "uploaded") filtered = filtered.filter(c => c.is_uploaded);
+    if (filter === "paused") result = result.filter(c => c.is_paused);
+    else if (filter === "unpaused") result = result.filter(c => !c.is_paused);
+    else if (filter === "due") result = deck.plan_id ? result.filter(c => c.is_due) : [];
+    else if (filter === "overdue") result = deck.plan_id ? result.filter(c => c.is_overdue === true) : [];
+    else if (filter === "new") result = result.filter(c => c.tier == 0);
+    else if (filter === "review") result = result.filter(c => c.tier != 0);
+    else if (filter === "custom") result = result.filter(c => !c.is_uploaded);
+    else if (filter === "uploaded") result = result.filter(c => c.is_uploaded);
 
-  if (dateSince) filtered = filtered.filter(c => lastSeenMap[c.id] && lastSeenMap[c.id] >= dateSince);
+    if (dateSince) result = result.filter(c => lastSeenMap[c.id] && lastSeenMap[c.id] >= dateSince);
 
-  if (sort === "sequence") filtered = [...filtered].sort((a, b) => a.sequence - b.sequence);
-  // else: trust backend ORDER BY (position ASC NULLS LAST, id ASC) for merged-deck zipper order
+    if (sort === "sequence") result = [...result].sort((a, b) => sortDir === "asc" ? a.sequence - b.sequence : b.sequence - a.sequence);
+    // else: trust backend ORDER BY (position ASC NULLS LAST, id ASC) for merged-deck zipper order
+    else if (sortDir === "desc") result = [...result].reverse();
+
+    return result;
+  }, [cards, search, scopeMain, scopeSupport, filter, dateSince, lastSeenMap, sort, sortDir, deck.plan_id]);
+
+  // Clicking the active sort again flips the direction
+  const pickSort = (key) => {
+    if (sort === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSort(key); setSortDir("asc"); }
+  };
+  const sortArrow = (key) => sort === key ? (sortDir === "asc" ? " ▴" : " ▾") : "";
+
+  // Only rows near the viewport are rendered, with spacer rows holding the scroll height
+  useLayoutEffect(() => {
+    const el = tableScrollRef.current;
+    if (!el) return;
+    const measure = () => setViewHeight(el.clientHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [filtered.length > 0]);
+
+  const OVERSCAN = 10;
+  const winStart = Math.max(0, Math.floor(scrollTop / ROW_H) - OVERSCAN);
+  const winEnd = Math.min(filtered.length, Math.ceil((scrollTop + (viewHeight || 600)) / ROW_H) + OVERSCAN);
+  const spacerStyle = (px) => ({ height: px, padding: 0, border: "none", background: "transparent" });
 
   const selectedCard = cards.find((c) => c.id === selectedId) ?? null;
   const handleCreated = (card) => { setCards((prev) => [...prev, card]); setSelectedId(card.id); };
@@ -1135,8 +1170,8 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
             </div>
             <div className="dk-sort-filter-row">
               <div className="dk-sort-seg">
-                <button className={sort === "id" ? "active" : ""} onClick={() => setSort("id")}>Created Date</button>
-                <button className={sort === "sequence" ? "active" : ""} onClick={() => setSort("sequence")}>Due Date</button>
+                <button className={sort === "id" ? "active" : ""} onClick={() => pickSort("id")}>Created Date{sortArrow("id")}</button>
+                <button className={sort === "sequence" ? "active" : ""} onClick={() => pickSort("sequence")}>Due Date{sortArrow("sequence")}</button>
               </div>
               <button className={`dk-filter-toggle${filtersOpen || filter !== "all" ? " active" : ""}`} onClick={() => setFiltersOpen(o => !o)}>
                 Filters {filtersOpen ? "▾" : "▸"}
@@ -1202,16 +1237,20 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                   </thead>
                 </table>
               </div>
-              <div className="dk-table-scroll">
+              <div className="dk-table-scroll" ref={tableScrollRef} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}>
                 <table className="dk-card-table">
                   <colgroup><col /><col /><col className="dk-col-due" /><col className="dk-col-paused" /></colgroup>
                   <tbody>
-                    {filtered.map((card) => {
+                    <tr aria-hidden="true"><td colSpan={4} style={spacerStyle(winStart * ROW_H)} /></tr>
+                    {filtered.slice(winStart, winEnd).map((card, i) => {
+                    const index = winStart + i;
                     const front = [stripHtml(card.imported_front ?? ""), card.front].filter(Boolean).join(" · ");
                     const back = [stripHtml(card.imported_back ?? ""), card.back].filter(Boolean).join(" · ");
                     return (
                       <tr key={card.id}
                         className={[
+                          index === 0 ? "dk-first" : "",
+                          index % 2 === 1 ? "dk-even" : "",
                           card.id === selectedId ? "selected" : "",
                           card.is_due && deck.plan_id
                             ? (card.tier === 0
@@ -1234,6 +1273,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                       </tr>
                     );
                     })}
+                    <tr aria-hidden="true"><td colSpan={4} style={spacerStyle((filtered.length - winEnd) * ROW_H)} /></tr>
                   </tbody>
                 </table>
               </div>
