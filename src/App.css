@@ -10,6 +10,7 @@
   --t-row-stripe:    #FAE8DA;   /* card-table zebra stripe, kept independent of the background */
   --t-border:        #F0D9CC;   /* default dividers */
   --t-border-2:      #E8CDBD;   /* input / hairline rule color */
+  --t-border-3:      #DCBBA9;   /* deep rules: notebook tables, reveal blocks, hr */
 
   /* Text: chocolate-plum */
   --t-text:          #4A3A3D;   /* primary */
@@ -685,7 +686,7 @@ textarea { overflow-y: scroll; }
 .nb-editor-scroll .ProseMirror table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0.8em 0; }
 .nb-editor-scroll .ProseMirror th,
 .nb-editor-scroll .ProseMirror td {
-  border: 1px solid var(--t-border);
+  border: 1px solid var(--t-border-3);
   padding: 6px 10px;
   min-width: 60px;
   font-size: 13px;
@@ -696,7 +697,7 @@ textarea { overflow-y: scroll; }
 }
 .nb-editor-scroll .ProseMirror .selectedCell { background-color: var(--t-blue-bg) !important; }
 .nb-editor-scroll .ProseMirror a { color: var(--t-blue); text-decoration: underline; cursor: pointer; }
-.nb-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid var(--t-border); margin: 1.2em 0; }
+.nb-editor-scroll .ProseMirror hr { border: none; border-top: 1px solid var(--t-border-3); margin: 1.2em 0; }
 .nb-view-content .ProseMirror { cursor: default; }
 .nb-view-content .ProseMirror a { cursor: pointer; }
 

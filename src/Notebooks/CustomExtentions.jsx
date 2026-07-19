@@ -10,7 +10,7 @@ const revealLabelCell = {
     flex: "0 0 76px",
     padding: "6px 10px",
     background: "var(--t-surface-3)",
-    borderRight: "1px solid var(--t-border-2)",
+    borderRight: "1px solid var(--t-border-3)",
     fontSize: 11,
     fontWeight: 700,
     color: "var(--t-text-2)",
@@ -27,7 +27,7 @@ function RevealBlockView({ node, updateAttributes, editor }) {
     return (
         <NodeViewWrapper>
             <div style={{
-                border: "1px solid var(--t-border-2)",
+                border: "1px solid var(--t-border-3)",
                 borderRadius: "var(--t-r-lg)",
                 overflow: "hidden",
                 margin: "8px 0",
@@ -38,7 +38,7 @@ function RevealBlockView({ node, updateAttributes, editor }) {
                 <div style={{
                     display: "flex",
                     alignItems: "stretch",
-                    borderBottom: "1px solid var(--t-border-2)",
+                    borderBottom: "1px solid var(--t-border-3)",
                 }}>
                     <div style={revealLabelCell}>
                         Prompt
