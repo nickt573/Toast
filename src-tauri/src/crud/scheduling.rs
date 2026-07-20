@@ -412,6 +412,43 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     tx.commit()
 }
 
+/// Opens today's line for a deck in its plan and returns it, reusing the one
+/// that's already there. Nothing happens for a deck outside a plan.
+pub fn open_stat_line(group_id: i64, conn: &Connection) -> Result<Option<i64>> {
+    let Some(plan_id): Option<i64> = conn.query_row(
+        r#"SELECT plan_id FROM "group" WHERE id = ?1"#,
+        [group_id],
+        |r| r.get(0),
+    )?
+    else {
+        return Ok(None);
+    };
+    let today = get_date(conn)?;
+
+    conn.execute(
+        r#"
+        INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date, version)
+        SELECT g.id, g.id, p.id, p.name, g.name, ?3, g.stat_version
+        FROM "group" g, plan p
+        WHERE g.id = ?1 AND p.id = ?2
+          AND NOT EXISTS (
+              SELECT 1 FROM group_stats
+              WHERE group_id = ?1 AND plan_id = ?2 AND date = ?3 AND version = g.stat_version
+          )
+        "#,
+        rusqlite::params![group_id, plan_id, &today],
+    )?;
+
+    conn.query_row(
+        r#"SELECT gs.id FROM group_stats gs
+           INNER JOIN "group" g ON g.id = gs.group_id AND g.stat_version = gs.version
+           WHERE gs.group_id = ?1 AND gs.plan_id = ?2 AND gs.date = ?3"#,
+        rusqlite::params![group_id, plan_id, &today],
+        |r| r.get(0),
+    )
+    .map(Some)
+}
+
 fn write_group_stat(
     group_id: i64,
     is_promote: bool,
@@ -419,142 +456,49 @@ fn write_group_stat(
     is_new_review: bool,
     conn: &Connection,
 ) -> Result<()> {
-    let today = get_date(&conn)?;
-
-    let (group_name, plan_id): (String, Option<i64>) = conn.query_row(
-        r#"SELECT name, plan_id FROM "group" WHERE id = ?1"#,
-        [group_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )?;
-    let plan_id = match plan_id {
-        Some(id) => id,
-        None => return Ok(()),
-    };
-
-    let existing_id: Option<i64> = conn
-        .query_row(
-            "SELECT id FROM group_stats WHERE group_id = ?1 AND date = ?2 ORDER BY id DESC LIMIT 1",
-            rusqlite::params![group_id, &today],
-            |row| row.get(0),
-        )
-        .ok();
-
-    let stat_id = match existing_id {
-        Some(id) => {
-            conn.execute(
-                r#"
-                UPDATE group_stats
-                SET num_promote = num_promote + ?1,
-                    num_demote = num_demote + ?2,
-                    num_new = num_new + ?3
-                WHERE id = ?4
-                "#,
-                rusqlite::params![
-                    is_promote as i32,
-                    is_demote as i32,
-                    is_new_review as i32,
-                    id
-                ],
-            )?;
-            id
-        }
-        // Should theoretically never execute, adding to a plan builds a blank stat
-        None => {
-            let plan_name: String = conn
-                .query_row("SELECT name FROM plan WHERE id = ?1", [plan_id], |r| {
-                    r.get(0)
-                })
-                .unwrap_or_default();
-            conn.execute(
-                r#"
-                INSERT INTO group_stats (group_id, plan_id, plan_name, group_name, date, num_promote, num_demote, num_new)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-                "#,
-                rusqlite::params![group_id, plan_id, plan_name, group_name, &today, is_promote as i32, is_demote as i32, is_new_review as i32],
-            )?;
-            conn.last_insert_rowid()
-        }
-    };
-
-    let (p, d): (i64, i64) = conn.query_row(
-        "SELECT num_promote, num_demote FROM group_stats WHERE id = ?1",
-        [stat_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )?;
-    let total = p + d;
-    let retention = if total > 0 {
-        p as f64 / total as f64
-    } else {
-        0.0
+    let Some(line) = open_stat_line(group_id, conn)? else {
+        return Ok(());
     };
 
     conn.execute(
-        "UPDATE group_stats SET retention_rate = ?1 WHERE id = ?2",
-        rusqlite::params![retention, stat_id],
+        "UPDATE group_stats
+         SET num_promote = num_promote + ?2,
+             num_demote = num_demote + ?3,
+             num_new = num_new + ?4,
+             retention_rate = CASE WHEN num_promote + ?2 + num_demote + ?3 > 0
+                 THEN CAST(num_promote + ?2 AS REAL) / (num_promote + ?2 + num_demote + ?3)
+                 ELSE 0.0 END
+         WHERE id = ?1",
+        rusqlite::params![line, is_promote as i32, is_demote as i32, is_new_review as i32],
     )?;
-
     Ok(())
 }
 
 pub fn add_group_time(group_id: i64, minutes: f64, conn: &Connection) -> Result<()> {
-    let today = get_date(&conn)?;
-
-    let (group_name, plan_id): (String, Option<i64>) = conn.query_row(
-        r#"SELECT name, plan_id FROM "group" WHERE id = ?1"#,
-        [group_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )?;
-    let plan_id = match plan_id {
-        Some(id) => id,
-        None => return Ok(()),
+    let Some(line) = open_stat_line(group_id, conn)? else {
+        return Ok(());
     };
-
-    let existing_id: Option<i64> = conn
-        .query_row(
-            "SELECT id FROM group_stats WHERE group_id = ?1 AND date = ?2 ORDER BY id DESC LIMIT 1",
-            rusqlite::params![group_id, &today],
-            |row| row.get(0),
-        )
-        .ok();
-
-    match existing_id {
-        Some(id) => {
-            conn.execute(
-                "UPDATE group_stats SET time_spent_minutes = time_spent_minutes + ?1 WHERE id = ?2",
-                rusqlite::params![minutes, id],
-            )?;
-        }
-        // Should theoretically never happen, as adding a deck to a plan creates a new row automatically
-        None => {
-            let plan_name: String = conn
-                .query_row("SELECT name FROM plan WHERE id = ?1", [plan_id], |r| {
-                    r.get(0)
-                })
-                .unwrap_or_default();
-            conn.execute(
-                r#"
-                INSERT INTO group_stats (group_id, plan_id, plan_name, group_name, date, time_spent_minutes)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-                "#,
-                rusqlite::params![group_id, plan_id, plan_name, group_name, today, minutes],
-            )?;
-        }
-    }
-
+    conn.execute(
+        "UPDATE group_stats SET time_spent_minutes = time_spent_minutes + ?2 WHERE id = ?1",
+        rusqlite::params![line, minutes],
+    )?;
     Ok(())
 }
 
 // Wipes card progress and starts a blank group_stats row for today, splitting
-// pre/post reset data. Also called from remove_group_from_plan with reset=true.
-pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
-    let today = get_date(conn)?;
-
-    let (group_name, plan_id): (String, Option<i64>) = conn.query_row(
-        r#"SELECT name, plan_id FROM "group" WHERE id = ?1"#,
+/// The version a deck's stats are currently being written into.
+pub fn current_version(group_id: i64, conn: &Connection) -> Result<i64> {
+    conn.query_row(
+        r#"SELECT stat_version FROM "group" WHERE id = ?1"#,
         [group_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )?;
+        |r| r.get(0),
+    )
+}
 
+// Wipes card progress and opens a fresh version of the deck's stats. A version
+// nothing was ever graded into gets replaced instead, so resetting repeatedly
+// can't run the counter up. Also called from remove_group_from_plan.
+pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE WHERE group_id = ?1",
         [group_id],
@@ -564,38 +508,37 @@ pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
         [group_id],
     )?;
 
-    // Delete today's stat if it only has zeros (no real data yet today, no point keeping it)
-    conn.execute(
-        r#"
-        DELETE FROM group_stats
-        WHERE group_id = ?1 AND date = ?2
-          AND num_new = 0 AND num_promote = 0 AND num_demote = 0 AND time_spent_minutes = 0
-        "#,
-        rusqlite::params![group_id, &today],
+    let version = current_version(group_id, conn)?;
+    let unused: bool = conn.query_row(
+        "SELECT NOT EXISTS(
+            SELECT 1 FROM group_stats
+            WHERE group_id = ?1 AND version = ?2
+              AND (num_new > 0 OR num_promote > 0 OR num_demote > 0)
+        )",
+        rusqlite::params![group_id, version],
+        |r| r.get(0),
     )?;
 
-    // If in plan, zero the scheduler counters, insert a fresh blank stats row, and fill group
-    if let Some(plan_id) = plan_id {
+    if unused {
         conn.execute(
-            "UPDATE scheduler SET studied_new = 0, studied_review = 0 WHERE group_id = ?1",
+            "DELETE FROM group_stats WHERE group_id = ?1 AND version = ?2",
+            rusqlite::params![group_id, version],
+        )?;
+    } else {
+        conn.execute(
+            r#"UPDATE "group" SET stat_version = stat_version + 1 WHERE id = ?1"#,
             [group_id],
         )?;
-
-        let plan_name: String = conn
-            .query_row("SELECT name FROM plan WHERE id = ?1", [plan_id], |r| {
-                r.get(0)
-            })
-            .unwrap_or_default();
-        conn.execute(
-            r#"
-            INSERT INTO group_stats (group_id, plan_id, plan_name, group_name, date, num_promote, num_demote, time_spent_minutes, retention_rate)
-            VALUES (?1, ?2, ?3, ?4, ?5, 0, 0, 0.0, 0.0)
-            "#,
-            rusqlite::params![group_id, plan_id, plan_name, group_name, &today],
-        )?;
-
-        let _ = fill_group(group_id, conn);
     }
+
+    // Out of a plan the counter is the whole record, the new version's first line
+    // gets written whenever the deck next joins one.
+    conn.execute(
+        "UPDATE scheduler SET studied_new = 0, studied_review = 0 WHERE group_id = ?1",
+        [group_id],
+    )?;
+    open_stat_line(group_id, conn)?;
+    let _ = fill_group(group_id, conn);
 
     Ok(())
 }
@@ -684,7 +627,7 @@ pub fn get_plan_streak(plan_id: i64, conn: &Connection) -> Result<(i64, bool)> {
         conn.prepare(
             r#"
             SELECT DISTINCT date FROM group_stats
-            WHERE plan_id = ?1
+            WHERE plan_id = ?1 AND is_archived = FALSE
               AND (num_new > 0 OR num_promote > 0 OR num_demote > 0)
             UNION
             SELECT DISTINCT date FROM todo_stats WHERE plan_id = ?1

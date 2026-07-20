@@ -77,11 +77,19 @@
 .st-table col:nth-child(4) { width: 66px; }
 .st-table col:nth-child(5) { width: 84px; }
 .st-table col:nth-child(6) { width: 54px; }
-.st-table col:nth-child(7) { width: 104px; }
+.st-table col:nth-child(7) { width: 168px; }
 
 /* Badges: fixed min-width so 1- and 2-digit values align across rows */
 .st-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; padding: 2px 7px; border-radius: var(--t-r); font-size: 11px; font-weight: 600; }
 .st-badge-deleted { border: none; color: var(--t-accent-fg); background: var(--t-red-2); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; }
+.st-row-alt { background: var(--t-surface-2); }
+.st-badge-merged { border: none; color: var(--t-accent-fg); background: var(--t-plum); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; min-width: 0; }
+.st-badge-archived { border: none; color: var(--t-accent-fg); background: var(--t-text-3); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; min-width: 0; }
+
+/* Pages between a deck's versions, newest first. Sits under the table. */
+.st-version-nav { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border-top: 1px solid var(--t-border); background: var(--t-surface-2); }
+.st-version-label { font-weight: 700; font-size: 12px; color: var(--t-text); }
+.st-version-count { font-size: 11px; color: var(--t-text-3); }
 
 .st-ret-bar-wrap { display: block; width: 100%; }
 .st-ret-bar-track {
@@ -164,6 +172,10 @@
 
 .st-btn-sm { padding: 3px 8px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-btn-fg); box-shadow: none; }
 .st-btn-sm:hover { background: var(--t-btn-h); box-shadow: none; }
+
+/* Archive toggle, hazard yellow so it reads as a soft warning, not a delete */
+.st-archive-btn { padding: 3px 8px; border: 1px solid var(--t-yellow); border-radius: var(--t-r-btn); background: var(--t-yellow); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: #000; box-shadow: none; white-space: nowrap; }
+.st-archive-btn:hover { filter: brightness(0.94); box-shadow: none; }
 
 /* Solid fill with a matching border, deleted must not read translucent */
 /* Dead pills never change text color, only the box darkens; the muted ink is set on

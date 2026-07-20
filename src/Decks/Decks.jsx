@@ -119,7 +119,6 @@ function DeckList({ setToast, onOpenDeck }) {
   const [mergeDeckB, setMergeDeckB] = useState(null);
   const [mergeName, setMergeName] = useState("");
   const [mergeReset, setMergeReset] = useState(false);
-  const [mergeStats, setMergeStats] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
 
   const loadSrsSummaries = () =>
@@ -260,7 +259,6 @@ function DeckList({ setToast, onOpenDeck }) {
         deckBId: mergeDeckB,
         newName: mergeName.trim(),
         reset: mergeReset,
-        mergeStats: !mergeReset && mergeStats,
       });
       const [updatedDecks, counts] = await Promise.all([
         loggedInvoke("get_decks"),
@@ -301,14 +299,8 @@ function DeckList({ setToast, onOpenDeck }) {
             <input type="checkbox" checked={mergeReset} onChange={(e) => setMergeReset(e.target.checked)} />
             Reset progress on merged cards
           </label>
-          {!mergeReset && (
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
-              <input type="checkbox" checked={mergeStats} onChange={(e) => setMergeStats(e.target.checked)} />
-              Merge past stats together under the new deck name
-            </label>
-          )}
           <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-          The two source decks will be deleted after their cards move into the new deck. Cards are ordered in alternating order. If either deck is linked to a plan, that link will be removed.
+          The two source decks will be deleted after their cards move into the new deck. Cards are ordered in alternating order. If either deck is linked to a plan, that link will be removed. Past stats move to the new deck, and each plan keeps its own portion.
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="primary" onClick={confirmMerge}>Merge</button>

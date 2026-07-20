@@ -3,7 +3,7 @@ use rusqlite::{params, Connection};
 use std::path::Path;
 
 /// Stamped into Toast to Go packages. A pull rejects a mismatch. Bump on any schema change.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// Adds a column to an existing table if it doesn't already have it.
 /// CREATE TABLE IF NOT EXISTS won't alter tables that predate a new column,
@@ -176,6 +176,32 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     // v1.5.0: skip a todo for today only. Cleared on day rollover and when the
     // todo's frequency changes.
     add_column_if_missing(conn, "todo", "is_skipped", "BOOLEAN NOT NULL DEFAULT FALSE")?;
+    // v1.6.0: a reset opens a new numbered version of a deck's stats instead of
+    // marking a row, so nothing a cleanup pass deletes can carry the reset.
+    // Quoted, group is a reserved word and PRAGMA table_info won't parse it bare
+    add_column_if_missing(conn, "\"group\"", "stat_version", "INTEGER NOT NULL DEFAULT 1")?;
+    add_column_if_missing(conn, "group_stats", "version", "INTEGER NOT NULL DEFAULT 1")?;
+    add_column_if_missing(
+        conn,
+        "group_stats",
+        "is_merged",
+        "BOOLEAN NOT NULL DEFAULT FALSE",
+    )?;
+    // A merge copies each source's latest version onto the new deck, so the
+    // original is kept for history but must not be counted a second time.
+    add_column_if_missing(
+        conn,
+        "group_stats",
+        "is_archived",
+        "BOOLEAN NOT NULL DEFAULT FALSE",
+    )?;
+    // Deck identity that outlives deletion, so two decks sharing a name never
+    // collapse into one card. Rows whose deck is already gone stay NULL.
+    add_column_if_missing(conn, "group_stats", "origin_group_id", "INTEGER")?;
+    conn.execute_batch(
+        "UPDATE group_stats SET origin_group_id = group_id
+         WHERE origin_group_id IS NULL AND group_id IS NOT NULL;",
+    )?;
     Ok(())
 }
 
@@ -216,6 +242,8 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
 
                 group_type TEXT NOT NULL
                     CHECK(group_type IN ('deck', 'notebook')),
+
+                stat_version INTEGER NOT NULL DEFAULT 1, -- bumped by a reset, partitions the deck's stats into versions
 
                 FOREIGN KEY(plan_id)
                     REFERENCES plan(id)
@@ -338,7 +366,8 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
             -- Stat table for a DECK ONLY (SRS), deprecated from Notebooks
             CREATE TABLE IF NOT EXISTS group_stats(
                 id INTEGER PRIMARY KEY,
-                group_id INTEGER, -- for the purpose of collecting data and sorting on stats page, not persistence
+                group_id INTEGER, -- goes NULL when the deck is deleted, which is how the stats page spots a dead deck
+                origin_group_id INTEGER, -- survives deletion, so same named decks never merge into one card
                 plan_id INTEGER NOT NULL, -- no FK: value persists after plan deletion so stats remain browsable
                 plan_name TEXT NOT NULL DEFAULT '', -- preserved for display after plan deletion; synced on rename
 
@@ -350,6 +379,10 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 num_new INTEGER NOT NULL DEFAULT 0, -- new card studied
                 time_spent_minutes FLOAT NOT NULL DEFAULT 0,
                 retention_rate REAL NOT NULL DEFAULT 0,
+
+                version INTEGER NOT NULL DEFAULT 1, -- which run of the deck this line belongs to
+                is_merged BOOLEAN NOT NULL DEFAULT FALSE, -- this deck was merged into another one
+                is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- copied into a merge, so the copy counts and this doesn't
 
                 FOREIGN KEY(group_id)
                     REFERENCES "group"(id)

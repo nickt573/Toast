@@ -77,6 +77,12 @@ function categoryStringToMap(catStr) {
   return map;
 }
 
+// An archived version was copied into a merged deck, so the copy is what counts.
+// Every aggregate reads through this, otherwise a merge inflates the plan.
+function counted(groupStats) {
+  return groupStats.filter(r => !r.is_archived);
+}
+
 function computeMetrics(groupStats, todoStats) {
   const studyMins = groupStats.reduce((s, r) => s + r.time_spent_minutes, 0);
   const todoMins  = todoStats.reduce((s, r) => s + r.time_spent_minutes, 0);
@@ -313,13 +319,16 @@ const RANGES = [
   { label: "90d", days: 90 },
 ];
 
-function ChartPanel({ groupStats, todoStats }) {
+function ChartPanel({ groupStats: allGroupStats, todoStats }) {
   const [tab, setTab] = useState("bytime");
   const [range,  setRange]  = useState(30);
   const [offset, setOffset] = useState(0);
 
-  // Snap back to the most recent window when the underlying data changes (e.g. plan switch)
-  useEffect(() => setOffset(0), [groupStats, todoStats]);
+  const groupStats = counted(allGroupStats);
+
+  // Snap back to the most recent window when the underlying data changes (e.g. plan
+  // switch). Keyed on the prop, since the filtered copy is new on every render.
+  useEffect(() => setOffset(0), [allGroupStats, todoStats]);
 
   // Each chart windows over its own date domain
   function computeWindow(allDates) {
@@ -492,24 +501,40 @@ function ChartPanel({ groupStats, todoStats }) {
 
 // Deck Sessions tab:
 
+// Archive toggle for a scope of stat rows. Reads Unarchive only when every row in
+// scope is already archived, so a mix or none offers Archive first.
+function ArchiveButton({ rows, onArchive, label = "Archive" }) {
+  const allArchived = rows.length > 0 && rows.every(r => r.is_archived);
+  return (
+    <button className="st-archive-btn" onClick={() => onArchive(!allArchived)}>
+      {allArchived ? `Un${label.toLowerCase()}` : label}
+    </button>
+  );
+}
+
 function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
   const [deckFilter, setDeckFilter]   = useState("all");
   const [expanded, setExpanded]       = useState({});
+  // Which version each deck card is showing. Unset means the newest one.
+  const [shownVersion, setShownVersion] = useState({});
 
-  const deckNames = [...new Set(groupStats.map(r => r.group_name))]
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-
-  const visible = deckFilter === "all"
-    ? groupStats
-    : groupStats.filter(r => r.group_name === deckFilter);
+  // One card per deck, versions paged inside it. origin_group_id outlives the
+  // deck, so two decks sharing a name stay apart. Older rows fall back to name.
+  const deckId = r => (r.origin_group_id === null ? `name:${r.group_name}` : `id:${r.origin_group_id}`);
 
   const byDeck = {};
-  visible.forEach(r => {
-    if (!byDeck[r.group_name]) byDeck[r.group_name] = [];
-    byDeck[r.group_name].push(r);
+  groupStats.forEach(r => {
+    const k = deckId(r);
+    if (!byDeck[k]) byDeck[k] = [];
+    byDeck[k].push(r);
   });
 
-  const toggle = name => setExpanded(e => ({ ...e, [name]: !e[name] }));
+  const deckKeys = Object.keys(byDeck)
+    .sort((a, b) => byDeck[a][0].group_name.localeCompare(byDeck[b][0].group_name, undefined, { sensitivity: "base" }));
+
+  const visibleKeys = deckFilter === "all" ? deckKeys : deckKeys.filter(k => k === deckFilter);
+
+  const toggle = key => setExpanded(e => ({ ...e, [key]: !e[key] }));
 
   const deleteRow = async (id) => {
     try {
@@ -519,68 +544,86 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
     } catch (e) { logError("catch", e); setToast("Failed to delete session.", "error"); }
   };
 
-  const deleteAll = async (groupName) => {
+  // version null clears the whole deck, otherwise just the one shown
+  const deleteStats = async (originGroupId, groupName, version) => {
     try {
-      await loggedInvoke("delete_group_stats_for_deck", { groupName, planId });
-      setToast("Deck stats deleted.");
+      await loggedInvoke("delete_group_stats_for_deck", { originGroupId, groupName, version, planId });
+      setToast(version === null ? "Deck stats deleted." : `Version ${version} deleted.`);
       onDeleted();
     } catch (e) { logError("catch", e); setToast("Failed to delete deck stats.", "error"); }
   };
 
-  if (deckNames.length === 0) {
+  const archiveRow = async (id, archived) => {
+    try {
+      await loggedInvoke("set_group_stat_archived", { id, archived });
+      setToast(archived ? "Session archived." : "Session unarchived.");
+      onDeleted();
+    } catch (e) { logError("catch", e); setToast("Failed to archive session.", "error"); }
+  };
+
+  const archiveStats = async (originGroupId, groupName, version, archived) => {
+    try {
+      await loggedInvoke("set_group_stats_archived_for_deck", { originGroupId, groupName, version, planId, archived });
+      setToast(archived ? "Stats archived." : "Stats unarchived.");
+      onDeleted();
+    } catch (e) { logError("catch", e); setToast("Failed to archive stats.", "error"); }
+  };
+
+  if (deckKeys.length === 0) {
     return <div className="empty-bubble" style={{ marginTop: 16 }}>No deck sessions recorded yet.</div>;
   }
-
-  const deletedNames = new Set(
-    groupStats.filter(r => r.group_id === null).map(r => r.group_name)
-  );
 
   return (
     <div>
       <div className="st-pills" style={{ marginBottom: 12 }}>
         <button className={`st-pill${deckFilter === "all" ? " active" : ""}`} onClick={() => setDeckFilter("all")}>All</button>
-        {deckNames.map(n => {
-          const deleted = deletedNames.has(n);
-          const isActive = deckFilter === n;
+        {[...new Map(groupStats.map(r => [deckId(r), r])).entries()].map(([id, r]) => {
+          const gone = r.group_id === null;
+          const isActive = deckFilter === id;
           return (
             <button
-              key={n}
-              className={`st-pill${isActive ? " active" : ""}${deleted ? " st-deck-pill-deleted" : ""}`}
-              onClick={() => setDeckFilter(n)}>
-              {n}
+              key={id}
+              className={`st-pill${isActive ? " active" : ""}${gone ? " st-deck-pill-deleted" : ""}`}
+              onClick={() => setDeckFilter(id)}>
+              {r.group_name}
             </button>
           );
         })}
       </div>
 
-      {deckNames.filter(name => byDeck[name]).map(name => {
-        const rows = byDeck[name];
-        const isOpen = !!expanded[name];
-        const totalTime = rows.reduce((s, r) => s + r.time_spent_minutes, 0);
-        const totalN    = rows.reduce((s, r) => s + r.num_new, 0);
-        const totalP    = rows.reduce((s, r) => s + r.num_promote, 0);
-        const totalD    = rows.reduce((s, r) => s + r.num_demote, 0);
+      {visibleKeys.map(cardId => {
+        const deckRows = byDeck[cardId];
+        const name = deckRows[0].group_name;
+        const isOpen = !!expanded[cardId];
+
+        // Newest first, so the arrows start on the most recent run
+        const allVersions = [...new Set(deckRows.map(r => r.version))].sort((a, b) => b - a);
+        const version = shownVersion[cardId] ?? allVersions[0];
+        const vIdx = Math.max(0, allVersions.indexOf(version));
+        const rows = deckRows.filter(r => r.version === version);
+
+        const totalTime = deckRows.reduce((s, r) => s + r.time_spent_minutes, 0);
+        const totalN    = deckRows.reduce((s, r) => s + r.num_new, 0);
+        const totalP    = deckRows.reduce((s, r) => s + r.num_promote, 0);
+        const totalD    = deckRows.reduce((s, r) => s + r.num_demote, 0);
         const avgRet    = (totalP + totalD) > 0 ? totalP / (totalP + totalD) : null;
 
-        // Group rows by date for tinting
-        const dateOrder = [];
-        const dateToRows = {};
-        rows.forEach(r => {
-          if (!dateToRows[r.date]) { dateOrder.push(r.date); dateToRows[r.date] = []; }
-          dateToRows[r.date].push(r);
-        });
-
-        const isDeleted = rows[0].group_id === null;
+        // A missing deck was either deleted outright or merged into another one
+        const isGone = deckRows[0].group_id === null;
+        const wasMerged = deckRows[0].is_merged;
+        const step = n => setShownVersion(v => ({ ...v, [cardId]: allVersions[vIdx + n] }));
 
         return (
-          <div key={name} className="st-deck-card">
-            <div className="st-deck-header" onClick={() => toggle(name)} style={{ cursor: "pointer" }}>
+          <div key={cardId} className="st-deck-card">
+            <div className="st-deck-header" onClick={() => toggle(cardId)} style={{ cursor: "pointer" }}>
               <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="st-deck-name">{name}</span>
-                {isDeleted && <span className="st-badge st-badge-deleted">Deleted</span>}
+                {isGone && (wasMerged
+                  ? <span className="st-badge st-badge-merged">Merged</span>
+                  : <span className="st-badge st-badge-deleted">Deleted</span>)}
               </span>
               <span className="st-deck-meta">
-                <span className="st-meta-pill">{rows.length} session{rows.length !== 1 ? "s" : ""}</span>
+                <span className="st-meta-pill">{deckRows.length} session{deckRows.length !== 1 ? "s" : ""}</span>
                 <span className="st-meta-pill st-meta-pill--new">{totalN} new</span>
                 <span className="st-meta-pill st-meta-pill--promote">+{totalP}</span>
                 <span className="st-meta-pill st-meta-pill--demote">−{totalD}</span>
@@ -588,7 +631,9 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                 <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
               </span>
               <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }} onClick={e => e.stopPropagation()}>
-                <ConfirmDelete label="Delete all" small onConfirm={() => deleteAll(name)} />
+                <ArchiveButton rows={deckRows} label="Archive all"
+                  onArchive={a => archiveStats(deckRows[0].origin_group_id, name, null, a)} />
+                <ConfirmDelete label="Delete all" small onConfirm={() => deleteStats(deckRows[0].origin_group_id, name, null)} />
                 <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
               </span>
             </div>
@@ -610,12 +655,16 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {dateOrder.map((date, di) => {
-                    const dateRows = dateToRows[date];
-                    const tinted = di % 2 === 1;
-                    return dateRows.map(r => (
-                      <tr key={r.id} style={tinted ? { background: "var(--t-surface-2)" } : {}}>
-                        <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{r.date}</td>
+                  {rows.map((r, i) => (
+                      <tr key={r.id} className={i % 2 === 1 ? "st-row-alt" : ""}>
+                        <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                            {r.date}
+                            {r.is_archived && (
+                              <span className="st-badge st-badge-archived" title="Copied into a merged deck, so it isn't counted twice">Archived</span>
+                            )}
+                          </span>
+                        </td>
                         <td><span className="st-badge" style={{ background: "var(--t-blue)", color: "var(--t-accent-fg)" }}>{r.num_new}</span></td>
                         <td><span className="st-badge" style={{ background: "var(--t-green)", color: "var(--t-accent-fg)" }}>{r.num_promote}</span></td>
                         <td><span className="st-badge" style={{ background: "var(--t-red)", color: "var(--t-accent-fg)" }}>{r.num_demote}</span></td>
@@ -641,12 +690,33 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                           )}
                         </td>
                         <td style={{ fontSize: 12, color: "var(--t-text-3)" }}>{fmtTime(r.time_spent_minutes)}</td>
-                        <td style={{ minWidth: 70 }}><ConfirmDelete small onConfirm={() => deleteRow(r.id)} /></td>
+                        <td>
+                          <span style={{ display: "inline-flex", gap: 4, justifyContent: "flex-end" }}>
+                            <ArchiveButton rows={[r]} onArchive={a => archiveRow(r.id, a)} />
+                            <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
+                          </span>
+                        </td>
                       </tr>
-                    ));
-                  })}
+                  ))}
                 </tbody>
               </table>
+            )}
+
+            {isOpen && allVersions.length > 1 && (
+              <div className="st-version-nav">
+                <button className="st-btn-sm" disabled={vIdx >= allVersions.length - 1}
+                  onClick={() => step(1)} title="Older version">‹</button>
+                <span className="st-version-label">v{version}</span>
+                <span className="st-version-count">of {allVersions.length}</span>
+                <button className="st-btn-sm" disabled={vIdx <= 0}
+                  onClick={() => step(-1)} title="Newer version">›</button>
+                <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                  <ArchiveButton rows={rows} label={`Archive v${version}`}
+                    onArchive={a => archiveStats(deckRows[0].origin_group_id, name, version, a)} />
+                  <ConfirmDelete label={`Delete v${version}`} small
+                    onConfirm={() => deleteStats(deckRows[0].origin_group_id, name, version)} />
+                </span>
+              </div>
             )}
           </div>
         );
@@ -1154,7 +1224,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
     loadStats(selectedPlanId);
   }, [selectedPlanId]);
 
-  const metrics = computeMetrics(groupStats, todoStats);
+  const metrics = computeMetrics(counted(groupStats), todoStats);
   const retColor = metrics.avgRetention !== null ? retentionColor(metrics.avgRetention) : GRAY;
   const atRisk = streakInfo.streak > 0 && !streakInfo.studied_today;
 

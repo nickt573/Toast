@@ -22,6 +22,37 @@ fn insert_stat_resource(stat_id: i64, resource_id: i64, conn: &Connection) -> Re
     Ok(())
 }
 
+// Archiving keeps a stat line visible but drops it from every total, chart and
+// streak. A merge archives its copies automatically, this is the manual toggle.
+pub fn set_group_stat_archived(id: i64, archived: bool, conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE group_stats SET is_archived = ?2 WHERE id = ?1",
+        rusqlite::params![id, archived],
+    )?;
+    Ok(())
+}
+
+// Scopes match delete_group_stats_for_deck, a version alone or the whole deck.
+pub fn set_group_stats_archived_for_deck(
+    origin_group_id: Option<i64>,
+    group_name: &str,
+    version: Option<i64>,
+    plan_id: i64,
+    archived: bool,
+    conn: &Connection,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE group_stats SET is_archived = ?5
+         WHERE plan_id = ?3
+           AND (?4 IS NULL OR version = ?4)
+           AND CASE WHEN ?1 IS NULL
+                    THEN origin_group_id IS NULL AND group_name = ?2
+                    ELSE origin_group_id = ?1 END",
+        rusqlite::params![origin_group_id, group_name, plan_id, version, archived],
+    )?;
+    Ok(())
+}
+
 pub fn update_plan(id: i64, name: String, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE plan SET name = ?1 WHERE id = ?2",

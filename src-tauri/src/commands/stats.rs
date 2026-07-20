@@ -44,12 +44,46 @@ pub fn delete_group_stat(id: i64, state: tauri::State<AppState>) -> Result<(), S
 
 #[tauri::command]
 pub fn delete_group_stats_for_deck(
+    origin_group_id: Option<i64>,
     group_name: String,
+    version: Option<i64>,
     plan_id: i64,
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
-    delete::delete_group_stats_for_deck(&group_name, plan_id, &conn).map_err(|e| e.to_string())
+    delete::delete_group_stats_for_deck(origin_group_id, &group_name, version, plan_id, &conn)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_group_stat_archived(
+    id: i64,
+    archived: bool,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    update::set_group_stat_archived(id, archived, &conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_group_stats_archived_for_deck(
+    origin_group_id: Option<i64>,
+    group_name: String,
+    version: Option<i64>,
+    plan_id: i64,
+    archived: bool,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    update::set_group_stats_archived_for_deck(
+        origin_group_id,
+        &group_name,
+        version,
+        plan_id,
+        archived,
+        &conn,
+    )
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

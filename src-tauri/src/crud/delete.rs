@@ -242,6 +242,25 @@ pub fn remove_group_from_plan(group_id: i64, reset: bool, conn: &mut Connection)
     {
         let tx = conn.transaction()?;
 
+        // Drop this plan's empty lines in the current version so add and remove
+        // cycles leave nothing behind. The reset marker lives on the deck's version
+        // counter, so nothing of meaning can be lost here.
+        tx.execute(
+            r#"
+            DELETE FROM group_stats
+            WHERE id IN (
+                SELECT gs.id FROM group_stats gs
+                INNER JOIN "group" g
+                    ON g.id = gs.group_id
+                   AND g.plan_id = gs.plan_id
+                   AND g.stat_version = gs.version
+                WHERE gs.group_id = ?1
+                  AND gs.num_new = 0 AND gs.num_promote = 0 AND gs.num_demote = 0
+            )
+            "#,
+            [group_id],
+        )?;
+
         tx.execute("DELETE FROM scheduler WHERE group_id = ?1", [group_id])?;
         tx.execute(
             r#"UPDATE "group" SET plan_id = NULL WHERE id = ?1"#,
@@ -411,14 +430,25 @@ pub fn delete_group_stat(id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+// Clears every version of one deck within a plan, matching the deck level card on
+// the stats page. origin_group_id outlives the deck, so two decks sharing a name
+// stay independent even after both are gone. Rows predating it fall back to name.
+// Passing a version clears just that one, otherwise every version of the deck goes.
 pub fn delete_group_stats_for_deck(
+    origin_group_id: Option<i64>,
     group_name: &str,
+    version: Option<i64>,
     plan_id: i64,
     conn: &Connection,
 ) -> Result<()> {
     conn.execute(
-        "DELETE FROM group_stats WHERE group_name = ?1 AND plan_id = ?2",
-        rusqlite::params![group_name, plan_id],
+        "DELETE FROM group_stats
+         WHERE plan_id = ?3
+           AND (?4 IS NULL OR version = ?4)
+           AND CASE WHEN ?1 IS NULL
+                    THEN origin_group_id IS NULL AND group_name = ?2
+                    ELSE origin_group_id = ?1 END",
+        rusqlite::params![origin_group_id, group_name, plan_id, version],
     )?;
     Ok(())
 }

@@ -425,26 +425,31 @@ pub fn get_todo_groups(todo_id: i64, conn: &Connection) -> Result<Vec<Group>> {
 pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>> {
     conn.prepare(
         r#"
-        SELECT id, group_id, plan_id, plan_name, group_name, date,
-               num_promote, num_demote, num_new, time_spent_minutes, retention_rate
+        SELECT id, group_id, origin_group_id, plan_id, plan_name, group_name, date,
+               num_promote, num_demote, num_new, time_spent_minutes, retention_rate,
+               version, is_merged, is_archived
         FROM group_stats
         WHERE plan_id = ?1
-        ORDER BY date DESC, id DESC
+        ORDER BY version DESC, date DESC, id DESC
         "#,
     )?
     .query_map([plan_id], |row| {
         Ok(GroupStat {
             id: row.get(0)?,
             group_id: row.get(1)?,
-            plan_id: row.get(2)?,
-            plan_name: row.get(3)?,
-            group_name: row.get(4)?,
-            date: row.get(5)?,
-            num_promote: row.get(6)?,
-            num_demote: row.get(7)?,
-            num_new: row.get(8)?,
-            time_spent_minutes: row.get(9)?,
-            retention_rate: row.get(10)?,
+            origin_group_id: row.get(2)?,
+            plan_id: row.get(3)?,
+            plan_name: row.get(4)?,
+            group_name: row.get(5)?,
+            date: row.get(6)?,
+            num_promote: row.get(7)?,
+            num_demote: row.get(8)?,
+            num_new: row.get(9)?,
+            time_spent_minutes: row.get(10)?,
+            retention_rate: row.get(11)?,
+            version: row.get(12)?,
+            is_merged: row.get(13)?,
+            is_archived: row.get(14)?,
         })
     })?
     .collect()

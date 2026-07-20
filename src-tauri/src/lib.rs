@@ -157,6 +157,8 @@ pub fn run() {
             commands::stats::get_todo_stats,
             commands::stats::delete_group_stat,
             commands::stats::delete_group_stats_for_deck,
+            commands::stats::set_group_stat_archived,
+            commands::stats::set_group_stats_archived_for_deck,
             commands::stats::delete_todo_stat,
             commands::stats::update_todo_stat,
             commands::stats::get_deleted_plan_ids,

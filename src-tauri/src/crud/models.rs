@@ -169,6 +169,7 @@ pub struct NewResource {
 pub struct GroupStat {
     pub id: i64,
     pub group_id: Option<i64>,
+    pub origin_group_id: Option<i64>,
     pub plan_id: i64,
     pub plan_name: String,
     pub group_name: String,
@@ -178,6 +179,9 @@ pub struct GroupStat {
     pub num_new: i64,
     pub time_spent_minutes: f64,
     pub retention_rate: f64,
+    pub version: i64,
+    pub is_merged: bool,
+    pub is_archived: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
