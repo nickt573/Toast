@@ -1118,7 +1118,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                         <div className="hp-date">{displayDate}</div>
                     </div>
                     {onRefreshDay && (
-                        <button className={`hp-refresh-day${dayStale ? " stale" : ""}`} onClick={onRefreshDay}>Refresh Day</button>
+                        <button className={`hp-refresh-day${dayStale ? " stale" : ""}`} onClick={onRefreshDay}>Refresh Date</button>
                     )}
                 </div>
 

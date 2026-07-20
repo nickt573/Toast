@@ -35,7 +35,7 @@ export const HELP_PAGES = [
     {
         tab: "home",
         title: "Home",
-        body: 'The Home page brings it all together. Each day your plans show how many todos and cards are due, and opening one lets you check todos off, study your decks, and time your sessions. Anything extra you did can be logged too. Toast intentionally only checks for a new day on each startup, so click the "Refresh Day" button to update the date mid session (if applicable). Happy studying!',
+        body: 'The Home page brings it all together. Each day your plans show how many todos and cards are due, and opening one lets you check todos off, study your decks, and time your sessions. Anything extra you did can be logged too. Toast intentionally only checks for a new day on each startup, so click the "Refresh Date" button to update the date mid session (if applicable). Happy studying!',
     },
 ];
 
