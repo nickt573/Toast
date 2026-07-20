@@ -184,6 +184,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-stat-num--zero  { color: var(--t-green); }
 .hp-stat-lbl { font-size: 15px; color: var(--t-text-2); font-weight: 600; }
 .hp-plan-stat-divider { width: 2px; height: 44px; background: var(--t-border); margin: 0 20px; flex-shrink: 0; }
+.hp-plan-card.is-done .hp-plan-stat-divider { background: var(--t-green); }
 .hp-plan-card-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
 .hp-plan-open { font-size: 12px; font-weight: 600; color: var(--t-accent); letter-spacing: 0.02em; }
 /* Matches the green border and counts on a finished card */
