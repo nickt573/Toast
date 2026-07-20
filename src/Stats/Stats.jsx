@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { loggedInvoke, logError } from "../logger";
-import { ResourceCard, GroupTypeBadge, ConfirmDelete } from "../UIUtils";
+import { ResourceCard, GroupTypeBadge, ConfirmDelete, Linkify } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
 import {
   Chart as ChartJS,
@@ -942,7 +942,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                   {r.details && (
                     <div className="st-todo-section">
                       <div className="st-todo-section-label">Details</div>
-                      <p className="st-todo-notes">{r.details}</p>
+                      <p className="st-todo-notes"><Linkify text={r.details} /></p>
                     </div>
                   )}
                   {r.resources.length > 0 && (

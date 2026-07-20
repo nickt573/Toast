@@ -134,6 +134,8 @@ html, body, #root {
 }
 
 a { color: var(--t-blue); text-decoration: underline; }
+/* Pasted links inside a todo description, wrap so a long url can't overflow */
+.t-inline-link { color: var(--t-blue); text-decoration: underline; cursor: pointer; word-break: break-all; }
 
 /* Universal button: solid ink, presses down instead of lifting */
 button {

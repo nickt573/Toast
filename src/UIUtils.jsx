@@ -79,6 +79,38 @@ export function GroupTypeBadge({ type }) {
   );
 }
 
+const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+
+// Renders free text with any pasted links turned into clickable links
+export function Linkify({ text }) {
+  if (!text) return null;
+  return (
+    <>
+      {text.split(URL_PATTERN).map((part, i) => {
+        if (i % 2 === 0) return part;
+        // Trailing punctuation reads as sentence punctuation, not part of the link
+        const trimmed = part.replace(/[.,;:!?)\]]+$/, "");
+        const tail = part.slice(trimmed.length);
+        return (
+          <span key={i}>
+            <a
+              href={trimmed}
+              className="t-inline-link"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openUrl(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+              }}>
+              {trimmed}
+            </a>
+            {tail}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
 // Full-info resource card, shared by Stats and the study page.
 export function ResourceCard({ res }) {
   const openResource = () => res.url && openUrl(res.url.startsWith("http") ? res.url : `https://${res.url}`);
