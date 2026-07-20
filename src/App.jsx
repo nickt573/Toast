@@ -103,8 +103,8 @@ export default function App() {
         const update = await check();
         if (!update) return;
         const yes = await ask(
-          `Toast ${update.version} is available (currently ${update.currentVersion}). Changes can be found in the release notes on GitHub. Update now?\n
-          A newer push to Toast to Go cannot be pulled on an older version.`,
+          `Toast ${update.version} is available (currently ${update.currentVersion}). Changes can be found in the release notes on GitHub. Update now?
+          Note: A newer push to Toast to Go cannot be pulled on an older version.`,
           { title: "Update Available", kind: "info", okLabel: "Update", cancelLabel: "Later" }
         );
         if (!yes) return;
