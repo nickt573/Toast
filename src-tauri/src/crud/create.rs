@@ -96,6 +96,7 @@ pub fn merge_decks(
     deck_b_id: i64,
     new_name: String,
     reset: bool,
+    archive_sources: bool,
     conn: &mut Connection,
 ) -> Result<Group> {
     let tx = conn.transaction()?;
@@ -138,54 +139,40 @@ pub fn merge_decks(
         )?;
     }
 
-    // The new deck gets a copy of both decks' latest versions, combined. Nothing is
-    // taken from the sources, they keep every version and only pick up a flag so
-    // the stats page can say "merged" rather than "deleted". Resetting on merge
-    // copies nothing, leaving the new deck a clean first version.
+    // Without a reset the new deck inherits both sources' still-counting study,
+    // combined per plan and date, and every source row is archived so the copy is the
+    // only thing counting. This is a one-time migration: unarchiving a source later
+    // brings that study back on its own terms and never re-syncs the copy.
+    //
+    // With a reset the new deck starts empty and nothing is copied, so the sources
+    // keep counting unless archive_sources asks otherwise. Archiving happens inside
+    // this transaction either way: a failed merge must not leave the sources archived
+    // with no copy to show for it. archive_sources only means anything with a reset,
+    // since without one the copy makes archiving mandatory.
     if !reset {
-        let latest_a: i64 = tx.query_row(
-            r#"SELECT stat_version FROM "group" WHERE id = ?1"#,
-            [deck_a_id],
-            |r| r.get(0),
-        )?;
-        let latest_b: i64 = tx.query_row(
-            r#"SELECT stat_version FROM "group" WHERE id = ?1"#,
-            [deck_b_id],
-            |r| r.get(0),
-        )?;
-
         tx.execute(
             r#"
-            INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date, version,
+            INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date,
                                      num_promote, num_demote, num_new, time_spent_minutes, retention_rate)
-            SELECT ?1, ?1, plan_id, MAX(plan_name), ?2, date, 1,
+            SELECT ?1, ?1, plan_id, MAX(plan_name), ?2, date,
                    SUM(num_promote), SUM(num_demote), SUM(num_new), SUM(time_spent_minutes),
                    CASE WHEN SUM(num_promote) + SUM(num_demote) > 0
                         THEN CAST(SUM(num_promote) AS REAL) / (SUM(num_promote) + SUM(num_demote))
                         ELSE 0.0 END
             FROM group_stats
-            WHERE (group_id = ?3 AND version = ?4)
-               OR (group_id = ?5 AND version = ?6)
+            WHERE group_id IN (?3, ?4) AND is_archived = FALSE
             GROUP BY plan_id, date
             HAVING SUM(num_promote) + SUM(num_demote) + SUM(num_new) > 0
                 OR SUM(time_spent_minutes) > 0
             "#,
-            rusqlite::params![
-                new_deck_id,
-                new_name,
-                deck_a_id,
-                latest_a,
-                deck_b_id,
-                latest_b
-            ],
+            rusqlite::params![new_deck_id, new_name, deck_a_id, deck_b_id],
         )?;
+    }
 
-        // Only what was actually copied is archived. Every other version is still
-        // the sole record of that study and keeps counting toward the plan.
+    if !reset || archive_sources {
         tx.execute(
-            "UPDATE group_stats SET is_archived = TRUE
-             WHERE (group_id = ?1 AND version = ?2) OR (group_id = ?3 AND version = ?4)",
-            rusqlite::params![deck_a_id, latest_a, deck_b_id, latest_b],
+            "UPDATE group_stats SET is_archived = TRUE WHERE group_id IN (?1, ?2)",
+            rusqlite::params![deck_a_id, deck_b_id],
         )?;
     }
 
@@ -697,45 +684,10 @@ pub fn add_group_to_plan(
         ],
     )?;
 
-    // Fetch group name while still in scope before commit
-    let group_name: String = tx.query_row(
-        r#"SELECT name FROM "group" WHERE id = ?1"#,
-        [group_id],
-        |row| row.get(0),
-    )?;
-
     tx.commit()?;
 
-    let today = get_date(conn)?;
-
-    let plan_name: String = conn
-        .query_row("SELECT name FROM plan WHERE id = ?1", [plan_id], |r| {
-            r.get(0)
-        })
-        .unwrap_or_default();
-    // Today's line for this plan in the current version gets picked back up, so
-    // repeated add and remove can't stack empty rows. A reset already moved the
-    // deck onto a new version, so this naturally starts that version's first line.
-    let version = crate::crud::scheduling::current_version(group_id, conn)?;
-    let has_line_today: bool = conn.query_row(
-        "SELECT EXISTS(
-            SELECT 1 FROM group_stats
-            WHERE group_id = ?1 AND date = ?2 AND plan_id = ?3 AND version = ?4
-        )",
-        rusqlite::params![group_id, &today, plan_id, version],
-        |r| r.get(0),
-    )?;
-
-    if !has_line_today {
-        conn.execute(
-            r#"
-            INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date, version, num_promote, num_demote, time_spent_minutes, retention_rate)
-            VALUES (?1, ?1, ?2, ?3, ?4, ?5, ?6, 0, 0, 0.0, 0.0)
-            "#,
-            rusqlite::params![group_id, plan_id, plan_name, group_name, &today, version],
-        )?;
-    }
-
+    // Joining a plan writes nothing. The deck shows up on the stats page with an
+    // empty table, and its first row appears when a session is actually opened.
     let _ = fill_group(group_id, conn);
 
     Ok(Scheduler {
@@ -769,14 +721,14 @@ pub fn create_resource(resource: NewResource, conn: &Connection) -> Result<Resou
     })
 }
 
-
+// A handful of rules have to hold no matter what order things happen in, so
 // this checks all of them after every step of every sequence.
 #[cfg(test)]
-mod version_invariant_tests {
+mod stat_row_invariant_tests {
     use super::*;
     use crate::crud::{
         delete::remove_group_from_plan,
-        scheduling::{current_version, reset_deck},
+        scheduling::{open_stat_line, reset_deck},
     };
 
     #[derive(Clone, Copy, Debug)]
@@ -829,6 +781,15 @@ mod version_invariant_tests {
         .unwrap()
     }
 
+    fn rows(conn: &Connection, deck: i64) -> i64 {
+        conn.query_row(
+            "SELECT COUNT(*) FROM group_stats WHERE group_id = ?1",
+            [deck],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
     fn apply(conn: &mut Connection, deck: i64, op: Op) -> Option<i64> {
         match op {
             Op::AddP1 | Op::AddP2 => {
@@ -857,16 +818,14 @@ mod version_invariant_tests {
             }
             Op::Reset => reset_deck(deck, conn).unwrap(),
             Op::Study => {
-                let hit = conn
-                    .execute(
-                        "UPDATE group_stats SET num_new = num_new + 1
-                         WHERE id = (SELECT MAX(id) FROM group_stats WHERE group_id = ?1)",
-                        [deck],
-                    )
-                    .unwrap();
-                if hit == 0 {
-                    return None;
-                }
+                // Opening the session is what creates the line, out of a plan there
+                // is nowhere to write and the whole step is a no-op
+                let line = open_stat_line(deck, conn).unwrap()?;
+                conn.execute(
+                    "UPDATE group_stats SET num_new = num_new + 1 WHERE id = ?1",
+                    [line],
+                )
+                .unwrap();
             }
             Op::RollDay => {
                 conn.execute(
@@ -886,6 +845,7 @@ mod version_invariant_tests {
                     partner,
                     "merged".into(),
                     matches!(op, Op::MergeReset),
+                    false,
                     conn,
                 )
                 .unwrap();
@@ -895,56 +855,47 @@ mod version_invariant_tests {
         Some(deck)
     }
 
-    // One line per deck per version per plan per day, always
-    fn check_one_line_per_slot(conn: &Connection, trace: &str) {
+    // One ordinary line per deck, plan, and day. A day can hold more than one line,
+    // but only because a reset split it, and those extras are marked as run starts.
+    fn check_one_plain_line_per_day(conn: &Connection, trace: &str) {
         let dupes: i64 = conn
             .query_row(
                 "SELECT COUNT(*) FROM (
                     SELECT 1 FROM group_stats
-                    GROUP BY origin_group_id, version, plan_id, date
+                    WHERE starts_era = FALSE
+                    GROUP BY origin_group_id, plan_id, date
                     HAVING COUNT(*) > 1
                  )",
                 [],
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(dupes, 0, "duplicate line for one day after {trace}");
+        assert_eq!(dupes, 0, "duplicate plain line for one day after {trace}");
     }
 
-    // Leaving a plan takes that plan's empty lines with it
-    fn check_no_bare_lines_when_out_of_plan(conn: &Connection, deck: i64, trace: &str) {
-        if in_plan(conn, deck) {
+    // Opening a session is the only thing that writes a line. Joining a plan,
+    // leaving one, resetting, and the day rolling over all leave the count alone.
+    fn check_only_sessions_write(before: i64, now: i64, op: Op, trace: &str) {
+        if matches!(op, Op::Study) {
             return;
         }
-        let bare: i64 = conn
+        assert_eq!(now, before, "line count moved without a session after {trace}");
+    }
+
+    // A session inside a plan always consumes a pending reset, so the flag can never
+    // outlive the line it was meant to open.
+    fn check_sessions_clear_the_reset_flag(conn: &Connection, deck: i64, op: Op, trace: &str) {
+        if !matches!(op, Op::Study) || !in_plan(conn, deck) {
+            return;
+        }
+        let flag: bool = conn
             .query_row(
-                "SELECT COUNT(*) FROM group_stats
-                 WHERE group_id = ?1 AND num_new = 0 AND num_promote = 0 AND num_demote = 0",
+                r#"SELECT was_reset FROM "group" WHERE id = ?1"#,
                 [deck],
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(bare, 0, "empty line left behind after {trace}");
-    }
-
-    // A version number only ever goes up, so history can't be rewritten
-    fn check_version_never_goes_backwards(conn: &Connection, deck: i64, prev: i64, trace: &str) {
-        let now = current_version(deck, conn).unwrap();
-        assert!(now >= prev, "version went backwards after {trace}");
-    }
-
-    // Nothing is ever written into a version the deck hasn't reached
-    fn check_no_lines_beyond_current_version(conn: &Connection, deck: i64, trace: &str) {
-        let ahead: i64 = conn
-            .query_row(
-                r#"SELECT COUNT(*) FROM group_stats gs
-                   INNER JOIN "group" g ON g.id = gs.group_id
-                   WHERE gs.group_id = ?1 AND gs.version > g.stat_version"#,
-                [deck],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(ahead, 0, "line written past the current version after {trace}");
+        assert!(!flag, "reset flag survived a session after {trace}");
     }
 
     fn sweep(depth: usize) {
@@ -960,29 +911,26 @@ mod version_invariant_tests {
 
             let mut conn = fresh();
             let mut deck = 1i64;
-            let mut prev_version = 1i64;
             let mut done: Vec<Op> = Vec::new();
 
             for &op in seq.iter() {
                 let carried = matches!(op, Op::Merge | Op::MergeReset);
+                let before = rows(&conn, deck);
                 let Some(next) = apply(&mut conn, deck, op) else {
                     continue;
                 };
                 done.push(op);
                 let trace = format!("{done:?}");
 
-                // A merge starts a new deck, so the version baseline restarts with it
+                // A merge starts a new deck, so the line count baseline restarts too
                 if carried {
                     deck = next;
-                    prev_version = current_version(deck, &conn).unwrap();
                 } else {
-                    check_version_never_goes_backwards(&conn, deck, prev_version, &trace);
-                    prev_version = current_version(deck, &conn).unwrap();
+                    check_only_sessions_write(before, rows(&conn, deck), op, &trace);
                 }
 
-                check_one_line_per_slot(&conn, &trace);
-                check_no_bare_lines_when_out_of_plan(&conn, deck, &trace);
-                check_no_lines_beyond_current_version(&conn, deck, &trace);
+                check_one_plain_line_per_day(&conn, &trace);
+                check_sessions_clear_the_reset_flag(&conn, deck, op, &trace);
             }
         }
     }
@@ -1001,12 +949,12 @@ mod version_invariant_tests {
 // One test per documented behaviour. If a row of the behaviour table isn't
 // provable here, it isn't a behaviour, it's a hope.
 #[cfg(test)]
-mod version_tests {
+mod stat_row_tests {
     use super::*;
     use crate::crud::{
-        delete::{delete_group_stats_for_deck, remove_group_from_plan},
+        delete::{delete_group_stats, remove_group_from_plan},
         read::get_group_stats,
-        scheduling::{current_version, reset_deck},
+        scheduling::{archive_deck_stats, open_stat_line, reset_deck},
     };
 
     fn setup() -> Connection {
@@ -1035,11 +983,12 @@ mod version_tests {
         .unwrap();
     }
 
+    // Opening the session is what builds the line, so every test studies through here
     fn study(conn: &Connection, deck: i64, n: i64) {
+        let line = open_stat_line(deck, conn).unwrap().expect("deck is not in a plan");
         conn.execute(
-            "UPDATE group_stats SET num_new = num_new + ?2
-             WHERE id = (SELECT MAX(id) FROM group_stats WHERE group_id = ?1)",
-            rusqlite::params![deck, n],
+            "UPDATE group_stats SET num_new = num_new + ?2 WHERE id = ?1",
+            rusqlite::params![line, n],
         )
         .unwrap();
     }
@@ -1053,29 +1002,31 @@ mod version_tests {
             .unwrap()
     }
 
-    fn new_at(conn: &Connection, origin: i64, version: i64, plan: i64) -> i64 {
+    fn era_rows(conn: &Connection, deck: i64) -> i64 {
         conn.query_row(
-            "SELECT COALESCE(SUM(num_new), 0) FROM group_stats
-             WHERE origin_group_id = ?1 AND version = ?2 AND plan_id = ?3",
-            rusqlite::params![origin, version, plan],
+            "SELECT COUNT(*) FROM group_stats WHERE group_id = ?1 AND starts_era = TRUE",
+            [deck],
             |r| r.get(0),
         )
         .unwrap()
     }
 
-    fn versions(conn: &Connection, origin: i64) -> Vec<i64> {
-        let mut v: Vec<i64> = conn
-            .prepare("SELECT DISTINCT version FROM group_stats WHERE origin_group_id = ?1 ORDER BY version")
+    fn flag(conn: &Connection, deck: i64) -> bool {
+        conn.query_row(r#"SELECT was_reset FROM "group" WHERE id = ?1"#, [deck], |r| r.get(0))
             .unwrap()
-            .query_map([origin], |r| r.get(0))
-            .unwrap()
-            .filter_map(|r| r.ok())
-            .collect();
-        v.dedup();
-        v
     }
 
-    // What the plan actually counts, which is every line that isn't an archived copy
+    fn new_in(conn: &Connection, origin: i64, plan: i64) -> i64 {
+        conn.query_row(
+            "SELECT COALESCE(SUM(num_new), 0) FROM group_stats
+             WHERE origin_group_id = ?1 AND plan_id = ?2",
+            rusqlite::params![origin, plan],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
+    // What the plan actually counts, which is every line that isn't archived
     fn plan_total(conn: &Connection, plan: i64) -> i64 {
         get_group_stats(plan, conn)
             .unwrap()
@@ -1085,487 +1036,469 @@ mod version_tests {
             .sum()
     }
 
-    fn flags(conn: &Connection, origin: i64, version: i64) -> (bool, bool) {
+    // The rows behind one deck card on the stats page, which is what that page hands
+    // to the bulk delete and archive commands. Live and dead decks are separate cards
+    // even when they share an id, so group_id is part of the pick.
+    fn card_rows(conn: &Connection, origin: i64, plan: i64, dead: bool) -> Vec<i64> {
+        conn.prepare(
+            "SELECT id FROM group_stats
+             WHERE plan_id = ?1 AND origin_group_id = ?2 AND (group_id IS NULL) = ?3",
+        )
+        .unwrap()
+        .query_map(rusqlite::params![plan, origin, dead], |r| r.get(0))
+        .unwrap()
+        .filter_map(|r| r.ok())
+        .collect()
+    }
+
+    fn archived_split(conn: &Connection, origin: i64) -> (i64, i64) {
         conn.query_row(
-            "SELECT MIN(is_merged), MIN(is_archived) FROM group_stats
-             WHERE origin_group_id = ?1 AND version = ?2",
-            rusqlite::params![origin, version],
+            "SELECT COALESCE(SUM(is_archived), 0), COALESCE(SUM(NOT is_archived), 0)
+             FROM group_stats WHERE origin_group_id = ?1",
+            [origin],
             |r| Ok((r.get(0)?, r.get(1)?)),
         )
         .unwrap()
     }
 
-    // Versions
+    // Line lifecycle
 
     #[test]
-    fn t01_new_deck_starts_at_v1() {
+    fn t01_joining_a_plan_writes_nothing() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
-        assert_eq!(current_version(1, &conn).unwrap(), 1);
+        assert_eq!(rows(&conn, 1), 0, "the deck shows up with an empty table");
+    }
+
+    #[test]
+    fn t02_opening_a_session_builds_the_line() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
         assert_eq!(rows(&conn, 1), 1);
+        assert_eq!(new_in(&conn, 1, 1), 5);
     }
 
     #[test]
-    fn t02_reset_with_data_opens_the_next_version() {
+    fn t03_a_second_session_the_same_day_reuses_the_line() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        assert_eq!(current_version(1, &conn).unwrap(), 2);
-        assert_eq!(new_at(&conn, 1, 1, 1), 5, "v1 keeps its data");
-        assert_eq!(new_at(&conn, 1, 2, 1), 0, "v2 starts empty");
-    }
-
-    #[test]
-    fn t03_reset_on_an_unused_version_replaces_it() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        for _ in 0..4 {
-            reset_deck(1, &conn).unwrap();
-        }
-        assert_eq!(current_version(1, &conn).unwrap(), 2, "no empty versions stack up");
-    }
-
-    #[test]
-    fn t04_repeated_resets_out_of_plan_only_bump_once() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        for _ in 0..5 {
-            reset_deck(1, &conn).unwrap();
-        }
-        assert_eq!(current_version(1, &conn).unwrap(), 2);
-    }
-
-    #[test]
-    fn t05_resets_on_an_unstudied_deck_never_bump() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        for _ in 0..5 {
-            reset_deck(1, &conn).unwrap();
-        }
-        assert_eq!(current_version(1, &conn).unwrap(), 1);
-        assert_eq!(rows(&conn, 1), 0);
-    }
-
-    #[test]
-    fn t06_a_reset_survives_leaving_and_rejoining_a_plan() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 1, 1);
-        assert_eq!(current_version(1, &conn).unwrap(), 2);
-        assert_eq!(versions(&conn, 1), vec![1, 2]);
-    }
-
-    #[test]
-    fn t07_a_reset_cannot_be_laundered_by_waiting_a_day() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        reset_deck(1, &conn).unwrap();
-        roll_day(&conn);
-        add(&mut conn, 1, 1);
-        assert_eq!(current_version(1, &conn).unwrap(), 2);
-    }
-
-    // Plan membership
-
-    #[test]
-    fn t08_add_remove_cycles_leave_no_empty_lines() {
-        let mut conn = setup();
-        for _ in 0..5 {
-            add(&mut conn, 1, 1);
-            remove_group_from_plan(1, false, &mut conn).unwrap();
-        }
-        assert_eq!(rows(&conn, 1), 0);
-        assert_eq!(current_version(1, &conn).unwrap(), 1);
-    }
-
-    #[test]
-    fn t09_rejoining_the_same_day_resumes_the_line() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 1, 1);
-        assert_eq!(new_at(&conn, 1, 1, 1), 5);
+        study(&conn, 1, 3);
         assert_eq!(rows(&conn, 1), 1);
+        assert_eq!(new_in(&conn, 1, 1), 8);
     }
 
     #[test]
-    fn t10_a_new_day_opens_its_own_line() {
+    fn t04_a_new_day_opens_its_own_line() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
         roll_day(&conn);
-        add(&mut conn, 1, 1);
+        study(&conn, 1, 3);
         assert_eq!(rows(&conn, 1), 2);
-        assert_eq!(current_version(1, &conn).unwrap(), 1, "a new day is not a reset");
     }
 
     #[test]
-    fn t11_one_version_spans_several_plans() {
+    fn t05_out_of_a_plan_a_session_writes_nothing() {
+        let conn = setup();
+        assert!(open_stat_line(1, &conn).unwrap().is_none());
+        assert_eq!(rows(&conn, 1), 0);
+    }
+
+    #[test]
+    fn t06_leaving_a_plan_keeps_the_lines() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
-        study(&conn, 1, 20);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        assert_eq!(rows(&conn, 1), 1, "study already done is real history");
+        assert_eq!(new_in(&conn, 1, 1), 5);
+    }
+
+    #[test]
+    fn t07_a_deck_never_studied_leaves_nothing_behind() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 1, 1);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        assert_eq!(rows(&conn, 1), 0, "add and remove cycles write nothing at all");
+    }
+
+    #[test]
+    fn t08_rejoining_the_same_day_resumes_the_line() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 3);
+        assert_eq!(rows(&conn, 1), 1);
+        assert_eq!(new_in(&conn, 1, 1), 8);
+    }
+
+    #[test]
+    fn t09_each_plan_keeps_its_own_line() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
         remove_group_from_plan(1, false, &mut conn).unwrap();
         add(&mut conn, 1, 2);
-        study(&conn, 1, 7);
-        assert_eq!(current_version(1, &conn).unwrap(), 1, "moving plans is not a reset");
-        assert_eq!(new_at(&conn, 1, 1, 1), 20);
-        assert_eq!(new_at(&conn, 1, 1, 2), 7);
+        study(&conn, 1, 3);
+        assert_eq!(new_in(&conn, 1, 1), 5);
+        assert_eq!(new_in(&conn, 1, 2), 3);
+    }
+
+    // Resets
+
+    #[test]
+    fn t10_a_reset_writes_nothing_by_itself() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        assert_eq!(rows(&conn, 1), 1, "the flag is the whole record until a session");
+        assert!(flag(&conn, 1));
     }
 
     #[test]
-    fn t12_each_plan_keeps_its_own_history() {
+    fn t11_the_session_after_a_reset_starts_its_own_line() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
-        study(&conn, 1, 20);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+        assert_eq!(rows(&conn, 1), 2, "same day, but a new run");
+        assert_eq!(era_rows(&conn, 1), 1);
+        assert!(!flag(&conn, 1), "the flag clears once it has been spent");
+        assert_eq!(new_in(&conn, 1, 1), 13, "the old line keeps its 5");
+    }
+
+    #[test]
+    fn t12_studying_on_after_a_reset_stays_in_the_new_line() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+        study(&conn, 1, 2);
+        assert_eq!(rows(&conn, 1), 2, "no third line");
+    }
+
+    #[test]
+    fn t13_repeat_resets_collapse_into_one_line() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        for _ in 0..10 {
+            reset_deck(1, &conn).unwrap();
+        }
+        study(&conn, 1, 8);
+        assert_eq!(rows(&conn, 1), 2, "ten resets, one boundary");
+        assert_eq!(era_rows(&conn, 1), 1);
+    }
+
+    #[test]
+    fn t14_a_reset_survives_leaving_and_rejoining() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, true, &mut conn).unwrap();
+        assert!(flag(&conn, 1));
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 8);
+        assert_eq!(era_rows(&conn, 1), 1, "the reset lands on the first session back");
+    }
+
+    #[test]
+    fn t15_a_reset_cannot_be_laundered_by_waiting_a_day() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        roll_day(&conn);
+        study(&conn, 1, 8);
+        assert_eq!(era_rows(&conn, 1), 1, "a new day does not absorb the reset");
+    }
+
+    #[test]
+    fn t16_resetting_outside_a_plan_still_applies_on_return() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        for _ in 0..5 {
+            reset_deck(1, &conn).unwrap();
+        }
+        assert_eq!(rows(&conn, 1), 1, "nowhere to write while out of a plan");
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 8);
+        assert_eq!(era_rows(&conn, 1), 1);
+    }
+
+    // Archiving
+
+    #[test]
+    fn t17_archiving_the_deck_covers_every_plan() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
         remove_group_from_plan(1, false, &mut conn).unwrap();
         add(&mut conn, 1, 2);
-        study(&conn, 1, 7);
-        assert_eq!(plan_total(&conn, 1), 20);
-        assert_eq!(plan_total(&conn, 2), 7);
+        study(&conn, 1, 3);
+
+        archive_deck_stats(1, &conn).unwrap();
+        assert_eq!(archived_split(&conn, 1), (2, 0));
+        assert_eq!(plan_total(&conn, 1), 0);
+        assert_eq!(plan_total(&conn, 2), 0);
     }
 
-    // Merging without a reset
-
     #[test]
-    fn t13_merge_copies_the_latest_versions_into_the_new_deck() {
+    fn t18_an_archived_line_stops_counting_but_stays() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-
-        let merged = merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-        assert_eq!(new_at(&conn, merged.id, 1, 1), 11, "8 + 3");
-    }
-
-    #[test]
-    fn t14_sources_keep_every_version_after_a_merge() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-
-        merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-        assert_eq!(versions(&conn, 1), vec![1, 2], "nothing is taken from the source");
-        assert_eq!(new_at(&conn, 1, 1, 1), 5);
-        assert_eq!(new_at(&conn, 1, 2, 1), 8);
-    }
-
-    #[test]
-    fn t15_only_the_copied_versions_are_archived() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-
-        let merged = merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-        assert_eq!(flags(&conn, 1, 1), (true, false), "v1 merged, not copied, still counts");
-        assert_eq!(flags(&conn, 1, 2), (true, true), "v2 was copied, so it's archived");
-        assert_eq!(flags(&conn, 2, 1), (true, true));
-        assert_eq!(flags(&conn, merged.id, 1), (false, false), "the living copy counts");
-    }
-
-    #[test]
-    fn t16_merge_does_not_double_count_the_plan() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-
-        let before = plan_total(&conn, 1);
-        assert_eq!(before, 16, "5 + 8 + 3");
-        merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 16, "the merge moved nothing into the total");
-    }
-
-    #[test]
-    fn t17_merge_splits_across_plans() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 20);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 1, 2);
-        study(&conn, 1, 10);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 5);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-        add(&mut conn, 2, 3);
-        study(&conn, 2, 10);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-
-        let merged = merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-        assert_eq!(new_at(&conn, merged.id, 1, 1), 25);
-        assert_eq!(new_at(&conn, merged.id, 1, 2), 10);
-        assert_eq!(new_at(&conn, merged.id, 1, 3), 10);
-    }
-
-    #[test]
-    fn t18_a_merged_deck_can_be_merged_again() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-        let first = merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-
-        let third = create_deck("deck c".into(), &conn).unwrap().id;
-        add(&mut conn, third, 1);
-        study(&conn, third, 4);
-        remove_group_from_plan(third, false, &mut conn).unwrap();
-
-        let second = merge_decks(first.id, third, "joint two".into(), false, &mut conn).unwrap();
-        assert_eq!(new_at(&conn, second.id, 1, 1), 12);
-        assert_eq!(plan_total(&conn, 1), 12, "still counted once after two merges");
-    }
-
-    // Merging with a reset
-
-    #[test]
-    fn t19_merge_with_reset_copies_nothing() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-
-        let merged = merge_decks(1, 2, "joint".into(), true, &mut conn).unwrap();
-        assert_eq!(rows(&conn, merged.id), 0, "the new deck starts clean");
-        assert_eq!(current_version(merged.id, &conn).unwrap(), 1);
-    }
-
-    #[test]
-    fn t20_merge_with_reset_archives_nothing_so_totals_hold() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-
-        merge_decks(1, 2, "joint".into(), true, &mut conn).unwrap();
-        assert_eq!(flags(&conn, 1, 1), (true, false), "merged but never copied");
-        assert_eq!(flags(&conn, 2, 1), (true, false));
-        assert_eq!(plan_total(&conn, 1), 8, "nothing was archived, so nothing was lost");
-    }
-
-    // Deletion
-
-    #[test]
-    fn t21_deleting_one_version_leaves_the_others() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-
-        delete_group_stats_for_deck(Some(1), "deck a", Some(1), 1, &conn).unwrap();
-        assert_eq!(versions(&conn, 1), vec![2]);
-        assert_eq!(plan_total(&conn, 1), 8);
-    }
-
-    #[test]
-    fn t22_deleting_the_deck_clears_every_version() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-
-        delete_group_stats_for_deck(Some(1), "deck a", None, 1, &conn).unwrap();
-        assert!(versions(&conn, 1).is_empty());
+        archive_deck_stats(1, &conn).unwrap();
+        assert_eq!(rows(&conn, 1), 1, "still on the page");
         assert_eq!(plan_total(&conn, 1), 0);
     }
 
     #[test]
-    fn t23_deleting_a_living_copy_does_not_revive_the_archive() {
+    fn t19_unarchiving_restores_the_total() {
+        use crate::crud::update::set_group_stats_archived;
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-        let merged = merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-
-        assert_eq!(plan_total(&conn, 1), 8);
-        delete_group_stats_for_deck(Some(merged.id), "joint", None, 1, &conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 0, "the archive stays archived, as chosen");
-        assert_eq!(new_at(&conn, 1, 1, 1), 5, "but it is still there to look at");
+        archive_deck_stats(1, &conn).unwrap();
+        set_group_stats_archived(&card_rows(&conn, 1, 1, false), false, &conn).unwrap();
+        assert_eq!(plan_total(&conn, 1), 5);
     }
 
     #[test]
-    fn t24_deleting_one_plans_stats_leaves_the_other_plan() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 20);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 1, 2);
-        study(&conn, 1, 7);
-
-        delete_group_stats_for_deck(Some(1), "deck a", None, 1, &conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 0);
-        assert_eq!(plan_total(&conn, 2), 7);
-    }
-
-    // Identity
-
-    #[test]
-    fn t25_same_named_decks_stay_separate() {
-        let mut conn = setup();
-        conn.execute("UPDATE \"group\" SET name = 'same' WHERE id IN (1, 2)", []).unwrap();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 9);
-
-        assert_eq!(new_at(&conn, 1, 1, 1), 5);
-        assert_eq!(new_at(&conn, 2, 1, 1), 9);
-        delete_group_stats_for_deck(Some(1), "same", None, 1, &conn).unwrap();
-        assert_eq!(new_at(&conn, 2, 1, 1), 9, "deleting one leaves its namesake alone");
-    }
-
-    #[test]
-    fn t26_streaks_ignore_archived_copies() {
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        remove_group_from_plan(1, false, &mut conn).unwrap();
-        add(&mut conn, 2, 1);
-        study(&conn, 2, 3);
-        remove_group_from_plan(2, false, &mut conn).unwrap();
-        let merged = merge_decks(1, 2, "joint".into(), false, &mut conn).unwrap();
-
-        let (with_copy, _) = crate::crud::scheduling::get_plan_streak(1, &conn).unwrap();
-        delete_group_stats_for_deck(Some(merged.id), "joint", None, 1, &conn).unwrap();
-        let (without, _) = crate::crud::scheduling::get_plan_streak(1, &conn).unwrap();
-        assert_eq!(with_copy, 1);
-        assert_eq!(without, 0, "the archived copy never propped the streak up");
-    }
-
-    // Manual archiving
-
-    fn archived_at(conn: &Connection, origin: i64, version: i64) -> (i64, i64) {
-        conn.query_row(
-            "SELECT SUM(is_archived), SUM(NOT is_archived) FROM group_stats
-             WHERE origin_group_id = ?1 AND version = ?2",
-            rusqlite::params![origin, version],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )
-        .unwrap()
-    }
-
-    #[test]
-    fn t27_archiving_a_version_drops_it_from_the_total() {
-        use crate::crud::update::set_group_stats_archived_for_deck;
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-
-        assert_eq!(plan_total(&conn, 1), 13);
-        set_group_stats_archived_for_deck(Some(1), "deck a", Some(1), 1, true, &conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 8, "v1 no longer counts");
-        assert_eq!(new_at(&conn, 1, 1, 1), 5, "but it is still there");
-    }
-
-    #[test]
-    fn t28_unarchiving_restores_the_total() {
-        use crate::crud::update::set_group_stats_archived_for_deck;
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-
-        set_group_stats_archived_for_deck(Some(1), "deck a", None, 1, true, &conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 0);
-        set_group_stats_archived_for_deck(Some(1), "deck a", None, 1, false, &conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 5, "unarchive brings it back");
-    }
-
-    #[test]
-    fn t29_archiving_the_deck_covers_every_version() {
-        use crate::crud::update::set_group_stats_archived_for_deck;
-        let mut conn = setup();
-        add(&mut conn, 1, 1);
-        study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-
-        set_group_stats_archived_for_deck(Some(1), "deck a", None, 1, true, &conn).unwrap();
-        assert_eq!(archived_at(&conn, 1, 1), (1, 0));
-        assert_eq!(archived_at(&conn, 1, 2), (1, 0));
-        assert_eq!(plan_total(&conn, 1), 0);
-    }
-
-    #[test]
-    fn t30_archiving_one_row_leaves_its_siblings_counting() {
-        use crate::crud::scheduling::open_stat_line;
+    fn t20_archiving_one_line_leaves_its_siblings_counting() {
         use crate::crud::update::set_group_stat_archived;
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
-        // A second day's line, opened the way studying opens it, still in the plan
         roll_day(&conn);
-        open_stat_line(1, &conn).unwrap();
         study(&conn, 1, 3);
-
         let first: i64 = conn
             .query_row("SELECT MIN(id) FROM group_stats WHERE group_id = 1", [], |r| r.get(0))
             .unwrap();
         set_group_stat_archived(first, true, &conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 3, "only the archived day drops out");
+        assert_eq!(plan_total(&conn, 1), 3);
+    }
+
+    // Merging
+
+    #[test]
+    fn t21_merge_migrates_the_study_into_the_new_deck() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+
+        let merged = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        assert_eq!(new_in(&conn, merged.id, 1), 8, "5 + 3 on the same day");
     }
 
     #[test]
-    fn t31_archiving_is_scoped_to_the_plan() {
-        use crate::crud::update::set_group_stats_archived_for_deck;
+    fn t22_merge_archives_the_sources_entirely() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
-        study(&conn, 1, 20);
+        study(&conn, 1, 5);
+        roll_day(&conn);
+        study(&conn, 1, 4);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+
+        merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        assert_eq!(archived_split(&conn, 1), (2, 0), "every line, not just the copied ones");
+        assert_eq!(archived_split(&conn, 2), (1, 0));
+    }
+
+    #[test]
+    fn t23_merge_does_not_double_count_the_plan() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+
+        merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        assert_eq!(plan_total(&conn, 1), 8, "the copy counts, the sources don't");
+    }
+
+    #[test]
+    fn t24_merge_skips_source_lines_already_archived() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        archive_deck_stats(1, &conn).unwrap();
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+
+        let merged = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        assert_eq!(new_in(&conn, merged.id, 1), 3, "the archived 5 stays behind");
+    }
+
+    #[test]
+    fn t25_merge_with_reset_copies_and_archives_nothing() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+
+        let merged = merge_decks(1, 2, "joint".into(), true, false, &mut conn).unwrap();
+        assert_eq!(rows(&conn, merged.id), 0, "the new deck starts empty");
+        assert_eq!(archived_split(&conn, 1), (0, 1), "the caller decides, not the merge");
+        assert_eq!(plan_total(&conn, 1), 8, "so the sources keep counting");
+    }
+
+    #[test]
+    fn t26_merge_splits_across_plans() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
         remove_group_from_plan(1, false, &mut conn).unwrap();
         add(&mut conn, 1, 2);
+        study(&conn, 1, 4);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+
+        let merged = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        assert_eq!(new_in(&conn, merged.id, 1), 8, "plan one keeps its own portion");
+        assert_eq!(new_in(&conn, merged.id, 2), 4);
+    }
+
+    #[test]
+    fn t27_a_merged_deck_can_be_merged_again() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+        let first = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+
+        let third = create_deck("deck c".into(), &mut conn).unwrap().id;
+        add(&mut conn, third, 1);
+        study(&conn, third, 2);
+        remove_group_from_plan(third, false, &mut conn).unwrap();
+
+        let second = merge_decks(first.id, third, "joint two".into(), false, false, &mut conn).unwrap();
+        assert_eq!(new_in(&conn, second.id, 1), 10, "8 carried forward plus 2");
+        assert_eq!(plan_total(&conn, 1), 10, "and still counted once");
+    }
+
+    // Deleting
+
+    #[test]
+    fn t28_deleting_a_decks_stats_clears_that_plan_only() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 1, 2);
+        study(&conn, 1, 3);
+
+        delete_group_stats(&card_rows(&conn, 1, 1, false), &conn).unwrap();
+        assert_eq!(new_in(&conn, 1, 1), 0);
+        assert_eq!(new_in(&conn, 1, 2), 3, "the other plan is untouched");
+    }
+
+    #[test]
+    fn t29_deleting_clears_every_run_of_the_deck() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+
+        delete_group_stats(&card_rows(&conn, 1, 1, false), &conn).unwrap();
+        assert_eq!(rows(&conn, 1), 0, "runs are lines, not a separate scope");
+    }
+
+    // On a database old enough to have reused an id before the migration reserved it,
+    // a dead deck and a live one can share origin_group_id. The stats page draws them
+    // as separate cards, so clearing one must not reach into the other.
+    #[test]
+    fn t30_clearing_a_dead_decks_stats_leaves_a_live_deck_on_the_same_id() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        // deck 1 deleted, then its id handed to a new deck that also gets studied
+        conn.execute("UPDATE group_stats SET group_id = NULL WHERE group_id = 1", [])
+            .unwrap();
         study(&conn, 1, 7);
 
-        set_group_stats_archived_for_deck(Some(1), "deck a", None, 1, true, &conn).unwrap();
-        assert_eq!(plan_total(&conn, 1), 0);
-        assert_eq!(plan_total(&conn, 2), 7, "the other plan is untouched");
+        delete_group_stats(&card_rows(&conn, 1, 1, true), &conn).unwrap();
+        assert_eq!(new_in(&conn, 1, 1), 7, "only the dead deck's history goes");
+
+        delete_group_stats(&card_rows(&conn, 1, 1, false), &conn).unwrap();
+        assert_eq!(new_in(&conn, 1, 1), 0);
+    }
+
+    #[test]
+    fn t31_same_named_decks_stay_separate() {
+        let mut conn = setup();
+        conn.execute(
+            "UPDATE \"group\" SET name = 'deck a' WHERE id = 2",
+            [],
+        )
+        .unwrap();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+
+        delete_group_stats(&card_rows(&conn, 1, 1, false), &conn).unwrap();
+        assert_eq!(new_in(&conn, 2, 1), 3, "origin id keeps them apart, not the name");
+    }
+
+    #[test]
+    fn t32_studying_after_archiving_today_opens_a_fresh_line() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        archive_deck_stats(1, &conn).unwrap();
+        study(&conn, 1, 3);
+        assert_eq!(rows(&conn, 1), 2, "an archived line is never written into");
+        assert_eq!(plan_total(&conn, 1), 3, "so the new study still counts");
+        assert_eq!(archived_split(&conn, 1), (1, 1), "and the old line stays archived");
+    }
+
+    #[test]
+    fn t33_merge_with_reset_can_archive_the_sources_in_the_same_stroke() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 2, 1);
+        study(&conn, 2, 3);
+        remove_group_from_plan(2, false, &mut conn).unwrap();
+
+        let merged = merge_decks(1, 2, "joint".into(), true, true, &mut conn).unwrap();
+        assert_eq!(rows(&conn, merged.id), 0, "the new deck still starts empty");
+        assert_eq!(archived_split(&conn, 1), (1, 0));
+        assert_eq!(archived_split(&conn, 2), (1, 0));
+        assert_eq!(plan_total(&conn, 1), 0, "nothing counts once both sources are archived");
     }
 }

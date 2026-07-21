@@ -179,7 +179,7 @@ pub struct GroupStat {
     pub num_new: i64,
     pub time_spent_minutes: f64,
     pub retention_rate: f64,
-    pub version: i64,
+    pub starts_era: bool,
     pub is_merged: bool,
     pub is_archived: bool,
 }
@@ -196,6 +196,9 @@ pub struct CardGradeLog {
 
 #[derive(Serialize, Deserialize)]
 pub struct StatResource {
+    /// todo_stat_resource's rowid. The snapshot outlives the resource, so this is the
+    /// only stable way to point at one line of it.
+    pub row_id: i64,
     pub name: String,
     pub url: Option<String>,
     pub resource_type: Option<String>,
@@ -204,6 +207,8 @@ pub struct StatResource {
 
 #[derive(Serialize, Deserialize)]
 pub struct TodoStatGroup {
+    /// todo_stat_group's rowid, see StatResource::row_id.
+    pub row_id: i64,
     pub group_id: Option<i64>,
     pub name: String,
     pub group_type: Option<String>,

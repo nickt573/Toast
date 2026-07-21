@@ -632,6 +632,10 @@ function StudySession({ group, onBack, setToast }) {
 
     useEffect(() => {
         fetchNext();
+        // Today's stat row is opened by the first thing that has something to record,
+        // which is whichever comes first: this timer flushing, or a grade. Time spent
+        // on a card before rating it still lands, so a long first card isn't lost, and
+        // opening the deck then leaving straight away writes nothing.
         const interval = setInterval(flushTime, 20000);
         const onVisibility = () => { if (document.hidden) flushTime(); };
         document.addEventListener("visibilitychange", onVisibility);

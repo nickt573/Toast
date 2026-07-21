@@ -119,6 +119,7 @@ function DeckList({ setToast, onOpenDeck }) {
   const [mergeDeckB, setMergeDeckB] = useState(null);
   const [mergeName, setMergeName] = useState("");
   const [mergeReset, setMergeReset] = useState(false);
+  const [mergeArchive, setMergeArchive] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
 
   const loadSrsSummaries = () =>
@@ -254,9 +255,12 @@ function DeckList({ setToast, onOpenDeck }) {
     if (mergeDeckA === mergeDeckB) { setToast("Please select two different decks."); return; }
     if (!mergeName.trim()) { setToast("Please enter a name for the merged deck."); return; }
     try {
+      // archiveSources only matters with a reset. Without one the merge moves the
+      // sources' study onto the new deck and archives them regardless.
       const newDeck = await loggedInvoke("merge_decks", {
         deckAId: mergeDeckA,
         deckBId: mergeDeckB,
+        archiveSources: mergeReset && mergeArchive,
         newName: mergeName.trim(),
         reset: mergeReset,
       });
@@ -299,8 +303,16 @@ function DeckList({ setToast, onOpenDeck }) {
             <input type="checkbox" checked={mergeReset} onChange={(e) => setMergeReset(e.target.checked)} />
             Reset progress on merged cards
           </label>
+          {mergeReset && (
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
+              <input type="checkbox" checked={mergeArchive} onChange={(e) => setMergeArchive(e.target.checked)} />
+              Archive the source decks' stats
+            </label>
+          )}
           <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
-          The two source decks will be deleted after their cards move into the new deck. Cards are ordered in alternating order. If either deck is linked to a plan, that link will be removed. Past stats move to the new deck, and each plan keeps its own portion.
+          The two source decks will be deleted after their cards move into the new deck. Cards are ordered in alternating order. If either deck is linked to a plan, that link will be removed. {mergeReset
+            ? "The new deck starts with an empty stats table, and the sources keep counting unless you archive them."
+            : "Past stats move to the new deck, and each plan keeps its own portion. The sources are archived so nothing is counted twice."}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="primary" onClick={confirmMerge}>Merge</button>
@@ -1029,16 +1041,17 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     } catch (e) { logError("catch", e); setToast("Failed to update cards.", "error"); }
   };
 
-  const resetDeck = async () => {
+  const resetDeck = async (archivePrevious) => {
     try {
       await loggedInvoke("reset_deck", { groupId: deck.id });
+      if (archivePrevious) await loggedInvoke("archive_deck_stats", { groupId: deck.id });
       const updated = await loggedInvoke("get_cards", { deckId: deck.id });
       setCards(updated);
       // Reset wipes the grade logs, so the last-seen filter and editor log must reload too
       const pairs = await loggedInvoke("get_card_last_seen_dates", { deckId: deck.id });
       setLastSeenMap(Object.fromEntries(pairs));
       setLogVersion((v) => v + 1);
-      setToast("Deck progress reset.");
+      setToast(archivePrevious ? "Deck progress reset and old stats archived." : "Deck progress reset.");
       setConfirmReset(false);
     } catch (e) { logError("catch", e); setToast("Failed to reset deck.", "error"); }
   };
@@ -1150,8 +1163,11 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
 
       {confirmReset && (
         <div className="dk-confirm-bar">
-          <span style={{ flex: 1 }}>Reset all SRS progress on this deck? This cannot be undone.</span>
-          <button className="danger" onClick={resetDeck}>Reset</button>
+          <span style={{ flex: 1 }}>
+            Reset all SRS progress on this deck? This cannot be undone.
+          </span>
+          <button className="danger" onClick={() => resetDeck(true)}>Reset and archive stats</button>
+          <button className="danger" onClick={() => resetDeck(false)}>Reset and keep stats</button>
           <button onClick={() => setConfirmReset(false)}>Cancel</button>
         </div>
       )}

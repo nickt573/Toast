@@ -32,24 +32,13 @@ pub fn set_group_stat_archived(id: i64, archived: bool, conn: &Connection) -> Re
     Ok(())
 }
 
-// Scopes match delete_group_stats_for_deck, a version alone or the whole deck.
-pub fn set_group_stats_archived_for_deck(
-    origin_group_id: Option<i64>,
-    group_name: &str,
-    version: Option<i64>,
-    plan_id: i64,
-    archived: bool,
-    conn: &Connection,
-) -> Result<()> {
-    conn.execute(
-        "UPDATE group_stats SET is_archived = ?5
-         WHERE plan_id = ?3
-           AND (?4 IS NULL OR version = ?4)
-           AND CASE WHEN ?1 IS NULL
-                    THEN origin_group_id IS NULL AND group_name = ?2
-                    ELSE origin_group_id = ?1 END",
-        rusqlite::params![origin_group_id, group_name, plan_id, version, archived],
-    )?;
+/// Archives or restores the lines behind one deck card, addressed by id the same way
+/// delete_group_stats is.
+pub fn set_group_stats_archived(ids: &[i64], archived: bool, conn: &Connection) -> Result<()> {
+    let mut stmt = conn.prepare("UPDATE group_stats SET is_archived = ?2 WHERE id = ?1")?;
+    for id in ids {
+        stmt.execute(rusqlite::params![id, archived])?;
+    }
     Ok(())
 }
 
@@ -546,8 +535,8 @@ pub fn update_todo_stat(
     details: Option<String>,
     time_spent_minutes: f64,
     num_unit: Option<String>,
-    remove_group_names: Vec<String>,
-    remove_resource_names: Vec<String>,
+    remove_group_row_ids: Vec<i64>,
+    remove_resource_row_ids: Vec<i64>,
     add_group_ids: Vec<i64>,
     add_resource_ids: Vec<i64>,
     conn: &Connection,
@@ -569,16 +558,19 @@ pub fn update_todo_stat(
         "UPDATE todo_stats SET text=?1, category=?2, details=?3, time_spent_minutes=?4, num_unit=?5 WHERE id=?6",
         rusqlite::params![text, category_str, details, time_spent_minutes, num_unit, id],
     )?;
-    for name in &remove_group_names {
+    // By rowid, never by name: the snapshot keeps whatever the group or resource was
+    // called when it was logged, so two rows can share a name and a rename splits them.
+    // The stat_id guard keeps a stray id from reaching into another entry.
+    for row_id in &remove_group_row_ids {
         conn.execute(
-            "DELETE FROM todo_stat_group WHERE stat_id=?1 AND group_name=?2",
-            rusqlite::params![id, name],
+            "DELETE FROM todo_stat_group WHERE stat_id=?1 AND rowid=?2",
+            rusqlite::params![id, row_id],
         )?;
     }
-    for name in &remove_resource_names {
+    for row_id in &remove_resource_row_ids {
         conn.execute(
-            "DELETE FROM todo_stat_resource WHERE stat_id=?1 AND resource_name=?2",
-            rusqlite::params![id, name],
+            "DELETE FROM todo_stat_resource WHERE stat_id=?1 AND rowid=?2",
+            rusqlite::params![id, row_id],
         )?;
     }
     // Only live groups/resources can be added: the snapshot is pulled from the

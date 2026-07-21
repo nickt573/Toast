@@ -3,7 +3,10 @@ use rusqlite::{params, Connection};
 use std::path::Path;
 
 /// Stamped into Toast to Go packages. A pull rejects a mismatch. Bump on any schema change.
-pub const SCHEMA_VERSION: u32 = 3;
+/// 4: stat runs replaced numbered versions, so group_stats.version and
+/// group.stat_version are gone. An older Toast pulling one of these packages would
+/// find its queries referring to columns that no longer exist.
+pub const SCHEMA_VERSION: u32 = 4;
 
 /// Adds a column to an existing table if it doesn't already have it.
 /// CREATE TABLE IF NOT EXISTS won't alter tables that predate a new column,
@@ -151,6 +154,58 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
     Ok(())
 }
 
+fn has_autoincrement(conn: &Connection, table: &str) -> rusqlite::Result<bool> {
+    // MAX over no rows still returns one row, so this never hits QueryReturnedNoRows
+    let sql: String = conn.query_row(
+        "SELECT COALESCE(MAX(sql), '') FROM sqlite_master WHERE type = 'table' AND name = ?1",
+        [table],
+        |r| r.get(0),
+    )?;
+    Ok(sql.contains("AUTOINCREMENT"))
+}
+
+/// Rebuilds a table so its key is AUTOINCREMENT, which SQLite can only apply when the
+/// table is created. Ids are carried over unchanged, then the counter is pushed past
+/// the highest id the stats tables still point at, because the whole danger is a gap
+/// left behind by an old delete: those ids are free again but their history isn't.
+///
+/// Follows SQLite's documented rebuild procedure. legacy_alter_table keeps the rename
+/// from rewriting other tables' foreign keys, which already name the real table.
+fn rebuild_with_autoincrement(
+    conn: &Connection,
+    table: &str,
+    create_rebuild: &str,
+    columns: &str,
+    high_water_sql: &str,
+) -> rusqlite::Result<()> {
+    if has_autoincrement(conn, table)? {
+        return Ok(());
+    }
+    let high: i64 = conn.query_row(high_water_sql, [], |r| r.get(0))?;
+
+    conn.execute_batch(&format!(
+        r#"
+        PRAGMA foreign_keys = OFF;
+        PRAGMA legacy_alter_table = ON;
+        BEGIN;
+        {create_rebuild}
+        INSERT INTO "{table}_rebuild" ({columns}) SELECT {columns} FROM "{table}";
+        DROP TABLE "{table}";
+        ALTER TABLE "{table}_rebuild" RENAME TO "{table}";
+        COMMIT;
+        PRAGMA legacy_alter_table = OFF;
+        PRAGMA foreign_keys = ON;
+        "#
+    ))?;
+
+    conn.execute("DELETE FROM sqlite_sequence WHERE name = ?1", [table])?;
+    conn.execute(
+        "INSERT INTO sqlite_sequence (name, seq) VALUES (?1, ?2)",
+        rusqlite::params![table, high],
+    )?;
+    Ok(())
+}
+
 /// Migrations for databases created by older releases. Each call is idempotent.
 fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     // v1.1.0: read-only support content mapped from Anki fields on import,
@@ -176,19 +231,14 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     // v1.5.0: skip a todo for today only. Cleared on day rollover and when the
     // todo's frequency changes.
     add_column_if_missing(conn, "todo", "is_skipped", "BOOLEAN NOT NULL DEFAULT FALSE")?;
-    // v1.6.0: a reset opens a new numbered version of a deck's stats instead of
-    // marking a row, so nothing a cleanup pass deletes can carry the reset.
-    // Quoted, group is a reserved word and PRAGMA table_info won't parse it bare
-    add_column_if_missing(conn, "\"group\"", "stat_version", "INTEGER NOT NULL DEFAULT 1")?;
-    add_column_if_missing(conn, "group_stats", "version", "INTEGER NOT NULL DEFAULT 1")?;
     add_column_if_missing(
         conn,
         "group_stats",
         "is_merged",
         "BOOLEAN NOT NULL DEFAULT FALSE",
     )?;
-    // A merge copies each source's latest version onto the new deck, so the
-    // original is kept for history but must not be counted a second time.
+    // Set when a merge copies a row onto the new deck, and when a reset archives the
+    // run it ended. Either way the row stays for history but stops counting.
     add_column_if_missing(
         conn,
         "group_stats",
@@ -202,6 +252,60 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
         "UPDATE group_stats SET origin_group_id = group_id
          WHERE origin_group_id IS NULL AND group_id IS NOT NULL;",
     )?;
+    // v1.6.0: a reset flags the deck instead of numbering its stats, and the first row
+    // of the run it opens carries the marker so the table can show where it began.
+    // Quoted, group is a reserved word and PRAGMA table_info won't parse it bare
+    add_column_if_missing(
+        conn,
+        "\"group\"",
+        "was_reset",
+        "BOOLEAN NOT NULL DEFAULT FALSE",
+    )?;
+    add_column_if_missing(
+        conn,
+        "group_stats",
+        "starts_era",
+        "BOOLEAN NOT NULL DEFAULT FALSE",
+    )?;
+    // v1.6.0: stats outlive the deck and plan they belong to, so a rowid handed out
+    // twice hands one thing's history to the next thing created. Runs last, since the
+    // rebuilt tables have to include every column added above.
+    rebuild_with_autoincrement(
+        conn,
+        "plan",
+        r#"CREATE TABLE "plan_rebuild" (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL
+        );"#,
+        "id, name",
+        "SELECT MAX(v) FROM (
+            SELECT COALESCE(MAX(id), 0) AS v FROM plan
+            UNION ALL SELECT COALESCE(MAX(plan_id), 0) FROM group_stats
+            UNION ALL SELECT COALESCE(MAX(plan_id), 0) FROM todo_stats
+         )",
+    )?;
+    rebuild_with_autoincrement(
+        conn,
+        "group",
+        r#"CREATE TABLE "group_rebuild" (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_id INTEGER,
+            name TEXT NOT NULL,
+            group_type TEXT NOT NULL
+                CHECK(group_type IN ('deck', 'notebook')),
+            was_reset BOOLEAN NOT NULL DEFAULT FALSE,
+            FOREIGN KEY(plan_id)
+                REFERENCES plan(id)
+                ON DELETE SET NULL
+        );"#,
+        "id, plan_id, name, group_type, was_reset",
+        r#"SELECT MAX(v) FROM (
+            SELECT COALESCE(MAX(id), 0) AS v FROM "group"
+            UNION ALL SELECT COALESCE(MAX(origin_group_id), 0) FROM group_stats
+            UNION ALL SELECT COALESCE(MAX(group_id), 0) FROM group_stats
+            UNION ALL SELECT COALESCE(MAX(group_id), 0) FROM todo_stat_group
+         )"#,
+    )?;
     Ok(())
 }
 
@@ -210,8 +314,11 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     conn.execute_batch(r#"
             PRAGMA foreign_keys = ON;
 
+            -- AUTOINCREMENT, not a plain rowid: group_stats keeps plan_id after the
+            -- plan is gone so its history stays browsable, and a reissued id would
+            -- hand all of it to whatever plan is created next.
             CREATE TABLE IF NOT EXISTS plan (
-                id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL
             );
 
@@ -234,8 +341,10 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                     ON DELETE CASCADE
             );
 
+            -- AUTOINCREMENT for the same reason as plan: group_stats.origin_group_id
+            -- outlives the deck, so an id must never be handed to a second deck.
             CREATE TABLE IF NOT EXISTS "group" (
-                id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 plan_id INTEGER,
 
                 name TEXT NOT NULL,
@@ -243,7 +352,7 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 group_type TEXT NOT NULL
                     CHECK(group_type IN ('deck', 'notebook')),
 
-                stat_version INTEGER NOT NULL DEFAULT 1, -- bumped by a reset, partitions the deck's stats into versions
+                was_reset BOOLEAN NOT NULL DEFAULT FALSE, -- a reset sets this; the next session opened starts its own row instead of adding to the day's
 
                 FOREIGN KEY(plan_id)
                     REFERENCES plan(id)
@@ -380,9 +489,9 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 time_spent_minutes FLOAT NOT NULL DEFAULT 0,
                 retention_rate REAL NOT NULL DEFAULT 0,
 
-                version INTEGER NOT NULL DEFAULT 1, -- which run of the deck this line belongs to
+                starts_era BOOLEAN NOT NULL DEFAULT FALSE, -- first row after a reset, so the table can mark where a run began
                 is_merged BOOLEAN NOT NULL DEFAULT FALSE, -- this deck was merged into another one
-                is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- copied into a merge, so the copy counts and this doesn't
+                is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- copied into a merge, or archived by the reset that ended its run; either way it doesn't count
 
                 FOREIGN KEY(group_id)
                     REFERENCES "group"(id)
@@ -470,6 +579,173 @@ mod tests {
 
     fn app_dir() -> PathBuf {
         PathBuf::from("/home/alice/.local/share/com.toast.app")
+    }
+
+    // group_stats holds onto origin_group_id and plan_id long after the deck or plan
+    // is deleted, so a reissued rowid silently hands one thing's history to the next
+    // thing created. A plain INTEGER PRIMARY KEY does exactly that.
+    #[test]
+    fn deleted_decks_and_plans_never_hand_their_id_to_the_next_one() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_schema(&conn, &app_dir()).unwrap();
+
+        conn.execute(
+            r#"INSERT INTO "group" (name, group_type) VALUES ('deck one', 'deck')"#,
+            [],
+        )
+        .unwrap();
+        let first_deck = conn.last_insert_rowid();
+        conn.execute(r#"DELETE FROM "group" WHERE id = ?1"#, [first_deck])
+            .unwrap();
+        conn.execute(
+            r#"INSERT INTO "group" (name, group_type) VALUES ('deck two', 'deck')"#,
+            [],
+        )
+        .unwrap();
+        assert_ne!(
+            conn.last_insert_rowid(),
+            first_deck,
+            "a new deck must not inherit a deleted deck's stats"
+        );
+
+        conn.execute("INSERT INTO plan (name) VALUES ('plan one')", [])
+            .unwrap();
+        let first_plan = conn.last_insert_rowid();
+        conn.execute("DELETE FROM plan WHERE id = ?1", [first_plan])
+            .unwrap();
+        conn.execute("INSERT INTO plan (name) VALUES ('plan two')", [])
+            .unwrap();
+        assert_ne!(
+            conn.last_insert_rowid(),
+            first_plan,
+            "a new plan must not inherit a deleted plan's stats"
+        );
+    }
+
+    // The migration has to cover ids that were already freed before it ran. Those are
+    // the dangerous ones: the row is gone, so MAX(id) forgets it, but group_stats
+    // still points at it and would hand that history to the next deck created.
+    #[test]
+    fn upgrading_an_old_database_keeps_freed_ids_out_of_circulation() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            r#"
+            CREATE TABLE plan (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+            CREATE TABLE "group" (
+                id INTEGER PRIMARY KEY,
+                plan_id INTEGER,
+                name TEXT NOT NULL,
+                group_type TEXT NOT NULL CHECK(group_type IN ('deck', 'notebook'))
+            );
+            CREATE TABLE group_stats(
+                id INTEGER PRIMARY KEY,
+                group_id INTEGER,
+                origin_group_id INTEGER,
+                plan_id INTEGER NOT NULL,
+                plan_name TEXT NOT NULL DEFAULT '',
+                group_name TEXT NOT NULL,
+                date DATE NOT NULL,
+                num_promote INTEGER NOT NULL DEFAULT 0,
+                num_demote INTEGER NOT NULL DEFAULT 0,
+                num_new INTEGER NOT NULL DEFAULT 0,
+                time_spent_minutes FLOAT NOT NULL DEFAULT 0,
+                retention_rate REAL NOT NULL DEFAULT 0
+            );
+            INSERT INTO plan (id, name) VALUES (7, 'old plan');
+            INSERT INTO "group" (id, plan_id, name, group_type) VALUES (9, 7, 'old deck', 'deck');
+            -- study logged against both, then both deleted, exactly as before an
+            -- upgrade. group_id goes null with the deck, origin_group_id is what
+            -- keeps the history addressable, and so is what has to stay reserved.
+            INSERT INTO group_stats (group_id, origin_group_id, plan_id, group_name, date, num_new)
+            VALUES (NULL, 9, 7, 'old deck', '2026-07-01', 12);
+            DELETE FROM "group" WHERE id = 9;
+            DELETE FROM plan WHERE id = 7;
+            "#,
+        )
+        .unwrap();
+
+        init_schema(&conn, &app_dir()).unwrap();
+
+        conn.execute("INSERT INTO plan (name) VALUES ('brand new plan')", [])
+            .unwrap();
+        let new_plan = conn.last_insert_rowid();
+        assert!(
+            new_plan > 7,
+            "a new plan reused id {new_plan}, inheriting the deleted plan's stats"
+        );
+
+        conn.execute(
+            r#"INSERT INTO "group" (name, group_type) VALUES ('brand new deck', 'deck')"#,
+            [],
+        )
+        .unwrap();
+        let new_deck = conn.last_insert_rowid();
+        assert!(
+            new_deck > 9,
+            "a new deck reused id {new_deck}, inheriting the deleted deck's stats"
+        );
+
+        // Rebuilding must not have cost anything that was already there
+        let kept: i64 = conn
+            .query_row("SELECT num_new FROM group_stats WHERE plan_id = 7", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(kept, 12, "existing history survives the rebuild");
+    }
+
+    #[test]
+    fn upgrades_a_real_pre_stat_run_database() {
+        // group and group_stats as released, before a reset had anywhere to record
+        // itself. New columns land by migration, since CREATE TABLE IF NOT EXISTS
+        // leaves an existing table alone.
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            r#"
+            CREATE TABLE "group" (
+                id INTEGER PRIMARY KEY,
+                plan_id INTEGER,
+                name TEXT NOT NULL,
+                group_type TEXT NOT NULL CHECK(group_type IN ('deck', 'notebook'))
+            );
+            CREATE TABLE group_stats(
+                id INTEGER PRIMARY KEY,
+                group_id INTEGER,
+                plan_id INTEGER NOT NULL,
+                plan_name TEXT NOT NULL DEFAULT '',
+                group_name TEXT NOT NULL,
+                date DATE NOT NULL,
+                num_promote INTEGER NOT NULL DEFAULT 0,
+                num_demote INTEGER NOT NULL DEFAULT 0,
+                num_new INTEGER NOT NULL DEFAULT 0,
+                time_spent_minutes FLOAT NOT NULL DEFAULT 0,
+                retention_rate REAL NOT NULL DEFAULT 0
+            );
+            INSERT INTO "group" (id, plan_id, name, group_type) VALUES (1, 1, 'deck a', 'deck');
+            INSERT INTO group_stats (id, group_id, plan_id, group_name, date, num_new)
+            VALUES (1, 1, 1, 'deck a', '2026-07-01', 4);
+            "#,
+        )
+        .unwrap();
+
+        init_schema(&conn, &app_dir()).unwrap();
+
+        // The stats page reads through here, so this is the query that was failing
+        let rows = crate::crud::read::get_group_stats(1, &conn).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].num_new, 4, "the study survives the upgrade");
+        assert!(!rows[0].starts_era, "an old line never began a run");
+        assert!(!rows[0].is_archived);
+        assert_eq!(
+            rows[0].origin_group_id,
+            Some(1),
+            "backfilled so the deck keeps its identity"
+        );
+
+        let flag: bool = conn
+            .query_row(r#"SELECT was_reset FROM "group" WHERE id = 1"#, [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert!(!flag, "an upgraded deck has no reset pending");
     }
 
     fn setup() -> Connection {

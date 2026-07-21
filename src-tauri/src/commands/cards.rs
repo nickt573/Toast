@@ -63,6 +63,13 @@ pub fn reset_deck(group_id: i64, state: tauri::State<AppState>) -> Result<(), St
     scheduling::reset_deck(group_id, &conn).map_err(|e| e.to_string())
 }
 
+/// Archives every stat row a deck has, in every plan. Offered after a reset.
+#[tauri::command]
+pub fn archive_deck_stats(group_id: i64, state: tauri::State<AppState>) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    scheduling::archive_deck_stats(group_id, &conn).map_err(|e| e.to_string())
+}
+
 /// Fetch one random is_due item for a group session.
 #[tauri::command]
 pub fn get_next_due_card(

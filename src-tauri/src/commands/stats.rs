@@ -43,16 +43,9 @@ pub fn delete_group_stat(id: i64, state: tauri::State<AppState>) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn delete_group_stats_for_deck(
-    origin_group_id: Option<i64>,
-    group_name: String,
-    version: Option<i64>,
-    plan_id: i64,
-    state: tauri::State<AppState>,
-) -> Result<(), String> {
+pub fn delete_group_stats(ids: Vec<i64>, state: tauri::State<AppState>) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
-    delete::delete_group_stats_for_deck(origin_group_id, &group_name, version, plan_id, &conn)
-        .map_err(|e| e.to_string())
+    delete::delete_group_stats(&ids, &conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -66,24 +59,13 @@ pub fn set_group_stat_archived(
 }
 
 #[tauri::command]
-pub fn set_group_stats_archived_for_deck(
-    origin_group_id: Option<i64>,
-    group_name: String,
-    version: Option<i64>,
-    plan_id: i64,
+pub fn set_group_stats_archived(
+    ids: Vec<i64>,
     archived: bool,
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
-    update::set_group_stats_archived_for_deck(
-        origin_group_id,
-        &group_name,
-        version,
-        plan_id,
-        archived,
-        &conn,
-    )
-    .map_err(|e| e.to_string())
+    update::set_group_stats_archived(&ids, archived, &conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -100,8 +82,8 @@ pub fn update_todo_stat(
     details: Option<String>,
     time_spent_minutes: f64,
     num_unit: Option<String>,
-    remove_group_names: Vec<String>,
-    remove_resource_names: Vec<String>,
+    remove_group_row_ids: Vec<i64>,
+    remove_resource_row_ids: Vec<i64>,
     add_group_ids: Vec<i64>,
     add_resource_ids: Vec<i64>,
     state: tauri::State<AppState>,
@@ -114,8 +96,8 @@ pub fn update_todo_stat(
         details,
         time_spent_minutes,
         num_unit,
-        remove_group_names,
-        remove_resource_names,
+        remove_group_row_ids,
+        remove_resource_row_ids,
         add_group_ids,
         add_resource_ids,
         &conn,

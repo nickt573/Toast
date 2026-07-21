@@ -97,13 +97,11 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                     </div>
                 )}
                 {removing && (
-                    <div className="plan-srs-confirm">
-                        <span className="plan-srs-confirm-sub">
-                            Preserve maintains all progress. Reset wipes all progress.
-                        </span>
-                        <button onClick={() => { onRemove(false); setRemoving(false); }}>Remove &amp; Preserve</button>
-                        <button className="danger" onClick={() => { onRemove(true); setRemoving(false); }}>Remove &amp; Reset</button>
-                    </div>
+                    <span className="plan-srs-confirm-actions">
+                        <button onClick={() => { onRemove(false, false); setRemoving(false); }}>Remove &amp; Preserve</button>
+                        <button className="danger" onClick={() => { onRemove(true, false); setRemoving(false); }}>Reset &amp; Keep Stats</button>
+                        <button className="danger" onClick={() => { onRemove(true, true); setRemoving(false); }}>Reset &amp; Archive Stats</button>
+                    </span>
                 )}
                 <span className="plan-srs-tip-wrap">
                     <button className="btn-amber" onClick={onClamp}>Trim</button>
@@ -116,6 +114,12 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                 <button onClick={() => { setEditing((e) => !e); setRemoving(false); }}>{editing ? "Cancel" : "Settings"}</button>
                 <button className="danger" onClick={() => { setRemoving((r) => !r); setEditing(false); }}>{removing ? "Cancel" : "Remove"}</button>
             </div>
+            {removing && (
+                <div className="plan-srs-confirm-sub">
+                    Preserve maintains all progress. Reset wipes all progress, and can
+                    archive this deck's old stats so they stop counting.
+                </div>
+            )}
         </div>
     );
 }
@@ -160,9 +164,10 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
         } catch (e) { logError("catch", e); setToast("Failed to add group.", "error"); }
     }
 
-    async function removeGroup(groupId, reset) {
+    async function removeGroup(groupId, reset, archivePrevious) {
         try {
             await loggedInvoke("remove_group_from_plan", { groupId, reset });
+            if (archivePrevious) await loggedInvoke("archive_deck_stats", { groupId });
             setToast(reset ? "Deck removed and progress reset." : "Deck removed, progress preserved.");
             await loadData();
         } catch (e) { logError("catch", e); setToast("Failed to remove group.", "error"); }
@@ -193,7 +198,7 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
                 <SrsGroupRow key={group.id} group={group} scheduler={scheduler}
                     onClamp={() => clampGroup(group.id)}
                     onClampMax={() => clampGroupMax(group.id)}
-                    onRemove={(reset) => removeGroup(group.id, reset)}
+                    onRemove={(reset, archivePrevious) => removeGroup(group.id, reset, archivePrevious)}
                     loadData={() => loadData()}
                     srsGroups={srsGroups}
                     setToast={setToast}

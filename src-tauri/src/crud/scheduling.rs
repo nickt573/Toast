@@ -1,7 +1,7 @@
 use crate::crud::models::*;
 use chrono::Datelike;
 use chrono::{self};
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, OptionalExtension, Result};
 
 pub fn update_scheduler(scheduler: Scheduler, conn: &Connection) -> Result<()> {
     conn.execute(
@@ -412,41 +412,60 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     tx.commit()
 }
 
-/// Opens today's line for a deck in its plan and returns it, reusing the one
-/// that's already there. Nothing happens for a deck outside a plan.
+/// Opens today's line for a deck in its plan and returns it. Nothing happens for a
+/// deck outside a plan.
+///
+/// A pending reset forces a brand new line even when the day already has one, so a
+/// run always begins on its own row. That line is marked as the start of the run and
+/// the flag clears, which means repeat resets before the next session collapse into
+/// one boundary. Otherwise the day's newest line is reused, since a reset earlier the
+/// same day can leave more than one. An archived newest line is never reused, or
+/// study logged after archiving the deck would land somewhere it doesn't count.
 pub fn open_stat_line(group_id: i64, conn: &Connection) -> Result<Option<i64>> {
-    let Some(plan_id): Option<i64> = conn.query_row(
-        r#"SELECT plan_id FROM "group" WHERE id = ?1"#,
+    let (plan_id, was_reset): (Option<i64>, bool) = conn.query_row(
+        r#"SELECT plan_id, was_reset FROM "group" WHERE id = ?1"#,
         [group_id],
-        |r| r.get(0),
-    )?
-    else {
+        |r| Ok((r.get(0)?, r.get(1)?)),
+    )?;
+    let Some(plan_id) = plan_id else {
         return Ok(None);
     };
     let today = get_date(conn)?;
 
+    let existing: Option<(i64, bool)> = conn
+        .query_row(
+            "SELECT id, is_archived FROM group_stats
+             WHERE group_id = ?1 AND plan_id = ?2 AND date = ?3
+             ORDER BY id DESC LIMIT 1",
+            rusqlite::params![group_id, plan_id, &today],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+
+    if let Some((id, archived)) = existing {
+        if !was_reset && !archived {
+            return Ok(Some(id));
+        }
+    }
+
     conn.execute(
         r#"
-        INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date, version)
-        SELECT g.id, g.id, p.id, p.name, g.name, ?3, g.stat_version
+        INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date, starts_era)
+        SELECT g.id, g.id, p.id, p.name, g.name, ?3, ?4
         FROM "group" g, plan p
         WHERE g.id = ?1 AND p.id = ?2
-          AND NOT EXISTS (
-              SELECT 1 FROM group_stats
-              WHERE group_id = ?1 AND plan_id = ?2 AND date = ?3 AND version = g.stat_version
-          )
         "#,
-        rusqlite::params![group_id, plan_id, &today],
+        rusqlite::params![group_id, plan_id, &today, was_reset],
     )?;
 
-    conn.query_row(
-        r#"SELECT gs.id FROM group_stats gs
-           INNER JOIN "group" g ON g.id = gs.group_id AND g.stat_version = gs.version
-           WHERE gs.group_id = ?1 AND gs.plan_id = ?2 AND gs.date = ?3"#,
-        rusqlite::params![group_id, plan_id, &today],
-        |r| r.get(0),
-    )
-    .map(Some)
+    if was_reset {
+        conn.execute(
+            r#"UPDATE "group" SET was_reset = FALSE WHERE id = ?1"#,
+            [group_id],
+        )?;
+    }
+
+    Ok(Some(conn.last_insert_rowid()))
 }
 
 fn write_group_stat(
@@ -486,18 +505,11 @@ pub fn add_group_time(group_id: i64, minutes: f64, conn: &Connection) -> Result<
 }
 
 // Wipes card progress and starts a blank group_stats row for today, splitting
-/// The version a deck's stats are currently being written into.
-pub fn current_version(group_id: i64, conn: &Connection) -> Result<i64> {
-    conn.query_row(
-        r#"SELECT stat_version FROM "group" WHERE id = ?1"#,
-        [group_id],
-        |r| r.get(0),
-    )
-}
-
-// Wipes card progress and opens a fresh version of the deck's stats. A version
-// nothing was ever graded into gets replaced instead, so resetting repeatedly
-// can't run the counter up. Also called from remove_group_from_plan.
+/// Wipes card progress and marks the deck so the next session opened starts its own
+/// stat row. Nothing is written here: a deck outside a plan has nowhere to write, and
+/// flagging instead of writing means it makes no difference where the reset happened.
+/// Resetting repeatedly just leaves the flag set. Also called from
+/// remove_group_from_plan. Archiving what came before is a separate, optional step.
 pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE WHERE group_id = ?1",
@@ -507,39 +519,26 @@ pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
         "DELETE FROM card_grade_log WHERE card_id IN (SELECT id FROM card WHERE group_id = ?1)",
         [group_id],
     )?;
-
-    let version = current_version(group_id, conn)?;
-    let unused: bool = conn.query_row(
-        "SELECT NOT EXISTS(
-            SELECT 1 FROM group_stats
-            WHERE group_id = ?1 AND version = ?2
-              AND (num_new > 0 OR num_promote > 0 OR num_demote > 0)
-        )",
-        rusqlite::params![group_id, version],
-        |r| r.get(0),
+    conn.execute(
+        r#"UPDATE "group" SET was_reset = TRUE WHERE id = ?1"#,
+        [group_id],
     )?;
-
-    if unused {
-        conn.execute(
-            "DELETE FROM group_stats WHERE group_id = ?1 AND version = ?2",
-            rusqlite::params![group_id, version],
-        )?;
-    } else {
-        conn.execute(
-            r#"UPDATE "group" SET stat_version = stat_version + 1 WHERE id = ?1"#,
-            [group_id],
-        )?;
-    }
-
-    // Out of a plan the counter is the whole record, the new version's first line
-    // gets written whenever the deck next joins one.
     conn.execute(
         "UPDATE scheduler SET studied_new = 0, studied_review = 0 WHERE group_id = ?1",
         [group_id],
     )?;
-    open_stat_line(group_id, conn)?;
     let _ = fill_group(group_id, conn);
 
+    Ok(())
+}
+
+/// Archives every stat row a deck has, across all plans. Offered alongside a reset so
+/// the run that just ended can be dropped from totals while staying on the page.
+pub fn archive_deck_stats(group_id: i64, conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE group_stats SET is_archived = TRUE WHERE group_id = ?1",
+        [group_id],
+    )?;
     Ok(())
 }
 

@@ -12,8 +12,10 @@
 .plan-srs-settings-label { font-size: 12px; display: flex; align-items: center; gap: 4px; }
 /* 28px matches button height so opening settings doesn't grow the actions row */
 .plan-srs-settings-input { width: 60px; margin-left: 6px; height: 28px; padding-top: 0; padding-bottom: 0; }
-.plan-srs-confirm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-right: auto; font-size: 13px; }
-.plan-srs-confirm-sub { font-size: 12px; color: var(--t-text-3); }
+/* The remove choices sit at the left of the row, like settings does, so the standing
+   Trim/Fill/Settings/Cancel buttons keep their place on the right */
+.plan-srs-confirm-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-right: auto; }
+.plan-srs-confirm-sub { font-size: 12px; color: var(--t-text-3); margin-top: 8px; }
 
 /* SRS add form: carries the deck-family gradient like its clay/yellow siblings */
 .plan-srs-add { border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r); padding: 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 62%); }

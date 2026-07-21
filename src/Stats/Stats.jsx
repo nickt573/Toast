@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { ResourceCard, GroupTypeBadge, ConfirmDelete, Linkify } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
@@ -57,6 +57,17 @@ function retentionPillClass(rate) {
   return "st-meta-pill--ret-poor";
 }
 
+function daysBetween(from, to) {
+  const ms = new Date(to + "T00:00:00Z") - new Date(from + "T00:00:00Z");
+  return Math.round(ms / 86400000);
+}
+
+// "Jul 8" style, for the ends of a session window
+function fmtShortDay(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function addDays(dateStr, n) {
   const d = new Date(dateStr + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
@@ -77,8 +88,9 @@ function categoryStringToMap(catStr) {
   return map;
 }
 
-// An archived version was copied into a merged deck, so the copy is what counts.
-// Every aggregate reads through this, otherwise a merge inflates the plan.
+// An archived row was either copied into a merged deck or set aside by a reset, so
+// either way something else is the record now. Every aggregate reads through this,
+// otherwise a merge inflates the plan.
 function counted(groupStats) {
   return groupStats.filter(r => !r.is_archived);
 }
@@ -513,15 +525,26 @@ function ArchiveButton({ rows, onArchive, label = "Archive" }) {
   );
 }
 
-function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
+// How many days of sessions one page of a deck's table covers.
+const WINDOW_DAYS = 14;
+
+function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast }) {
   const [deckFilter, setDeckFilter]   = useState("all");
   const [expanded, setExpanded]       = useState({});
-  // Which version each deck card is showing. Unset means the newest one.
-  const [shownVersion, setShownVersion] = useState({});
+  // How many windows back from the newest session each deck card is paged. 0 is the
+  // most recent fortnight.
+  const [windowBack, setWindowBack] = useState({});
 
-  // One card per deck, versions paged inside it. origin_group_id outlives the
-  // deck, so two decks sharing a name stay apart. Older rows fall back to name.
-  const deckId = r => (r.origin_group_id === null ? `name:${r.group_name}` : `id:${r.origin_group_id}`);
+  // One card per deck, a fortnight of days paged inside it.
+  //
+  // origin_group_id survives the deck being deleted, but it is a plain rowid and
+  // SQLite reissues it to the next deck created, so it identifies a deck only while
+  // that deck is alive. Rows whose deck is gone are bucketed apart by name, otherwise
+  // a dead deck's history lands inside a brand new deck's table. Rows old enough to
+  // predate origin_group_id have nothing but the name to go on either way.
+  const deckId = r => (r.group_id !== null
+    ? `live:${r.origin_group_id}`
+    : `dead:${r.origin_group_id ?? "x"}:${r.group_name}`);
 
   // A deck only counts as archived once every one of its rows is, the same test
   // ArchiveButton uses to decide whether it reads Archive all or Unarchive all.
@@ -531,6 +554,7 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
   // gone because it is the state that decides whether any of this counts toward
   // your totals, and a deck can easily be both.
   const deadState = rows => {
+    if (rows.length === 0) return null;
     if (allArchived(rows)) return "archived";
     if (rows[0].group_id !== null) return null;
     return rows[0].is_merged ? "merged" : "deleted";
@@ -543,10 +567,25 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
     byDeck[k].push(r);
   });
 
-  const deckKeys = Object.keys(byDeck)
-    .sort((a, b) => byDeck[a][0].group_name.localeCompare(byDeck[b][0].group_name, undefined, { sensitivity: "base" }));
+  // Decks in the plan that haven't been studied yet have no rows to derive a card
+  // from, so seed them here. They show an empty table until a session opens one, and
+  // drop off entirely if they leave the plan without ever being studied.
+  planDecks.forEach(d => {
+    const k = `live:${d.id}`;
+    if (!byDeck[k]) byDeck[k] = [];
+  });
 
-  const visibleKeys = deckFilter === "all" ? deckKeys : deckKeys.filter(k => k === deckFilter);
+  const deckName = key => (byDeck[key][0]?.group_name
+    ?? planDecks.find(d => `live:${d.id}` === key)?.name
+    ?? "");
+
+  const deckKeys = Object.keys(byDeck)
+    .sort((a, b) => deckName(a).localeCompare(deckName(b), undefined, { sensitivity: "base" }));
+
+  // Deleting or merging the deck you had filtered to leaves the key pointing at
+  // nothing, which would read as an empty page rather than a cleared filter
+  const activeFilter = byDeck[deckFilter] ? deckFilter : "all";
+  const visibleKeys = activeFilter === "all" ? deckKeys : deckKeys.filter(k => k === activeFilter);
 
   const toggle = key => setExpanded(e => ({ ...e, [key]: !e[key] }));
 
@@ -558,11 +597,12 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
     } catch (e) { logError("catch", e); setToast("Failed to delete session.", "error"); }
   };
 
-  // version null clears the whole deck, otherwise just the one shown
-  const deleteStats = async (originGroupId, groupName, version) => {
+  // This page is what decides which rows make up a deck's card, so it hands over their
+  // ids rather than a description the backend would have to group by all over again.
+  const deleteStats = async (rows) => {
     try {
-      await loggedInvoke("delete_group_stats_for_deck", { originGroupId, groupName, version, planId });
-      setToast(version === null ? "Deck stats deleted." : `Version ${version} deleted.`);
+      await loggedInvoke("delete_group_stats", { ids: rows.map(r => r.id) });
+      setToast("Deck stats deleted.");
       onDeleted();
     } catch (e) { logError("catch", e); setToast("Failed to delete deck stats.", "error"); }
   };
@@ -575,34 +615,34 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
     } catch (e) { logError("catch", e); setToast("Failed to archive session.", "error"); }
   };
 
-  const archiveStats = async (originGroupId, groupName, version, archived) => {
+  const archiveStats = async (rows, archived) => {
     try {
-      await loggedInvoke("set_group_stats_archived_for_deck", { originGroupId, groupName, version, planId, archived });
+      await loggedInvoke("set_group_stats_archived", { ids: rows.map(r => r.id), archived });
       setToast(archived ? "Stats archived." : "Stats unarchived.");
       onDeleted();
     } catch (e) { logError("catch", e); setToast("Failed to archive stats.", "error"); }
   };
 
   if (deckKeys.length === 0) {
-    return <div className="empty-bubble" style={{ marginTop: 16 }}>No deck sessions recorded yet.</div>;
+    return <div className="empty-bubble" style={{ marginTop: 16 }}>No decks in this plan yet.</div>;
   }
 
   return (
     <div>
       <div className="st-pills" style={{ marginBottom: 12 }}>
-        <button className={`st-pill${deckFilter === "all" ? " active" : ""}`} onClick={() => setDeckFilter("all")}>All</button>
+        <button className={`st-pill${activeFilter === "all" ? " active" : ""}`} onClick={() => setDeckFilter("all")}>All</button>
         {/* Read the name off the same row the deck's card does. Rows are newest
             first, and a rename or merge only ever updates the live deck, so older
             rows can still carry a name this deck hasn't gone by in a while. */}
         {Object.keys(byDeck).map(id => {
           const dead = deadState(byDeck[id]);
-          const isActive = deckFilter === id;
+          const isActive = activeFilter === id;
           return (
             <button
               key={id}
               className={`st-pill${isActive ? " active" : ""}${dead ? ` st-pill-dead st-pill-dead--${dead}` : ""}`}
               onClick={() => setDeckFilter(id)}>
-              {byDeck[id][0].group_name}
+              {deckName(id)}
             </button>
           );
         })}
@@ -610,17 +650,18 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
 
       {visibleKeys.map(cardId => {
         const deckRows = byDeck[cardId];
-        const name = deckRows[0].group_name;
+        const name = deckName(cardId);
         const isOpen = !!expanded[cardId];
 
-        // Newest first, so the arrows start on the most recent run
-        const allVersions = [...new Set(deckRows.map(r => r.version))].sort((a, b) => b - a);
-        // Deleting the version you were paging on leaves a stale pick behind. Without
-        // this the table filters to a version with no rows left and the deck reads as
-        // empty, and with only one version remaining there is no nav to escape it.
-        const version = allVersions.includes(shownVersion[cardId]) ? shownVersion[cardId] : allVersions[0];
-        const vIdx = Math.max(0, allVersions.indexOf(version));
-        const rows = deckRows.filter(r => r.version === version);
+        // Rows arrive newest first, so the first one anchors the most recent
+        // fortnight and paging walks backwards from there in whole windows.
+        const anchor  = deckRows[0]?.date ?? null;
+        const oldest  = deckRows[deckRows.length - 1]?.date ?? null;
+        const maxBack = anchor ? Math.floor(daysBetween(oldest, anchor) / WINDOW_DAYS) : 0;
+        const back    = Math.min(Math.max(windowBack[cardId] ?? 0, 0), maxBack);
+        const winEnd   = anchor ? addDays(anchor, -back * WINDOW_DAYS) : null;
+        const winStart = winEnd ? addDays(winEnd, -(WINDOW_DAYS - 1)) : null;
+        const rows = anchor ? deckRows.filter(r => r.date <= winEnd && r.date >= winStart) : [];
 
         const totalTime = deckRows.reduce((s, r) => s + r.time_spent_minutes, 0);
         const totalN    = deckRows.reduce((s, r) => s + r.num_new, 0);
@@ -629,11 +670,11 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
         const avgRet    = (totalP + totalD) > 0 ? totalP / (totalP + totalD) : null;
 
         // A missing deck was either deleted outright or merged into another one
-        const isGone = deckRows[0].group_id === null;
-        const wasMerged = deckRows[0].is_merged;
+        const isGone = deckRows.length > 0 && deckRows[0].group_id === null;
+        const wasMerged = deckRows[0]?.is_merged;
         const isArchived = allArchived(deckRows);
         const dead = deadState(deckRows);
-        const step = n => setShownVersion(v => ({ ...v, [cardId]: allVersions[vIdx + n] }));
+        const step = n => setWindowBack(v => ({ ...v, [cardId]: back + n }));
 
         return (
           <div key={cardId} className={`st-deck-card${dead ? ` st-deck-card--dead st-deck-card--${dead}` : ""}`}>
@@ -656,9 +697,13 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                 <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
               </span>
               <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }} onClick={e => e.stopPropagation()}>
-                <ArchiveButton rows={deckRows} label="Archive all"
-                  onArchive={a => archiveStats(deckRows[0].origin_group_id, name, null, a)} />
-                <ConfirmDelete label="Delete all" small onConfirm={() => deleteStats(deckRows[0].origin_group_id, name, null)} />
+                {deckRows.length > 0 && (
+                  <>
+                    <ArchiveButton rows={deckRows} label="Archive all"
+                      onArchive={a => archiveStats(deckRows, a)} />
+                    <ConfirmDelete label="Delete all" small onConfirm={() => deleteStats(deckRows)} />
+                  </>
+                )}
                 <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
               </span>
             </div>
@@ -680,13 +725,19 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                   </tr>
                 </thead>
                 <tbody>
+                  {rows.length === 0 && (
+                    <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--t-text-3)", padding: "10px 0" }}>
+                      No sessions yet.
+                    </td></tr>
+                  )}
                   {rows.map((r, i) => (
-                      <tr key={r.id} className={i % 2 === 1 ? "st-row-alt" : ""}>
+                    <Fragment key={r.id}>
+                      <tr className={i % 2 === 1 ? "st-row-alt" : ""}>
                         <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
                             {r.date}
                             {r.is_archived && (
-                              <span className="st-badge st-badge-archived" title="Copied into a merged deck, so it isn't counted twice">Archived</span>
+                              <span className="st-badge st-badge-archived" title="Archived, so it isn't counted toward your totals">Archived</span>
                             )}
                           </span>
                         </td>
@@ -722,25 +773,28 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
                           </span>
                         </td>
                       </tr>
+                      {/* Sits under the row that opened the run, since the table reads
+                          newest first, so everything below the line is the run before.
+                          A reset can split a single day, and without this two rows
+                          would share a date with nothing saying why. */}
+                      {r.starts_era && (
+                        <tr>
+                          <td colSpan={7} className="st-era-divider">Progress Reset</td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
             )}
 
-            {isOpen && allVersions.length > 1 && (
-              <div className="st-version-nav">
-                <button className="st-btn-sm" disabled={vIdx >= allVersions.length - 1}
-                  onClick={() => step(1)} title="Older version">‹</button>
-                <span className="st-version-label">v{version}</span>
-                <span className="st-version-count">of {allVersions.length}</span>
-                <button className="st-btn-sm" disabled={vIdx <= 0}
-                  onClick={() => step(-1)} title="Newer version">›</button>
-                <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-                  <ArchiveButton rows={rows} label={`Archive v${version}`}
-                    onArchive={a => archiveStats(deckRows[0].origin_group_id, name, version, a)} />
-                  <ConfirmDelete label={`Delete v${version}`} small
-                    onConfirm={() => deleteStats(deckRows[0].origin_group_id, name, version)} />
-                </span>
+            {isOpen && maxBack > 0 && (
+              <div className="st-window-nav">
+                <button className="st-btn-sm" disabled={back >= maxBack}
+                  onClick={() => step(1)} title="Earlier sessions">‹</button>
+                <span className="st-window-label">{fmtShortDay(winStart)} - {fmtShortDay(winEnd)}</span>
+                <button className="st-btn-sm" disabled={back <= 0}
+                  onClick={() => step(-1)} title="Later sessions">›</button>
               </div>
             )}
           </div>
@@ -839,8 +893,10 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
       details: r.details || "",
       timeSpent: r.time_spent_minutes,
       numUnit: r.num_unit || "",
-      groups: r.groups.map(x => x.name),
-      resources: r.resources.map(x => x.name),
+      // Kept lines are tracked by row id, never by name: the snapshot keeps whatever
+      // a deck or resource was called when it was logged, so names repeat and drift.
+      groups: r.groups.map(x => x.row_id),
+      resources: r.resources.map(x => x.row_id),
       addGroupIds: [],
       addResourceIds: [],
     });
@@ -856,8 +912,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     if (category === 0) { setToast("Select at least one category.", "error"); return; }
     const timeSpent = Math.max(0, Math.round(parseFloat(editForm.timeSpent) || 0));
     if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "error"); return; }
-    const removeGroups    = r.groups.map(x => x.name).filter(n => !editForm.groups.includes(n));
-    const removeResources = r.resources.map(x => x.name).filter(n => !editForm.resources.includes(n));
+    const removeGroupRowIds    = r.groups.map(x => x.row_id).filter(id => !editForm.groups.includes(id));
+    const removeResourceRowIds = r.resources.map(x => x.row_id).filter(id => !editForm.resources.includes(id));
     try {
       await loggedInvoke("update_todo_stat", {
         id: r.id,
@@ -866,8 +922,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
         details: editForm.details.trim() || null,
         timeSpentMinutes: timeSpent,
         numUnit: editForm.numUnit.trim() || null,
-        removeGroupNames: removeGroups,
-        removeResourceNames: removeResources,
+        removeGroupRowIds,
+        removeResourceRowIds,
         addGroupIds: editForm.addGroupIds,
         addResourceIds: editForm.addResourceIds,
       });
@@ -1068,18 +1124,19 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     />
                   </div>
                   {(() => {
-                    const addableResources = planResources.filter(pr => !editForm.resources.includes(pr.name));
-                    if (editForm.resources.length === 0 && addableResources.length === 0) return null;
+                    const keptResources = r.resources.filter(x => editForm.resources.includes(x.row_id));
+                    const addableResources = planResources.filter(pr => !keptResources.some(k => k.name === pr.name));
+                    if (keptResources.length === 0 && addableResources.length === 0) return null;
                     return (
                       <div>
                         <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Resources</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {editForm.resources.map((res, i) => {
-                            const dead = !planResources.some(pr => pr.name === res);
+                          {keptResources.map(res => {
+                            const dead = !planResources.some(pr => pr.name === res.name);
                             return (
-                              <span key={i} className={`pill pill-clay${dead ? " pill-dead" : ""}`}>
-                                {res}
-                                <button onClick={() => setEditForm(f => ({ ...f, resources: f.resources.filter(n => n !== res) }))}
+                              <span key={res.row_id} className={`pill pill-clay${dead ? " pill-dead" : ""}`}>
+                                {res.name}
+                                <button onClick={() => setEditForm(f => ({ ...f, resources: f.resources.filter(id => id !== res.row_id) }))}
                                   style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
                               </span>
                             );
@@ -1102,24 +1159,22 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     );
                   })()}
                   {(() => {
-                    const keptLiveIds = r.groups
-                      .filter(x => editForm.groups.includes(x.name) && x.group_id != null)
-                      .map(x => x.group_id);
+                    const keptGroups = r.groups.filter(x => editForm.groups.includes(x.row_id));
+                    const keptLiveIds = keptGroups.filter(x => x.group_id != null).map(x => x.group_id);
                     const addableGroups = allGroups.filter(g => !keptLiveIds.includes(g.id));
-                    if (editForm.groups.length === 0 && addableGroups.length === 0) return null;
+                    if (keptGroups.length === 0 && addableGroups.length === 0) return null;
                     return (
                       <div>
                         <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Decks / Notebooks</div>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {editForm.groups.map((g, i) => {
-                            const info = r.groups.find(x => x.name === g);
-                            const dead = info?.group_id == null;
-                            const fam = info?.group_type === "notebook" ? "plum" : "blue";
+                          {keptGroups.map(info => {
+                            const dead = info.group_id == null;
+                            const fam = info.group_type === "notebook" ? "plum" : "blue";
                             return (
-                              <span key={i} className={`pill pill-${fam}${dead ? " pill-dead" : ""}`}>
-                                {g}
-                                {info?.group_type && <GroupTypeBadge type={info.group_type} />}
-                                <button onClick={() => setEditForm(f => ({ ...f, groups: f.groups.filter(n => n !== g) }))}
+                              <span key={info.row_id} className={`pill pill-${fam}${dead ? " pill-dead" : ""}`}>
+                                {info.name}
+                                {info.group_type && <GroupTypeBadge type={info.group_type} />}
+                                <button onClick={() => setEditForm(f => ({ ...f, groups: f.groups.filter(id => id !== info.row_id) }))}
                                   style={{ background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1, color: "inherit", fontSize: 12 }}>×</button>
                               </span>
                             );
@@ -1178,6 +1233,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [today,          setToday]         = useState(null);
   const [loading,        setLoading]       = useState(true);
   const [allGroups,      setAllGroups]     = useState([]);
+  const [planDecks,      setPlanDecks]     = useState([]);
   const [planResources,  setPlanResources] = useState([]);
 
   useEffect(() => {
@@ -1213,11 +1269,15 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       loggedInvoke("get_todo_stats", { planId }),
       loggedInvoke("get_plan_streak",     { planId }),
       loggedInvoke("get_resources",       { planId }),
-    ]).then(([gs, ts, si, res]) => {
+      // A deck in the plan that hasn't been studied has no stat rows to be found in,
+      // so its card comes from plan membership instead
+      loggedInvoke("get_plan_srs_groups", { planId }),
+    ]).then(([gs, ts, si, res, srs]) => {
       setGroupStats(gs);
       setTodoStats(ts);
       setStreakInfo(si);
       setPlanResources(res);
+      setPlanDecks(srs.map(([g]) => g).filter(g => g.group_type === "deck"));
     }).catch(e => { logError("catch", e); setToast("Failed to load stats.", "error"); });
   };
 
@@ -1321,6 +1381,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           {contentTab === "decks" && (
             <DeckSessionsTab
               groupStats={groupStats}
+              planDecks={planDecks}
               planId={selectedPlanId}
               onDeleted={() => loadStats(selectedPlanId)}
               setToast={setToast}

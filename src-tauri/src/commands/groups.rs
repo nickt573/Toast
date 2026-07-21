@@ -25,10 +25,11 @@ pub fn merge_decks(
     deck_b_id: i64,
     new_name: String,
     reset: bool,
+    archive_sources: bool,
     state: tauri::State<AppState>,
 ) -> Result<Group, String> {
     let mut conn = state.conn.lock().unwrap();
-    create::merge_decks(deck_a_id, deck_b_id, new_name, reset, &mut conn)
+    create::merge_decks(deck_a_id, deck_b_id, new_name, reset, archive_sources, &mut conn)
         .map_err(|e| e.to_string())
 }
 
