@@ -135,24 +135,32 @@ button.togo-label:hover { background: none; color: var(--t-text); border-color: 
 /* Close behavior */
 .togo-choices { display: flex; gap: 8px; margin-top: 6px; }
 
+/* A real border rather than an inset shadow, so the chosen option reads as outlined in
+   gold instead of merely tinted. Every state names its own border color, otherwise the
+   global button:hover paints it mauve. */
 button.togo-choice {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
   padding: 9px 12px;
-  border: none;
+  border: 1px solid var(--t-border-2);
   border-radius: var(--t-r);
   background: var(--t-bg);
   box-shadow: var(--t-shadow-sm);
   text-align: left;
   white-space: normal;
 }
-button.togo-choice:hover { background: var(--t-bg); filter: brightness(0.98); }
+button.togo-choice:hover {
+  background: var(--t-surface-2);
+  border-color: var(--t-border-3);
+  filter: none;
+}
 button.togo-choice.active,
 button.togo-choice.active:hover {
   background: var(--t-accent-bg);
-  box-shadow: var(--t-shadow-sm), inset 0 0 0 1px var(--t-accent);
+  border-color: var(--t-accent);
+  box-shadow: var(--t-shadow-sm);
   filter: none;
 }
 button.togo-choice.active .togo-choice-label { color: var(--t-accent-h); }
