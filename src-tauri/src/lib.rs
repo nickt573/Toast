@@ -124,6 +124,7 @@ pub fn run() {
             commands::cards::mark_for_review,
             commands::cards::prioritize_card,
             commands::cards::reset_deck,
+            commands::cards::set_card_paused,
             commands::cards::archive_deck_stats,
             commands::cards::get_next_due_card,
             commands::cards::count_due_items,

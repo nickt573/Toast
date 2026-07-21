@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getVersion } from "@tauri-apps/api/app";
 
 import { CardFace, renderAnkiHtml, stripAudioTags } from "./Decks/CardFace";
-import { ResourceCard, GroupTypeBadge } from "./UIUtils";
+import { ResourceCard, GroupTypeBadge, Tip } from "./UIUtils";
 import { computeCategory, maskToCategories, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
 import "./Homepage.css";
 
@@ -615,6 +615,22 @@ function StudySession({ group, onBack, setToast }) {
         finally { grading.current = false; }
     }
 
+    // Steps the card out of rotation rather than grading it. Pausing frees its slot, so
+    // the backend refills from the same track and something eligible takes its place.
+    // Nothing eligible just means the card leaves and the session is one shorter.
+    async function handleSwap() {
+        if (!isCard) throw new Error("Attempted Notebook SRS");
+        const cardId = card?.id;
+        if (!cardId || grading.current) return;
+        grading.current = true;
+        try {
+            await loggedInvoke("set_card_paused", { cardId, paused: true });
+            await fetchNext();
+            setToast("Card paused. Unpause it in the deck to bring it back.");
+        } catch (e) { logError("catch", e); setToast("Failed to swap card.", "error"); }
+        finally { grading.current = false; }
+    }
+
     async function flushTime() {
         const now = Date.now();
         const elapsed = (now - lastFlush.current) / 60000;
@@ -727,6 +743,16 @@ function StudySession({ group, onBack, setToast }) {
                     <button className="hp-flip-btn" onClick={handleFlip}>Flip</button>
                 ) : (
                     <GradeButtons onGrade={handleGrade} card={card} />
+                )}
+
+                {flipped && (
+                    <div className="hp-swap-row">
+                        <span />
+                        <button className="hp-swap-btn" onClick={handleSwap}>Swap</button>
+                        <span className="hp-swap-tip">
+                            <Tip text="Pause this card and bring in another one that's ready to go (ASAP). Useful when the card is well-known and you would like a more challenging replacement. The paused card stays paused until you unpause it in the deck. If this card is overdue or there are no eligble replacements, a replacement card will not be found." />
+                        </span>
+                    </div>
                 )}
 
                 {flipped && (

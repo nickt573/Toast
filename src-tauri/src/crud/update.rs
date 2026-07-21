@@ -254,6 +254,25 @@ pub fn update_card(card: Card, conn: &Connection, app_dir: &Path) -> Result<()> 
     Ok(())
 }
 
+/// Flips one card's pause without touching the rest of it, which update_card would.
+/// Pausing a due card gives its slot back, and on_pause_changed refills the queue from
+/// the same track, so something eligible takes its place straight away.
+pub fn set_card_paused(card_id: i64, paused: bool, conn: &Connection) -> Result<()> {
+    let (group_id, was_paused, was_due): (i64, bool, bool) = conn.query_row(
+        "SELECT group_id, is_paused, is_due FROM card WHERE id = ?1",
+        [card_id],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )?;
+    if was_paused == paused {
+        return Ok(());
+    }
+    conn.execute(
+        "UPDATE card SET is_paused = ?1 WHERE id = ?2",
+        rusqlite::params![paused, card_id],
+    )?;
+    on_pause_changed(card_id, group_id, paused, was_due, conn)
+}
+
 pub fn set_all_searchable(group_id: i64, searchable: bool, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE card SET is_searchable = ?1 WHERE group_id = ?2",
@@ -622,6 +641,74 @@ fn category_mask_to_string(mask: i64) -> String {
 mod tests {
     use super::*;
     use crate::crud::models::Card;
+
+    // What Swap promises during a session: the card steps out and an eligible one
+    // takes the slot, rather than the day quietly getting one card shorter.
+    #[test]
+    fn pausing_a_due_card_pulls_in_a_replacement() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_schema(&conn, tmp.path()).unwrap();
+        conn.execute_batch(
+            r#"
+            INSERT INTO plan (id, name) VALUES (1, 'p');
+            INSERT INTO "group" (id, plan_id, name, group_type) VALUES (1, 1, 'd', 'deck');
+            INSERT INTO scheduler (group_id, max_new, max_review, can_overflow)
+            VALUES (1, 1, 0, FALSE);
+            -- two eligible new cards, only one slot, so one is due and one waits
+            INSERT INTO card (id, group_id, front, back, tier, sequence, is_due, is_overdue)
+            VALUES (1, 1, 'a', 'a', 0, 0, TRUE, FALSE),
+                   (2, 1, 'b', 'b', 0, 0, FALSE, NULL);
+            "#,
+        )
+        .unwrap();
+
+        set_card_paused(1, true, &conn).unwrap();
+
+        let (paused, due): (bool, bool) = conn
+            .query_row("SELECT is_paused, is_due FROM card WHERE id = 1", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })
+            .unwrap();
+        assert!(paused && !due, "the swapped card leaves the queue");
+
+        let replacement_due: bool = conn
+            .query_row("SELECT is_due FROM card WHERE id = 2", [], |r| r.get(0))
+            .unwrap();
+        assert!(replacement_due, "the freed slot goes to the next eligible card");
+    }
+
+    // Nothing eligible to promote just means the session is one card shorter
+    #[test]
+    fn pausing_with_no_candidates_just_removes_the_card() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_schema(&conn, tmp.path()).unwrap();
+        conn.execute_batch(
+            r#"
+            INSERT INTO plan (id, name) VALUES (1, 'p');
+            INSERT INTO "group" (id, plan_id, name, group_type) VALUES (1, 1, 'd', 'deck');
+            INSERT INTO scheduler (group_id, max_new, max_review, can_overflow)
+            VALUES (1, 1, 0, FALSE);
+            INSERT INTO card (id, group_id, front, back, tier, sequence, is_due, is_overdue)
+            VALUES (1, 1, 'a', 'a', 0, 0, TRUE, FALSE),
+            -- not ready: its countdown hasn't run out
+                   (2, 1, 'b', 'b', 0, 5, FALSE, NULL);
+            "#,
+        )
+        .unwrap();
+
+        set_card_paused(1, true, &conn).unwrap();
+
+        let due_now: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM card WHERE group_id = 1 AND is_due = TRUE AND is_paused = FALSE",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(due_now, 0, "no candidate, so nothing takes its place");
+    }
 
     #[test]
     fn update_card_saves_user_fields_and_leaves_imported_alone() {
