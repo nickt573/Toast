@@ -166,4 +166,4 @@ button.togo-choice.active:hover {
 button.togo-choice.active .togo-choice-label { color: var(--t-accent-h); }
 
 .togo-choice-label { font-size: 13px; font-weight: 600; color: var(--t-text); }
-.togo-choice-hint  { font-size: 11px; color: var(--t-text-2); font-style: italic; }
+.togo-choice-hint  { font-size: 11px; color: var(--t-text-2); }
