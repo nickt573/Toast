@@ -1455,8 +1455,83 @@ mod stat_row_tests {
         assert_eq!(new_in(&conn, 1, 1), 0);
     }
 
+    // Deleting the line a run opened on must not quietly merge that run into the one
+    // before it, so the marker moves to whatever line the run has left.
     #[test]
-    fn t31_same_named_decks_stay_separate() {
+    fn t31_deleting_a_runs_first_line_hands_the_marker_on() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+        roll_day(&conn);
+        study(&conn, 1, 3);
+
+        let era_line: i64 = conn
+            .query_row(
+                "SELECT id FROM group_stats WHERE group_id = 1 AND starts_era = TRUE",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        delete_group_stats(&[era_line], &conn).unwrap();
+
+        assert_eq!(era_rows(&conn, 1), 1, "the run still starts somewhere");
+        let carried: i64 = conn
+            .query_row(
+                "SELECT num_new FROM group_stats WHERE group_id = 1 AND starts_era = TRUE",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(carried, 3, "the next line of the run took it over");
+    }
+
+    // With nothing left to carry it, the flag comes back so the next session opens the
+    // boundary instead of the run vanishing entirely
+    #[test]
+    fn t32_deleting_a_runs_only_line_rearms_the_reset() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+
+        let era_line: i64 = conn
+            .query_row(
+                "SELECT id FROM group_stats WHERE group_id = 1 AND starts_era = TRUE",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        delete_group_stats(&[era_line], &conn).unwrap();
+        assert!(flag(&conn, 1), "the reset is pending again");
+
+        roll_day(&conn);
+        study(&conn, 1, 4);
+        assert_eq!(era_rows(&conn, 1), 1, "and lands on the next session");
+    }
+
+    // Clearing a deck cascades the marker down its own lines and ends up re-armed,
+    // rather than stamping a divider onto a plan that was left alone
+    #[test]
+    fn t33_clearing_a_deck_leaves_other_plans_unmarked() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 1, 2);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+
+        delete_group_stats(&card_rows(&conn, 1, 2, false), &conn).unwrap();
+        assert_eq!(new_in(&conn, 1, 1), 5, "plan one is untouched");
+        assert_eq!(era_rows(&conn, 1), 0, "and keeps no divider it never had");
+        assert!(flag(&conn, 1));
+    }
+
+    #[test]
+    fn t34_same_named_decks_stay_separate() {
         let mut conn = setup();
         conn.execute(
             "UPDATE \"group\" SET name = 'deck a' WHERE id = 2",
@@ -1474,7 +1549,7 @@ mod stat_row_tests {
     }
 
     #[test]
-    fn t32_studying_after_archiving_today_opens_a_fresh_line() {
+    fn t35_studying_after_archiving_today_opens_a_fresh_line() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
@@ -1486,7 +1561,7 @@ mod stat_row_tests {
     }
 
     #[test]
-    fn t33_merge_with_reset_can_archive_the_sources_in_the_same_stroke() {
+    fn t36_merge_with_reset_can_archive_the_sources_in_the_same_stroke() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
