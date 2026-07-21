@@ -60,6 +60,20 @@
   cursor: pointer;
 }
 .st-deck-name { font-weight: 600; font-size: 15px; color: var(--t-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* A dead deck recolors as a whole: the header band, the table's column heads, and
+   the frame around them all shift off peach together, so nothing inside the card
+   still reads as live. Each state keeps its badge's tint, and the states mean
+   different things: archived stops counting toward your totals, while deleted and
+   merged stats still count. Only the archived name fades, to match. */
+.st-deck-card--dead { border-color: var(--dead-bdr); }
+.st-deck-card--dead .st-deck-header,
+.st-deck-card--dead .st-table th { background: var(--dead-band); }
+
+.st-deck-card--archived { --dead-band: #DBD3CF; --dead-bdr: #C4BAB5; }
+.st-deck-card--deleted  { --dead-band: #F0CCC2; --dead-bdr: #DCA294; }
+.st-deck-card--merged   { --dead-band: #C8B4D2; --dead-bdr: #B49CC2; }
+.st-deck-card--archived .st-deck-name { color: var(--t-text-2); }
 /* Expand/collapse caret, matches .plan-col-label-caret / .hp-resources-caret */
 .st-caret { font-size: 10px; color: var(--t-text-3); flex-shrink: 0; user-select: none; }
 .st-deck-meta { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); white-space: nowrap; flex-shrink: 0; }
@@ -175,15 +189,24 @@
 .st-btn-sm { padding: 3px 8px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-btn-fg); box-shadow: none; }
 .st-btn-sm:hover { background: var(--t-btn-h); box-shadow: none; }
 
-/* Archive toggle, hazard yellow so it reads as a soft warning, not a delete */
-.st-archive-btn { padding: 3px 8px; border: 1px solid var(--t-yellow); border-radius: var(--t-r-btn); background: var(--t-yellow); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: #000; box-shadow: none; white-space: nowrap; }
-.st-archive-btn:hover { filter: brightness(0.94); box-shadow: none; }
+/* Archive toggle: the same grey the archived state wears everywhere else, so the
+   button and what it produces are visibly the same idea. Yellow read as a warning but
+   collided with the time pill beside it and fought the colored header bands. Hover has
+   to name every property it changes, or the global button:hover paints it mauve. */
+.st-archive-btn { padding: 3px 8px; border: 1px solid var(--t-text-3); border-radius: var(--t-r-btn); background: var(--t-text-3); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-accent-fg); box-shadow: none; white-space: nowrap; }
+.st-archive-btn:hover { background: #877376; border-color: #877376; color: var(--t-accent-fg); box-shadow: none; }
 
-/* Solid fill with a matching border, deleted must not read translucent */
+/* Solid fill with a matching border, dead must not read translucent */
 /* Dead pills never change text color, only the box darkens; the muted ink is set on
-   every state so the global button:hover (white ink) can't leak through */
-.st-deck-pill-deleted  { background: var(--t-border); border-color: var(--t-border); color: var(--t-text-2); }
-.st-pill.st-deck-pill-deleted:hover:not(.active) { background: #E5C3AD; border-color: #E5C3AD; color: var(--t-text-2); }
+   every state so the global button:hover (white ink) can't leak through. The three
+   fills are set per state below, so the filter row says why a deck went dead without
+   having to open it. */
+.st-pill-dead { background: var(--dead-pill); border-color: var(--dead-pill); color: var(--t-text-2); }
+.st-pill.st-pill-dead:hover:not(.active) { background: var(--dead-pill-h); border-color: var(--dead-pill-h); color: var(--t-text-2); }
 /* Selected dead pill: darker box, still the muted text instead of the orange active fill */
-.st-pill.st-deck-pill-deleted.active,
-.st-pill.st-deck-pill-deleted.active:hover { background: #D6AE96; border-color: #D6AE96; color: var(--t-text-2); }
+.st-pill.st-pill-dead.active,
+.st-pill.st-pill-dead.active:hover { background: var(--dead-pill-a); border-color: var(--dead-pill-a); color: var(--t-text-2); }
+
+.st-pill-dead--archived { --dead-pill: #DBD3CF; --dead-pill-h: #CDC3BE; --dead-pill-a: #B5AAA4; }
+.st-pill-dead--deleted  { --dead-pill: #EFD1C8; --dead-pill-h: #E5BBAF; --dead-pill-a: #D09686; }
+.st-pill-dead--merged   { --dead-pill: #DED1E4; --dead-pill-h: #CDBBD6; --dead-pill-a: #B7A0C4; }

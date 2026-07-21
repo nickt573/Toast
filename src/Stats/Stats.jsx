@@ -523,6 +523,19 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
   // deck, so two decks sharing a name stay apart. Older rows fall back to name.
   const deckId = r => (r.origin_group_id === null ? `name:${r.group_name}` : `id:${r.origin_group_id}`);
 
+  // A deck only counts as archived once every one of its rows is, the same test
+  // ArchiveButton uses to decide whether it reads Archive all or Unarchive all.
+  const allArchived = rows => rows.length > 0 && rows.every(r => r.is_archived);
+
+  // Why a deck stopped being live, or null while it still is. Archived outranks
+  // gone because it is the state that decides whether any of this counts toward
+  // your totals, and a deck can easily be both.
+  const deadState = rows => {
+    if (allArchived(rows)) return "archived";
+    if (rows[0].group_id !== null) return null;
+    return rows[0].is_merged ? "merged" : "deleted";
+  };
+
   const byDeck = {};
   groupStats.forEach(r => {
     const k = deckId(r);
@@ -578,15 +591,18 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
     <div>
       <div className="st-pills" style={{ marginBottom: 12 }}>
         <button className={`st-pill${deckFilter === "all" ? " active" : ""}`} onClick={() => setDeckFilter("all")}>All</button>
-        {[...new Map(groupStats.map(r => [deckId(r), r])).entries()].map(([id, r]) => {
-          const gone = r.group_id === null;
+        {/* Read the name off the same row the deck's card does. Rows are newest
+            first, and a rename or merge only ever updates the live deck, so older
+            rows can still carry a name this deck hasn't gone by in a while. */}
+        {Object.keys(byDeck).map(id => {
+          const dead = deadState(byDeck[id]);
           const isActive = deckFilter === id;
           return (
             <button
               key={id}
-              className={`st-pill${isActive ? " active" : ""}${gone ? " st-deck-pill-deleted" : ""}`}
+              className={`st-pill${isActive ? " active" : ""}${dead ? ` st-pill-dead st-pill-dead--${dead}` : ""}`}
               onClick={() => setDeckFilter(id)}>
-              {r.group_name}
+              {byDeck[id][0].group_name}
             </button>
           );
         })}
@@ -599,7 +615,10 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
 
         // Newest first, so the arrows start on the most recent run
         const allVersions = [...new Set(deckRows.map(r => r.version))].sort((a, b) => b - a);
-        const version = shownVersion[cardId] ?? allVersions[0];
+        // Deleting the version you were paging on leaves a stale pick behind. Without
+        // this the table filters to a version with no rows left and the deck reads as
+        // empty, and with only one version remaining there is no nav to escape it.
+        const version = allVersions.includes(shownVersion[cardId]) ? shownVersion[cardId] : allVersions[0];
         const vIdx = Math.max(0, allVersions.indexOf(version));
         const rows = deckRows.filter(r => r.version === version);
 
@@ -612,16 +631,21 @@ function DeckSessionsTab({ groupStats, planId, onDeleted, setToast }) {
         // A missing deck was either deleted outright or merged into another one
         const isGone = deckRows[0].group_id === null;
         const wasMerged = deckRows[0].is_merged;
+        const isArchived = allArchived(deckRows);
+        const dead = deadState(deckRows);
         const step = n => setShownVersion(v => ({ ...v, [cardId]: allVersions[vIdx + n] }));
 
         return (
-          <div key={cardId} className="st-deck-card">
+          <div key={cardId} className={`st-deck-card${dead ? ` st-deck-card--dead st-deck-card--${dead}` : ""}`}>
             <div className="st-deck-header" onClick={() => toggle(cardId)} style={{ cursor: "pointer" }}>
               <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="st-deck-name">{name}</span>
                 {isGone && (wasMerged
                   ? <span className="st-badge st-badge-merged">Merged</span>
                   : <span className="st-badge st-badge-deleted">Deleted</span>)}
+                {isArchived && (
+                  <span className="st-badge st-badge-archived" title="Every session in this deck is archived, so none of it counts toward your totals">Archived</span>
+                )}
               </span>
               <span className="st-deck-meta">
                 <span className="st-meta-pill">{deckRows.length} session{deckRows.length !== 1 ? "s" : ""}</span>
@@ -1253,7 +1277,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               {deletedPlans.map(p => (
                 <button
                   key={`d-${p.id}`}
-                  className={`st-pill st-deck-pill-deleted${selectedPlanId === p.id ? " active" : ""}`}
+                  className={`st-pill st-pill-dead st-pill-dead--deleted${selectedPlanId === p.id ? " active" : ""}`}
                   onClick={() => setSelectedPlanId(p.id)}
                 >{p.name}</button>
               ))}

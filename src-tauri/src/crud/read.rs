@@ -422,15 +422,25 @@ pub fn get_todo_groups(todo_id: i64, conn: &Connection) -> Result<Vec<Group>> {
     Ok(rows)
 }
 
+/// group_name is a snapshot taken when the session was logged, so a later rename or
+/// merge leaves it stale. Prefer the live deck's name and keep the snapshot as the
+/// fallback for decks that no longer exist, the same way todo stat groups do.
+///
+/// This is safe to hand back to delete_group_stats_for_deck and its archive twin even
+/// though they match on group_name: they only do so when origin_group_id IS NULL, and
+/// the backfill in db.rs guarantees those rows have no group_id, so the COALESCE
+/// returns the stored name untouched.
 pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>> {
     conn.prepare(
         r#"
-        SELECT id, group_id, origin_group_id, plan_id, plan_name, group_name, date,
-               num_promote, num_demote, num_new, time_spent_minutes, retention_rate,
-               version, is_merged, is_archived
-        FROM group_stats
-        WHERE plan_id = ?1
-        ORDER BY version DESC, date DESC, id DESC
+        SELECT gs.id, gs.group_id, gs.origin_group_id, gs.plan_id, gs.plan_name,
+               COALESCE(g.name, gs.group_name), gs.date,
+               gs.num_promote, gs.num_demote, gs.num_new, gs.time_spent_minutes, gs.retention_rate,
+               gs.version, gs.is_merged, gs.is_archived
+        FROM group_stats gs
+        LEFT JOIN "group" g ON g.id = gs.group_id
+        WHERE gs.plan_id = ?1
+        ORDER BY gs.version DESC, gs.date DESC, gs.id DESC
         "#,
     )?
     .query_map([plan_id], |row| {
@@ -455,14 +465,21 @@ pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>
     .collect()
 }
 
+/// A deleted plan's name only survives in its stat rows, and renaming a plan never
+/// rewrote them, so a plan renamed mid-life left rows under several names. DISTINCT
+/// then handed back one pair per name and the tab drew a pill for each. Group by the
+/// plan and keep the name from its most recent recorded day.
 pub fn get_deleted_plan_ids(conn: &Connection) -> Result<Vec<(i64, String)>> {
     conn.prepare(
         r#"
-        SELECT DISTINCT plan_id, plan_name FROM group_stats
+        SELECT plan_id, plan_name FROM (
+            SELECT plan_id, plan_name, date FROM group_stats
+            UNION ALL
+            SELECT plan_id, plan_name, date FROM todo_stats
+        )
         WHERE plan_id NOT IN (SELECT id FROM plan)
-        UNION
-        SELECT DISTINCT plan_id, plan_name FROM todo_stats
-        WHERE plan_id NOT IN (SELECT id FROM plan)
+        GROUP BY plan_id
+        HAVING date = MAX(date)
         "#,
     )?
     .query_map([], |row| {
