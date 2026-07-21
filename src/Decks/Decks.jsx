@@ -309,7 +309,7 @@ function DeckList({ setToast, onOpenDeck }) {
               Archive the source decks' stats
             </label>
           )}
-          <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+          <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
           The two source decks will be deleted after their cards move into the new deck. Cards are ordered in alternating order. If either deck is linked to a plan, that link will be removed. {mergeReset
             ? "The new deck starts with an empty stats table, and the sources keep counting unless you archive them."
             : "Past stats move to the new deck, and each plan keeps its own portion. The sources are archived so nothing is counted twice."}
@@ -368,7 +368,7 @@ function DeckList({ setToast, onOpenDeck }) {
             <button className="primary" onClick={confirmAnkiImport}>Import</button>
             <button onClick={() => setAnkiPending(null)}>Cancel</button>
           </div>
-          <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+          <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
             Cards may not appear exactly one-to-one as in Anki.
           </div>
         </div>

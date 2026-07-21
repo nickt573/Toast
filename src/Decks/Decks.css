@@ -197,4 +197,4 @@
 .dk-actions-menu .dk-menu-item.danger { background: none; border: none; border-radius: 0; color: var(--t-red); }
 .dk-actions-menu .dk-menu-item.danger:hover { background: var(--t-red-bg); color: var(--t-red); }
 
-.dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); border-bottom: 1px solid var(--t-red-bdr); font-size: 13px; color: var(--t-red); flex-shrink: 0; }
+.dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); border-bottom: 1px solid var(--t-red-bdr); font-size: 13px; color: var(--t-red); flex-shrink: 0; font-style: italic; }

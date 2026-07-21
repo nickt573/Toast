@@ -564,7 +564,7 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
                             <input type="number" min="1" step="1" value={orderNum}
                                 onChange={(e) => setOrderNum(e.target.value)}
                                 placeholder="None" style={{ width: 70 }} />
-                            <span style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+                            <span style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
                                 Numbered todos are listed first and the rest follow alphabetically.
                             </span>
                         </div>

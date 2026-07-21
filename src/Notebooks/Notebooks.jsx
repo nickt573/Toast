@@ -180,7 +180,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
                     </div>
                     <input type="text" placeholder="New notebook name..." value={mergeName}
                         onChange={(e) => setMergeName(e.target.value)} />
-                    <div style={{ fontSize: 11, color: "var(--t-text-3)" }}>
+                    <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
                         The two source notebooks will be deleted after their pages move into the new notebook. Pages are ordered by date created. If either notebook is linked to a todo, that link will be removed.
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>

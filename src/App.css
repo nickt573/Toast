@@ -421,7 +421,7 @@ textarea { overflow-y: scroll; }
   text-align: center;
 }
 .busy-overlay-title { font-size: 14px; font-weight: 600; color: var(--t-text); }
-.busy-overlay-note { font-size: 12px; color: var(--t-text-2); line-height: 1.45; }
+.busy-overlay-note { font-size: 12px; color: var(--t-text-2); line-height: 1.45; font-style: italic; }
 .busy-spinner {
   width: 28px;
   height: 28px;
