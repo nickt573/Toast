@@ -6,14 +6,16 @@
 
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
 
-/* Metric cards: auto-fit (not auto-fill) collapses empty tracks so cards stretch to fill the row, below 130px each they wrap */
-.st-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; margin-bottom: 16px; }
-/* Tight padding so the widest value (e.g. "12h 45m") fits on one line, the grid gap above provides breathing room */
+/* Seven fixed columns so the metric cards fill the row edge to edge, no wrapping. minmax(0,1fr) lets them shrink to share the width evenly. */
+.st-metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 16px; }
+/* Narrow gap and tight side padding buy each card enough width to keep the longest
+   label ("Avg. Card Retention") on one line. Taller padding keeps the card from
+   looking cramped now that it is wider. */
 .st-metric {
   background: var(--t-surface);
   border: 1px solid var(--t-stat-bdr);
   border-radius: var(--t-r-lg);
-  padding: 10px 11px;
+  padding: 12px 8px;
   box-shadow: var(--t-shadow-sm);
 }
 .st-metric-value { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; color: var(--t-text); }

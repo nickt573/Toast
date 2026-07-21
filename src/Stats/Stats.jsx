@@ -86,15 +86,16 @@ function counted(groupStats) {
 function computeMetrics(groupStats, todoStats) {
   const studyMins = groupStats.reduce((s, r) => s + r.time_spent_minutes, 0);
   const todoMins  = todoStats.reduce((s, r) => s + r.time_spent_minutes, 0);
-  // Sum of num_new = unique cards studied
-  const cardsStudied = groupStats.reduce((s, r) => s + r.num_new, 0);
+  // New cards seen, versus every card touched including promotes and demotes
+  const newCardsStudied = groupStats.reduce((s, r) => s + r.num_new, 0);
+  const totalCardsStudied = groupStats.reduce((s, r) => s + r.num_new + r.num_promote + r.num_demote, 0);
   const todosDone = todoStats.length;
 
   let totalP = 0, totalD = 0;
   groupStats.forEach(r => { totalP += r.num_promote; totalD += r.num_demote; });
   const avgRetention = (totalP + totalD) > 0 ? totalP / (totalP + totalD) : null;
 
-  return { studyMins, todoMins, cardsStudied, todosDone, avgRetention };
+  return { studyMins, todoMins, newCardsStudied, totalCardsStudied, todosDone, avgRetention };
 }
 
 // Chart data builders:
@@ -1272,7 +1273,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={metrics.avgRetention !== null ? `${Math.round(metrics.avgRetention * 100)}%` : "-"}
               color={metrics.avgRetention !== null ? retColor : GRAY}
             />
-            <MetricCard label="Cards Studied" value={metrics.cardsStudied} color="var(--t-blue)" />
+            <MetricCard label="New Cards Seen" value={metrics.newCardsStudied} color="var(--t-blue)" />
+            <MetricCard label="Total Cards Seen" value={metrics.totalCardsStudied} color="var(--t-blue)" />
             <MetricCard label="Todos Done"    value={metrics.todosDone}     color="var(--t-yellow)" />
             <MetricCard
               label="Study Streak"
