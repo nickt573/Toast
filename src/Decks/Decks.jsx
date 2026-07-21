@@ -1324,7 +1324,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
 
 // Root
 
-export default function Decks({ setToast, initialDeck, onClearInitial, returnTo, onReturnToOrigin }) {
+export default function Decks({ setToast, initialDeck, onClearInitial, returnTo, onReturnToOrigin, homeSignal }) {
   const [view, setView] = useState(initialDeck ? VIEW_CARDS : VIEW_DECKS);
   const [activeDeck, setActiveDeck] = useState(initialDeck ?? null);
 
@@ -1334,6 +1334,11 @@ export default function Decks({ setToast, initialDeck, onClearInitial, returnTo,
 
   const openDeck = (deck) => { setActiveDeck(deck); setView(VIEW_CARDS); };
   const goBack = () => { setActiveDeck(null); setView(VIEW_DECKS); };
+
+  // Re-clicking the Decks tab comes back here. Skips the first run, which is mount.
+  useEffect(() => {
+    if (homeSignal) goBack();
+  }, [homeSignal]);
 
   return (
     <div className="dk-root">

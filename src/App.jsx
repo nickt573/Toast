@@ -36,6 +36,7 @@ export default function App() {
   const [homeReturnContext, setHomeReturnContext] = useState(null);
   const [plansReturnContext, setPlansReturnContext] = useState(null);
   const [statsReturnContext, setStatsReturnContext] = useState(null);
+  const [homeSignal, setHomeSignal] = useState(0);
   const [refreshDayCount, setRefreshDayCount] = useState(0);
   const [dateReady, setDateReady] = useState(false);
   const [closePush, setClosePush] = useState(false);
@@ -87,7 +88,11 @@ export default function App() {
     setReturnTo(null);
   }
 
+  // Clicking the tab you're already on backs out to that tab's own front page, rather
+  // than doing nothing. The counter is what the pages watch, since re-clicking doesn't
+  // change `menu` and so wouldn't re-render anything on its own.
   function navigate(key) {
+    if (key === menu) setHomeSignal(c => c + 1);
     setMenu(key);
     setReturnTo(null);
     setHomeReturnContext(null);
@@ -210,6 +215,7 @@ export default function App() {
           onRefreshDay={refreshDay}
           onOpenHelp={openHelp}
           firstLaunch={firstLaunch}
+          homeSignal={homeSignal}
         />
       );
       break;
@@ -220,6 +226,7 @@ export default function App() {
           onNavigateToGroup={navigateToGroup}
           returnContext={plansReturnContext}
           onConsumeReturnContext={() => setPlansReturnContext(null)}
+          homeSignal={homeSignal}
         />
       );
       break;
@@ -231,6 +238,7 @@ export default function App() {
           onClearInitial={() => setInitialDeck(null)}
           returnTo={returnTo}
           onReturnToOrigin={returnToOrigin}
+          homeSignal={homeSignal}
         />
       );
       break;
@@ -242,6 +250,7 @@ export default function App() {
           onClearInitial={() => setInitialNotebook(null)}
           returnTo={returnTo}
           onReturnToOrigin={returnToOrigin}
+          homeSignal={homeSignal}
         />
       );
       break;

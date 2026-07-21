@@ -658,6 +658,10 @@ function StudySession({ group, onBack, setToast }) {
         return () => {
             clearInterval(interval);
             document.removeEventListener("visibilitychange", onVisibility);
+            // Leaving by the Back button already flushed, and a second call inside the
+            // same moment is a no-op. This is for the ways out that don't, like the
+            // Home tab dropping straight to the dashboard.
+            flushTime();
         };
     }, []);
 
@@ -1042,7 +1046,7 @@ const VIEW_HOME    = "home";
 const VIEW_PLAN    = "plan";
 const VIEW_SESSION = "session";
 
-export default function Homepage({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, refreshDayCount, onRefreshDay, onOpenHelp, firstLaunch }) {
+export default function Homepage({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, refreshDayCount, onRefreshDay, onOpenHelp, firstLaunch, homeSignal }) {
     const [plans, setPlans] = useState([]);
     const [view, setView] = useState(VIEW_HOME);
     const [activePlan, setActivePlan] = useState(null);
@@ -1073,6 +1077,17 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
             loggedInvoke("is_day_stale").then(setDayStale).catch(e => logError("catch", e));
         }
     }, [view]);
+
+    // Re-clicking the Home tab drops all the way back to the dashboard, from a plan or
+    // from mid-session. StudySession flushes its elapsed time as it unmounts, so
+    // leaving this way costs nothing. Skips mount.
+    useEffect(() => {
+        if (!homeSignal) return;
+        setView(VIEW_HOME);
+        setActivePlan(null);
+        setActiveGroup(null);
+        loadPlans();
+    }, [homeSignal]);
 
     useEffect(() => {
         if (returnContext?.plan) {

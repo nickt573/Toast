@@ -1018,10 +1018,18 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
 
 // Root
 
-export default function Notebooks({ setToast, initialNotebook, onClearInitial, returnTo, onReturnToOrigin }) {
+export default function Notebooks({ setToast, initialNotebook, onClearInitial, returnTo, onReturnToOrigin, homeSignal }) {
     const [view, setView] = useState(initialNotebook ? VIEW_PAGES : VIEW_NOTEBOOKS);
     const [activeNotebook, setActiveNotebook] = useState(initialNotebook ?? null);
     const [startNewOnOpen, setStartNewOnOpen] = useState(false);
+
+    // Re-clicking the Notebooks tab comes back here. Skips the first run, which is mount.
+    useEffect(() => {
+        if (!homeSignal) return;
+        setActiveNotebook(null);
+        setStartNewOnOpen(false);
+        setView(VIEW_NOTEBOOKS);
+    }, [homeSignal]);
 
     useEffect(() => {
         if (initialNotebook) onClearInitial?.();

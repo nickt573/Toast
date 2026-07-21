@@ -633,7 +633,7 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
 
 // Plans
 
-export default function Plans({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext }) {
+export default function Plans({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, homeSignal }) {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState("");
@@ -651,6 +651,11 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     const [dayMode, setDayMode] = useState("only");
 
     const toggleSection = (key) => setCollapsed(c => ({ ...c, [key]: !c[key] }));
+
+    // Re-clicking the Plans tab comes back to the plan list. Skips mount.
+    useEffect(() => {
+        if (homeSignal) setEditingPlan(null);
+    }, [homeSignal]);
 
     useEffect(() => {
         getPlans();
