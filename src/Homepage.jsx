@@ -626,7 +626,7 @@ function StudySession({ group, onBack, setToast }) {
         try {
             await loggedInvoke("set_card_paused", { cardId, paused: true });
             await fetchNext();
-            setToast("Card paused. Unpause it in the deck to bring it back.");
+            setToast("Card swapped.");
         } catch (e) { logError("catch", e); setToast("Failed to swap card.", "error"); }
         finally { grading.current = false; }
     }
