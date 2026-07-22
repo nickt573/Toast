@@ -951,10 +951,10 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
       <div style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "8px 6px", alignItems: "center", marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <input type="date" value={dateFrom} onChange={editDate(setDateFrom)}
-            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)" }} />
+            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)" }} />
           <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>-</span>
           <input type="date" value={dateTo} onChange={editDate(setDateTo)}
-            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)" }} />
+            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)" }} />
         </div>
         <div className="st-pills">
           {[{ label: "All", days: null }, { label: "7d", days: 7 }, { label: "30d", days: 30 }, { label: "90d", days: 90 }].map(({ label, days }) => (
@@ -966,7 +966,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
           onChange={e => setSearch(e.target.value)}
           placeholder="Search todo history"
           size={1}
-          style={{ fontSize: 12, padding: "3px 8px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)", width: "100%" }}
+          style={{ fontSize: 12, padding: "3px 8px", border: "1px solid var(--t-border)", width: "100%" }}
         />
         <div className="st-pills">
           {SEARCH_SCOPES.map(s => (
@@ -1082,7 +1082,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       autoFocus
                       onKeyDown={editKey(r)}
                       onChange={e => setEditForm(f => ({ ...f, text: e.target.value }))}
-                      style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", borderRadius: "var(--t-r)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
+                      style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
                     />
                   </div>
                   <div>
@@ -1100,7 +1100,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                         value={editForm.timeSpent}
                         onKeyDown={editKey(r)}
                         onChange={e => setEditForm(f => ({ ...f, timeSpent: e.target.value }))}
-                        style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", borderRadius: "var(--t-r)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
                       />
                     </div>
                     <div style={{ flex: 1 }}>
@@ -1110,7 +1110,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                         onKeyDown={editKey(r)}
                         onChange={e => setEditForm(f => ({ ...f, numUnit: e.target.value }))}
                         placeholder="e.g. 5 pages, 2 articles, 4 chapters"
-                        style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", borderRadius: "var(--t-r)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
                       />
                     </div>
                   </div>
@@ -1120,7 +1120,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       value={editForm.details}
                       onChange={e => setEditForm(f => ({ ...f, details: e.target.value }))}
                       rows={3}
-                      style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border)", borderRadius: "var(--t-r)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+                      style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
                     />
                   </div>
                   {(() => {

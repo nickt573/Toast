@@ -34,7 +34,7 @@
 .plan-resource-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .todo-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .todo-filter-seg { display: flex; gap: 3px; flex-wrap: wrap; }
-.todo-filter-seg button { font-size: 11px; padding: 3px 9px; border: 1px solid var(--t-btn); border-radius: var(--t-r); background: var(--t-btn); color: var(--t-btn-fg); cursor: pointer; white-space: nowrap; box-shadow: none; user-select: none; }
+.todo-filter-seg button { font-size: 11px; padding: 3px 9px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); color: var(--t-btn-fg); cursor: pointer; white-space: nowrap; box-shadow: none; user-select: none; }
 .todo-filter-seg button:hover { background: var(--t-btn-h); box-shadow: none; }
 .todo-filter-seg button.active,
 .todo-filter-seg button.active:hover { background: var(--t-yellow); border-color: var(--t-yellow); color: var(--t-text); }

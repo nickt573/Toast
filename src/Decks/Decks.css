@@ -30,7 +30,7 @@
 .dk-anki-sample { display: flex; align-items: center; gap: 6px; margin: 3px 0 1px; min-width: 0; }
 .dk-anki-pager { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; }
 /* Bare button: inherits the neutral mauve ink, matching the notebook page nav */
-.dk-anki-arrow { width: 17px; height: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--t-r); font-size: 12px; line-height: 1; }
+.dk-anki-arrow { width: 17px; height: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--t-r-btn); font-size: 12px; line-height: 1; }
 .dk-anki-sample-pos { min-width: 22px; text-align: center; font-size: 10px; color: var(--t-text-3); font-variant-numeric: tabular-nums; }
 .dk-anki-sample-quote { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 5px; overflow: hidden; }
 .dk-anki-sample-label { flex-shrink: 0; font-size: 11px; color: var(--t-text-3); }
@@ -56,14 +56,14 @@
 .dk-search-row > input { flex: 1; min-width: 0; box-sizing: border-box; background: var(--t-surface); }
 .dk-dup-label { font-size: 11px; color: var(--t-text-3); align-self: center; margin-right: 2px; }
 .dk-search-scope { display: flex; gap: 4px; flex-shrink: 0; }
-.dk-scope-btn { font-size: 11px; padding: 3px 10px; border: 1px solid var(--t-btn); border-radius: var(--t-r); background: var(--t-btn); color: var(--t-btn-fg); cursor: pointer; white-space: nowrap; box-shadow: none; user-select: none; }
+.dk-scope-btn { font-size: 11px; padding: 3px 10px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); color: var(--t-btn-fg); cursor: pointer; white-space: nowrap; box-shadow: none; user-select: none; }
 .dk-scope-btn:hover { background: var(--t-btn-h); box-shadow: none; }
 .dk-scope-btn.active,
 .dk-scope-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
 
 .dk-sort-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .dk-sort-seg { display: flex; gap: 4px; flex-shrink: 0; }
-.dk-sort-seg button { padding: 3px 11px; font-size: 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; box-shadow: none; user-select: none; }
+.dk-sort-seg button { padding: 3px 11px; font-size: 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; box-shadow: none; user-select: none; }
 .dk-sort-seg button:hover { background: var(--t-btn-h); box-shadow: none; }
 .dk-sort-seg button.active,
 .dk-sort-seg button.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); filter: brightness(1); }
@@ -78,10 +78,10 @@
 
 .dk-filter-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 8px; background: var(--t-bg); border: 1px solid var(--t-border); border-radius: var(--t-r); }
 .dk-filter-bar > span { flex-basis: 100%; height: 0; }
-.dk-filter-toggle { font-size: 11px; padding: 3px 11px; border-radius: var(--t-r); flex-shrink: 0; user-select: none; }
+.dk-filter-toggle { font-size: 11px; padding: 3px 11px; border-radius: var(--t-r-btn); flex-shrink: 0; user-select: none; }
 .dk-filter-toggle.active,
 .dk-filter-toggle.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
-.dk-filter-btn { font-size: 11px; padding: 3px 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; font-family: inherit; font-weight: 600; transition: background var(--t-ease), border-color var(--t-ease); box-shadow: none; user-select: none; }
+.dk-filter-btn { font-size: 11px; padding: 3px 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; font-family: inherit; font-weight: 600; transition: background var(--t-ease), border-color var(--t-ease); box-shadow: none; user-select: none; }
 .dk-filter-btn:hover { color: var(--t-btn-fg); background: var(--t-btn-h); box-shadow: none; }
 .dk-filter-btn.active,
 .dk-filter-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
@@ -137,7 +137,7 @@
 
 /* Creator toggle row, also the drag handle for resizing the panel below it.
    Overlaps the table by the corner radius so rows stay visible in the notches. */
-.dk-creator-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: none; border-radius: var(--t-r-lg) var(--t-r-lg) 0 0; margin-top: calc(-1 * var(--t-r-lg)); position: relative; padding: 8px 14px; background: var(--t-surface-4); color: var(--t-label); font-weight: 500; cursor: ns-resize; user-select: none; }
+.dk-creator-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: none; border-radius: var(--t-r) var(--t-r) 0 0; margin-top: calc(-1 * var(--t-r)); position: relative; padding: 8px 14px; background: var(--t-surface-4); color: var(--t-label); font-weight: 500; cursor: ns-resize; user-select: none; }
 .dk-creator-toggle-row:hover { filter: brightness(0.97); }
 
 /* Muted backdrop so bright editable inputs read as real fields and read-only fields read as locked. */
@@ -151,7 +151,7 @@
 .dk-field { display: flex; flex-direction: column; gap: 4px; }
 .dk-field-divider { height: 1px; background: var(--t-border-2); margin: 4px 0; flex-shrink: 0; }
 .dk-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); }
-.dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 11px; font-size: 13px; background: var(--t-bg); line-height: 1.6; color: var(--t-text-2); }
+.dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r-input); padding: 9px 11px; font-size: 13px; background: var(--t-bg); line-height: 1.6; color: var(--t-text-2); }
 .dk-field-row { display: flex; align-items: center; gap: 4px; }
 /* Searchable / Pause: each group snug internally (via .dk-new-card-check), with
    generous space between the two groups. */
@@ -187,10 +187,10 @@
 .dk-new-card-dark input.input-readonly { background: var(--t-surface-2); }
 
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
-.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
+.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-label); }
 
-.dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
+.dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
 /* Square (radius 0) so hover highlights sit flush inside the menu container,
    whose own border radius clips the outer corners */
 .dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }

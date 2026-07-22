@@ -28,7 +28,7 @@ function RevealBlockView({ node, updateAttributes, editor }) {
         <NodeViewWrapper>
             <div style={{
                 border: "1px solid var(--t-border-3)",
-                borderRadius: "var(--t-r-lg)",
+                borderRadius: "var(--t-r)",
                 overflow: "hidden",
                 margin: "8px 0",
                 fontSize: 14,

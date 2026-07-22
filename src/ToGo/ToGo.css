@@ -21,7 +21,7 @@
 /* Silver-tinted body, crisp paper edge */
 .togo-card {
   background: var(--t-surface);
-  border-radius: var(--t-r-lg);
+  border-radius: var(--t-r);
   padding: 14px 16px 16px;
   margin-bottom: 12px;
   box-shadow: var(--t-shadow-sm);
@@ -40,7 +40,7 @@
   font-size: 13px;
   padding: 7px 10px;
   border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-input);
   background: var(--t-surface-2);
   color: var(--t-text);
   overflow-x: auto;
@@ -56,7 +56,7 @@
   font-size: 13px;
   padding: 7px 10px;
   border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-input);
   background: var(--t-surface-2);
   color: var(--t-text);
 }
@@ -126,7 +126,7 @@ button.togo-label:hover { background: none; color: var(--t-text); border-color: 
   font-size: 13px;
   font-family: inherit;
   border: 1px solid var(--t-accent-bdr);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-input);
   background: var(--t-surface);
   color: var(--t-text);
 }
@@ -145,7 +145,7 @@ button.togo-choice {
   gap: 3px;
   padding: 9px 12px;
   border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   background: var(--t-bg);
   box-shadow: var(--t-shadow-sm);
   text-align: left;

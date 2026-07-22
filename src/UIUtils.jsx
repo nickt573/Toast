@@ -48,7 +48,7 @@ export function Tip({ text }) {
           color: "var(--t-bg)",
           fontSize: 12,
           padding: "6px 10px",
-          borderRadius: "var(--t-r-lg)",
+          borderRadius: "var(--t-r)",
           maxWidth: 240,
           zIndex: 9999,
           pointerEvents: "none",

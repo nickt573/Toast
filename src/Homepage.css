@@ -78,7 +78,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   padding: 48px 24px;
   text-align: center;
   border: 1px dashed var(--t-border-2);
-  border-radius: var(--t-r-lg);
+  border-radius: var(--t-r);
   background: var(--t-surface);
 }
 .hp-empty-icon {
@@ -118,7 +118,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   flex-direction: column;
   justify-content: space-between;
   border: var(--t-bw) solid var(--t-stripe-hi);
-  border-radius: var(--t-r-stripe);
+  border-radius: var(--t-r);
   cursor: pointer;
   background: var(--t-surface);
   margin-bottom: 14px;
@@ -240,7 +240,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   user-select: none;
 }
 .hp-timer-display.running { color: var(--t-text); }
-.hp-timer-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--t-r); }
+.hp-timer-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--t-r-btn); }
 /* Family ink actions: green Start, blue Resume, amber Pause, red Clear */
 .hp-timer-btn--start { background: var(--t-green); border-color: var(--t-green); color: var(--t-accent-fg); }
 .hp-timer-btn--start:hover { background: var(--t-green); border-color: var(--t-green); color: var(--t-accent-fg); filter: brightness(0.92); }
@@ -255,7 +255,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-section-panel {
   background: var(--t-surface);
   border: none;
-  border-radius: var(--t-r-lg);
+  border-radius: var(--t-r);
   padding: 14px 20px;
   margin-bottom: 16px;
   box-shadow: var(--t-shadow-sm);
@@ -401,7 +401,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* Study card: plain paper sheet, crisp edge */
 .hp-card-box {
   border: none;
-  border-radius: var(--t-r-xl);
+  border-radius: var(--t-r);
   padding: 32px 28px;
   background: var(--t-surface);
   margin-bottom: 14px;
@@ -436,7 +436,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   background: var(--t-accent);
   color: var(--t-accent-fg);
   border: none;
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   cursor: pointer;
   transition: background var(--t-ease), transform 0.1s ease;
 }
@@ -450,7 +450,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   padding: 12px 6px;
   font-size: 13px;
   font-weight: 700;
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -546,7 +546,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   /* surface-2 tray (like the deck card creator) so surface-filled inputs and
      unselected chips read as solid fields instead of blending in */
   background: var(--t-surface-2);
-  border-radius: var(--t-r-xl);
+  border-radius: var(--t-r);
   padding: 24px;
   width: 420px;
   display: flex;

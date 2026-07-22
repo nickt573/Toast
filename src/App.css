@@ -120,12 +120,15 @@
   /* Spacing / shape */
   --t-nav-h:         54px;
   --t-page-pad:      24px;
-  --t-r:             4px;
+  /* Two corners and no more. Anything that holds content rounds the same amount,
+     whether it is a panel, a table card, a striped row, an input, or a sheet, so
+     nothing ever sits next to something almost-but-not-quite as round. Buttons keep
+     their own tighter corner because they are the one thing that should read as a
+     control rather than a container. */
+  --t-r:             10px;
   --t-r-btn:         4px;
-  --t-r-lg:          6px;
-  --t-r-xl:          8px;   /* true paper sheets only */
-  --t-r-stripe:      12px;  /* user content boxes: the striped rows and cards, plus the homepage plan card */
-  --t-r-tab:         5px 5px 1px 1px;   /* index-divider tab badges */
+  --t-r-input:       4px;   /* fields you type into stay tight, same as the controls. A rounded box is something to read, a square-ish one is somewhere to write */
+  --t-r-tab:         5px 5px 1px 1px;   /* index-divider tab badges, a deliberate shape rather than a container */
   --t-ease:          0.12s ease;
 
   /* Shadows: crisp paper edges, no glow */
@@ -191,11 +194,11 @@ button.btn-amber { background: var(--t-amber); border-color: var(--t-amber); col
 button.btn-amber:hover { border-color: var(--t-amber); background: var(--t-amber); color: var(--t-accent-fg); filter: brightness(0.93); }
 
 /* Audio chip: quiet paper look so playback reads as media, not actions */
-button.audio-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--t-r); border: 1px solid var(--t-border-2); background: var(--t-surface); font-size: 13px; color: var(--t-text-2); box-shadow: none; }
+button.audio-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--t-r-btn); border: 1px solid var(--t-border-2); background: var(--t-surface); font-size: 13px; color: var(--t-text-2); box-shadow: none; }
 button.audio-btn:hover { background: var(--t-surface); border-color: var(--t-text-3); color: var(--t-text-2); filter: brightness(0.98); }
 button.audio-btn:active { background: var(--t-surface); filter: brightness(0.95); transform: none; box-shadow: none; }
 /* Compact variant for dense rows like the notebook toolbar */
-button.audio-btn.sm { padding: 2px 10px; font-size: 12px; border-radius: var(--t-r); gap: 5px; flex-shrink: 0; }
+button.audio-btn.sm { padding: 2px 10px; font-size: 12px; border-radius: var(--t-r-btn); gap: 5px; flex-shrink: 0; }
 button.btn-blue  { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-accent-fg); }
 button.btn-blue:hover  { border-color: var(--t-blue); background: var(--t-blue); color: var(--t-accent-fg); filter: brightness(0.93); }
 
@@ -210,7 +213,7 @@ input, textarea, select {
   color: var(--t-text);
   background: var(--t-surface);
   border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-input);
   padding: 5px 9px;
   line-height: 1.5;
   transition: border-color var(--t-ease), box-shadow var(--t-ease);
@@ -234,7 +237,7 @@ input[type="checkbox"] {
   display: inline-block;
   vertical-align: middle;
   border: 1px solid var(--t-btn-bdr);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-input);
   background: var(--t-surface);
   box-shadow: none;
   cursor: pointer;
@@ -345,7 +348,7 @@ textarea { overflow-y: scroll; }
 .app-nav-tab:active { background: rgba(255,255,255,0.03); box-shadow: none; transform: none; }
 .app-nav-tab.active { color: var(--t-nav-fg); background: none; }
 /* Home: soft pink paper chip instead of an underline */
-.app-nav-tab--home { height: 36px; align-self: center; border-radius: var(--t-r); }
+.app-nav-tab--home { height: 36px; align-self: center; border-radius: var(--t-r-btn); }
 .app-nav-tab--home.active { background: rgba(246,167,184,0.16); }
 .app-nav-tab--home.active::after { display: none; }
 .app-nav-tab.active::after {
@@ -364,7 +367,7 @@ textarea { overflow-y: scroll; }
   z-index: 901;
   pointer-events: none;
   background: rgba(255,255,255,0.12);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   box-shadow: inset 0 0 0 2px var(--tab-underline, var(--t-accent));
   color: var(--t-nav-fg);
 }
@@ -434,7 +437,7 @@ textarea { overflow-y: scroll; }
   padding: 26px 34px;
   background: var(--t-surface);
   border: none;
-  border-radius: var(--t-r-xl);
+  border-radius: var(--t-r);
   box-shadow: var(--t-shadow-lg);
   max-width: 320px;
   text-align: center;
@@ -493,7 +496,7 @@ textarea { overflow-y: scroll; }
   font-size: 12px;
   cursor: pointer;
   padding: 3px 10px;
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   border: 1px solid var(--t-border-2);
   background: var(--t-surface);
   color: var(--t-text-2);
@@ -601,7 +604,7 @@ textarea { overflow-y: scroll; }
 .empty-bubble {
   background: var(--t-surface);
   border: 1px dashed var(--t-border-2);
-  border-radius: var(--t-r-lg);
+  border-radius: var(--t-r);
   padding: 22px 16px;
   margin-bottom: 12px;
   text-align: center;
@@ -648,7 +651,7 @@ textarea { overflow-y: scroll; }
      air. Scales with --t-stripe-u, so the half size rows get a half size gutter. */
   --t-stripe-gutter: calc(9 * var(--t-stripe-u));
   border: var(--t-bw) solid var(--t-stripe-hi);
-  border-radius: var(--t-r-stripe);
+  border-radius: var(--t-r);
   background-color: var(--t-surface);
   background-image: linear-gradient(90deg,
     transparent 0 calc(100% - 8 * var(--t-stripe-u)),
@@ -686,7 +689,7 @@ textarea { overflow-y: scroll; }
 .plan-srs-count,
 .hp-session-counts span {
   color: var(--t-accent-fg);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   padding: 2px 8px;
   text-align: center;
 }

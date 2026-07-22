@@ -67,8 +67,8 @@
 .nb-editor-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; max-width: 700px; margin: 0 auto 6px; width: 100%; box-sizing: border-box; padding: 0 20px; min-height: 0; }
 .nb-view-content .nb-editor-wrap { max-width: 100%; padding: 0; }
 /* The page itself: a sheet of paper, crisp edge instead of a boxed border */
-.nb-editor-scroll { flex: 1; overflow-y: scroll; scrollbar-gutter: stable both-edges; padding-bottom: 16px; border: none; border-radius: var(--t-r-lg); padding: 12px 16px; background: var(--t-surface); margin-top: 0; box-shadow: var(--t-shadow-sm); }
-.nb-view-content .nb-editor-scroll { border: none; border-radius: var(--t-r-lg); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
+.nb-editor-scroll { flex: 1; overflow-y: scroll; scrollbar-gutter: stable both-edges; padding-bottom: 16px; border: none; border-radius: var(--t-r); padding: 12px 16px; background: var(--t-surface); margin-top: 0; box-shadow: var(--t-shadow-sm); }
+.nb-view-content .nb-editor-scroll { border: none; border-radius: var(--t-r); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
 
 /* Toolbar: no-wrap so groups stay together */
 .nb-toolbar {
@@ -99,7 +99,7 @@
   font-size: 12px;
   padding: 2px 7px;
   border: 1px solid var(--t-btn);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   background: var(--t-btn);
   color: var(--t-btn-fg);
   cursor: pointer;
@@ -121,7 +121,7 @@
   font-size: 12px;
   padding: 2px 4px;
   border: 1px solid var(--t-border);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-input);
   background: var(--t-surface);
   flex-shrink: 0;
   box-shadow: none;
@@ -139,7 +139,7 @@
   padding: 0;
   flex-shrink: 0;
   border: 1px solid var(--t-btn-bdr);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   cursor: pointer;
   box-shadow: none;
 }
@@ -177,7 +177,7 @@
   position: absolute; left: 0; right: 0; bottom: 6px; margin: 0 auto;
   display: flex; flex-direction: column;
   background: var(--t-surface-2);
-  border: 1px solid var(--t-border); border-radius: var(--t-r-lg);
+  border: 1px solid var(--t-border); border-radius: var(--t-r);
   box-shadow: var(--t-shadow-lg);
   overflow: hidden; z-index: 5;
 }
@@ -189,14 +189,14 @@
   padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--t-label);
   background: var(--t-surface-4);
   border: none;
-  border-radius: var(--t-r-lg);
+  border-radius: var(--t-r-btn);
   box-shadow: var(--t-shadow-sm);
 }
 .nb-card-toggle:hover { filter: brightness(0.97); }
 /* Open header doubles as the drag handle for resizing the panel */
 .nb-card-creator.open .nb-card-toggle {
   flex-shrink: 0; border: none;
-  border-radius: var(--t-r-lg) var(--t-r-lg) 0 0;
+  border-radius: var(--t-r) var(--t-r) 0 0;
   box-shadow: none;
   cursor: ns-resize;
 }
