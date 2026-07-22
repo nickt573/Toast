@@ -19,7 +19,7 @@
 .nb-pages-root { display: flex; flex-direction: column; height: 100%; }
 .nb-pages-header { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), var(--t-plum-bdr)); background: var(--hdr-band); flex-shrink: 0; }
 .nb-pages-header:has(+ .nb-search) { border-bottom: none; }
-.nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; flex: 1; color: var(--t-text); }
+.nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
 
 /* Search bar extends the page header so the two read as one band */
 .nb-search {

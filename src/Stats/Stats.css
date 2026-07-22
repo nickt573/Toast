@@ -1,7 +1,7 @@
 /* Stats view */
 .st-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .st-header { --hdr-band: color-mix(in srgb, #EABA9D 60%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), #EABA9D); background: var(--hdr-band); flex-shrink: 0; }
-.st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; color: var(--t-text); }
+.st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; color: var(--t-title); }
 .st-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }

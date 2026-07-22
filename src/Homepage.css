@@ -163,11 +163,11 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-plan-name {
   font-family: var(--t-font-head);
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
-  color: var(--t-text);
+  color: var(--t-title);
 }
 .hp-streak-chip {
   font-size: 10px; font-weight: 600; padding: 3px 8px;
@@ -216,8 +216,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: 12px;
   margin-bottom: 24px;
 }
-/* 18px is the standard for free-floating "← Back + title" headers (also .hp-session-header h2) */
-.hp-plan-back h2 { margin: 0; font-family: var(--t-font-head); font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--t-text); }
+/* Free-floating "← Back + title" headers (also .hp-session-header h2) name where you are, so they take the title ink and size */
+.hp-plan-back h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 800; letter-spacing: -0.02em; color: var(--t-title); }
 
 /* Study timer: small paper chip */
 .hp-timer {
@@ -392,7 +392,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: 10px;
   margin-bottom: 16px;
 }
-.hp-session-header h2 { margin: 0; flex: 1; font-family: var(--t-font-head); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.hp-session-header h2 { margin: 0; flex: 1; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
 .hp-session-counts { font-size: 12px; color: var(--t-text-3); display: flex; gap: 10px; font-variant-numeric: tabular-nums; }
 .hp-session-counts span { min-width: 62px; }
 

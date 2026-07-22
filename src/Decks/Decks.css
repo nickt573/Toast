@@ -43,7 +43,7 @@
 
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
 .dk-cards-header { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 35%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), var(--t-blue-bdr)); flex-shrink: 0; background: var(--hdr-band); }
-.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; color: var(--t-text); }
+.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; color: var(--t-title); }
 .dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 

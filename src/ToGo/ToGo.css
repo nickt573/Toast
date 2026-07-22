@@ -12,7 +12,7 @@
   background: var(--hdr-band);
   flex-shrink: 0;
 }
-.togo-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; color: var(--t-text); }
+.togo-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; color: var(--t-title); }
 .togo-header-sub { margin-left: auto; font-size: 11px; color: var(--t-text-3); }
 
 .togo-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
