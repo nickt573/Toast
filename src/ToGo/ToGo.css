@@ -7,11 +7,12 @@
   gap: 8px;
   height: 44px;
   padding: 0 var(--t-page-pad);
-  border-bottom: 1px solid var(--t-silver-bdr);
-  background: linear-gradient(280deg, #DCDDDE 0%, var(--t-surface) 72%);
+  --hdr-band: color-mix(in srgb, #C6C8C9 35%, #fff);   /* a soft silver tint, in step with the other header bands */
+  border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), #C6C8C9);
+  background: var(--hdr-band);
   flex-shrink: 0;
 }
-.togo-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
+.togo-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; color: var(--t-text); }
 .togo-header-sub { margin-left: auto; font-size: 11px; color: var(--t-text-3); }
 
 .togo-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
@@ -20,7 +21,6 @@
 /* Silver-tinted body, crisp paper edge */
 .togo-card {
   background: var(--t-surface);
-  border: 1px solid var(--t-silver-bdr);
   border-radius: var(--t-r-lg);
   padding: 14px 16px 16px;
   margin-bottom: 12px;

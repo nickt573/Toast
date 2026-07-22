@@ -65,7 +65,8 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                     {group.name}
                 </span>
                 <span className="plan-srs-counts">
-                    New: {dueCount[0]}/{scheduler.max_new} · Review: {dueCount[1]}/{scheduler.max_review}
+                    <span className="plan-srs-count plan-srs-count--new">New: {dueCount[0]}/{scheduler.max_new}</span>
+                    <span className="plan-srs-count plan-srs-count--review">Review: {dueCount[1]}/{scheduler.max_review}</span>
                 </span>
             </div>
             <div className="plan-srs-actions">
@@ -368,7 +369,7 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
                 <div className="empty-bubble">No resources yet.</div>
             )}
             {resources.map((r) => (
-                <div key={r.id} className="plan-resource-row">
+                <div key={r.id} className={`plan-resource-row${editingId === r.id ? " editing" : ""}`}>
                     {editingId === r.id ? (
                         <div className="plan-resource-edit-form">
                             <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name"
@@ -812,9 +813,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                 Resources <span className="plan-col-label-caret">{collapsed.resources ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.resources && (
-                                <div className="plan-resources-indent">
-                                    <ResourcesSection planId={editingPlan.id} plans={plans} setToast={setToast} onChanged={refreshResources} />
-                                </div>
+                                <ResourcesSection planId={editingPlan.id} plans={plans} setToast={setToast} onChanged={refreshResources} />
                             )}
                         </div>
 

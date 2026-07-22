@@ -6,13 +6,13 @@
 .dk-deck-name-input { width: 100%; }
 .dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 
-.dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-blue-bdr); background: var(--t-blue-bg); flex-shrink: 0; }
+.dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); background: var(--t-blue-bdr); flex-shrink: 0; }
 .dk-new-deck input { flex: 1; border-color: var(--t-blue-bdr); }
 .dk-new-deck input:focus { border-color: var(--t-accent); }
 
 /* Merge and Anki panels extend the landing header so the two read as one band */
 .landing-hdr:has(+ .dk-merge-panel) { border-bottom: none; }
-.dk-merge-panel { padding: 10px var(--t-page-pad); border-bottom: 1px solid var(--t-blue-bdr); background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 72%); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.dk-merge-panel { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 10%, #fff); padding: 10px var(--t-page-pad); background: var(--hdr-band); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), var(--t-blue-bdr)); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
 .dk-merge-panel input:not([type="checkbox"]), .dk-merge-panel select { border-color: var(--t-blue-bdr); }
 .dk-merge-panel input:focus, .dk-merge-panel select:focus { border-color: var(--t-accent); }
 
@@ -42,8 +42,8 @@
 .dk-merge-row select { flex: 1; }
 
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
-.dk-cards-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-blue-bdr); flex-shrink: 0; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 72%); }
-.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
+.dk-cards-header { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 35%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), var(--t-blue-bdr)); flex-shrink: 0; background: var(--hdr-band); }
+.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; color: var(--t-text); }
 .dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
@@ -142,6 +142,8 @@
 
 /* Muted backdrop so bright editable inputs read as real fields and read-only fields read as locked. */
 .dk-editor-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; gap: 12px; background: #FEF4EC; }
+/* Previewing swaps the muted editor backdrop for the app background, so the paper card and its shadow stand off it */
+.dk-editor-pane--preview { background: var(--t-bg); }
 .dk-editor-pane textarea, .dk-editor-pane input[type="text"] { background: var(--t-surface); }
 .dk-editor-none { flex: 1; background: #FEF4EC; color: var(--t-text-3); font-style: italic; padding: 16px; font-size: 13px; }
 .dk-editor-topbar { display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
@@ -185,7 +187,7 @@
 .dk-new-card-dark input.input-readonly { background: var(--t-surface-2); }
 
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
-.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: 1px solid var(--t-border); border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
+.dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r-lg); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-label); }
 
 .dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-lg); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }

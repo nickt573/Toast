@@ -80,7 +80,7 @@ export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGro
 
     if (!editing) {
         return (
-            <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r)", padding: "12px", marginBottom: "10px", opacity: dimmed ? 0.5 : 1, background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%)" }}>
+            <div className="plan-todo-row" style={{ opacity: dimmed ? 0.5 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
                     <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 17, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
@@ -135,7 +135,7 @@ export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGro
     }
 
     return (
-        <div style={{ border: "1px solid var(--t-yellow-bdr)", borderRadius: "var(--t-r)", padding: "12px", marginBottom: "10px", background: "linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 62%)" }}>
+        <div className="plan-todo-edit">
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div>
                     <div style={{ fontSize: 12, marginBottom: 4 }}>Order</div>

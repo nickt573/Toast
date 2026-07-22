@@ -2,15 +2,24 @@
 
 :root {
   /* Backgrounds: peachy Neapolitan cream + warm paper surfaces */
-  --t-bg:            #FDEEE3;   /* main app background, peach cream */
+  --t-bg:            #F8E5D6;   /* main app background, peach cream. Kept a touch deeper than the surface so borderless white content reads against it */
   --t-surface:       #FFF9F4;   /* card / surface fill, warm off-white */
   --t-surface-2:     #FBEAE0;   /* muted: read-only fields, form zones */
   --t-surface-3:     #F7D9C4;   /* deep peach: table/section headers over white bodies */
   --t-surface-4:     #EFCBB4;   /* darker peach: panels that sit against surface-3 hover tints */
   --t-row-stripe:    #FAE8DA;   /* card-table zebra stripe, kept independent of the background */
+  --t-bw:            2px;       /* border weight for user content boxes, heavier than the 1px hairline everything else uses. Whole pixels only: a fractional width rounds per edge, so some sides land on 1px and some on 2px */
   --t-border:        #F0D9CC;   /* default dividers */
   --t-border-2:      #E8CDBD;   /* input / hairline rule color */
   --t-border-3:      #DCBBA9;   /* deep rules: notebook tables, reveal blocks, hr */
+
+  /* Rest-stripe: the resting bar sits between a family's border and its highlight,
+     so the box edge isn't a hard jump off the bars. Decks and resources keep the
+     lighter bdr at rest by design. */
+  --t-yellow-stripe: color-mix(in srgb, var(--t-yellow-bdr) 55%, var(--t-yellow));
+  --t-accent-stripe: color-mix(in srgb, var(--t-accent-bdr) 55%, var(--t-accent));
+  --t-green-stripe:  color-mix(in srgb, var(--t-green-bdr) 55%, var(--t-green));
+  --t-plum-stripe:   color-mix(in srgb, var(--t-plum-bdr) 55%, var(--t-plum));
 
   /* Text: chocolate-plum */
   --t-text:          #4A3A3D;   /* primary */
@@ -23,6 +32,7 @@
   /* Plans / primary accent: wheat / caramel */
   --t-accent:        #C99A63;
   --t-accent-h:      #B5854E;
+  --t-accent-d:      #9C6F3C;   /* deepest caramel, for a card edge that has to hold on its own */
   --t-accent-bg:     #F3E4CF;
   --t-accent-bdr:    #DFC59C;
   --t-accent-fg:     #FFF9F4;   /* text on ink fills */
@@ -35,6 +45,7 @@
 
   /* Done / safe: forest green */
   --t-green:         #4A8C5E;
+  --t-green-h:       #3E764F;   /* hover deepens */
   --t-green-bg:      #D9E8D6;
   --t-green-bdr:     #A6C6A8;
 
@@ -54,6 +65,8 @@
   --t-blue:          #5A7A90;
   --t-blue-bg:       #DDE7EC;
   --t-blue-bdr:      #AEC4D0;
+  --t-blue-lt:       #7E97A8;   /* the slate lightened, for a hovered row's stripes */
+  --t-new:           #6BA6CE;   /* new cards: a lighter sky, kept apart from the deck slate */
 
   /* Warning / at-risk: weak yellow-tan (amber) */
   --t-amber:         #C49A44;
@@ -69,6 +82,7 @@
   --t-clay:          #C2705A;
   --t-clay-bg:       #F6E0D6;
   --t-clay-bdr:      #E2B5A4;
+  --t-clay-lt:       #D5917E;   /* the clay lightened, for a hovered row's stripes */
 
   /* Stats: dark / burnt orange (distinct from caramel plans) */
   --t-stat:          #C85A2A;
@@ -109,6 +123,7 @@
   --t-r-btn:         4px;
   --t-r-lg:          6px;
   --t-r-xl:          8px;   /* true paper sheets only */
+  --t-r-stripe:      12px;  /* user content boxes: the striped rows and cards, plus the homepage plan card */
   --t-r-tab:         5px 5px 1px 1px;   /* index-divider tab badges */
   --t-ease:          0.12s ease;
 
@@ -559,14 +574,21 @@ textarea { overflow-y: scroll; }
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
-/* Unified landing pages (Plans / Decks / Notebooks): white-to-family gradient bands */
+/* Unified landing pages (Plans / Decks / Notebooks): solid family bands */
+/* The band carries the rule's color itself, so no divider line is needed. Feature
+   pages take the shade their content boxes rest their bars in. */
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-border); background: var(--t-surface); flex-shrink: 0; }
-.landing-hdr--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 72%); border-bottom-color: var(--t-accent-bdr); }
-.landing-hdr--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 72%); border-bottom-color: var(--t-blue-bdr); }
-.landing-hdr--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 72%); border-bottom-color: var(--t-plum-bdr); }
-.landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; flex: 1; color: var(--t-text); }
+/* Each band sets --hdr-band once; the bottom rule is derived from it, so lightening
+   or darkening a band drags its rule along instead of drifting apart. */
+.landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 40%, var(--t-surface)); background: var(--hdr-band); border-bottom-color: color-mix(in srgb, var(--hdr-band), var(--t-accent)); }
+.landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 35%, #fff); background: var(--hdr-band); border-bottom-color: color-mix(in srgb, var(--hdr-band), var(--t-blue-bdr)); }
+.landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); background: var(--hdr-band); border-bottom-color: color-mix(in srgb, var(--hdr-band), var(--t-plum-bdr)); }
+.landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; flex: 1; color: var(--t-text); }
 .landing-body { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
-.landing-footer { display: flex; gap: 8px; padding: 10px var(--t-page-pad); border-top: 1px solid var(--t-accent-bdr); background: var(--t-accent-bg); flex-shrink: 0; }
+.landing-footer { display: flex; gap: 8px; padding: 10px var(--t-page-pad); background: var(--t-accent-bdr); flex-shrink: 0; }
+/* Both button and band are caramel, so the button sits a shade deeper to stay legible */
+.landing-footer button.primary { background: var(--t-accent-h); border-color: var(--t-accent-h); }
+.landing-footer button.primary:hover { filter: brightness(0.92); }
 .landing-footer input { flex: 1; border-color: var(--t-accent-bdr); }
 .landing-footer input:focus { border-color: var(--t-accent); }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
@@ -584,27 +606,104 @@ textarea { overflow-y: scroll; }
   font-style: italic;
 }
 
-/* Shared card look for all list items: gradient wash, crisp edge, no box border.
-   Hover only deepens the wash, never moves or grows a shadow. */
+/* Shared card look for all list items: white body, crisp edge, no box border.
+   Hover only deepens the stripes, never moves or grows a shadow. */
 .landing-card {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 22px 24px;
-  background: var(--t-surface);
-  border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r-lg);
   cursor: pointer;
   box-shadow: var(--t-shadow-sm);
-  transition: background var(--t-ease);
 }
-/* Per-feature gradient washes and edges */
-.landing-card--plan     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 55%); border-color: var(--t-accent-bdr); }
-.landing-card--deck     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 55%); border-color: var(--t-blue-bdr); }
-.landing-card--notebook { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 55%); border-color: var(--t-plum-bdr); }
-.landing-card--plan:hover     { background: linear-gradient(280deg, var(--t-accent-bg) 0%, var(--t-surface) 95%); }
-.landing-card--deck:hover     { background: linear-gradient(280deg, var(--t-blue-bg)   0%, var(--t-surface) 95%); }
-.landing-card--notebook:hover { background: linear-gradient(280deg, var(--t-plum-bg)   0%, var(--t-surface) 95%); }
+
+/* Three vertical bars tucked into the right edge, the rest of the box left white.
+   Every box below sets two colors: --t-stripe for the bars at rest and
+   --t-stripe-hi for the same family a shade deeper. The deeper one draws the
+   border, so a user content box always reads as one weight heavier than the plain
+   panels around it, and hovering just brings the bars up to meet it.
+
+   --t-stripe-u scales the set for smaller rows: it is both the bar thickness and
+   the gap. Stops count back from the right edge, so a bar k units back sits k units
+   in on every box and height never enters into it. */
+.landing-card,
+.st-resource-card,
+.hp-todo-row,
+.hp-free-todo-option,
+.hp-free-todo-option:hover,
+.hp-deck-row,
+.plan-srs-row,
+.plan-srs-add,
+.plan-resource-row,
+.plan-resource-add,
+.plan-todo-form,
+.plan-todo-row,
+.plan-todo-edit {
+  --t-stripe-u: 12px;
+  /* Keeps text clear of the bars: the leftmost one sits 8 units in, plus a unit of
+     air. Scales with --t-stripe-u, so the half size rows get a half size gutter. */
+  --t-stripe-gutter: calc(9 * var(--t-stripe-u));
+  border: var(--t-bw) solid var(--t-stripe-hi);
+  border-radius: var(--t-r-stripe);
+  background-color: var(--t-surface);
+  background-image: linear-gradient(90deg,
+    transparent 0 calc(100% - 8 * var(--t-stripe-u)),
+    var(--t-stripe) calc(100% - 8 * var(--t-stripe-u)) calc(100% - 7 * var(--t-stripe-u)),
+    transparent calc(100% - 7 * var(--t-stripe-u)) calc(100% - 6 * var(--t-stripe-u)),
+    var(--t-stripe) calc(100% - 6 * var(--t-stripe-u)) calc(100% - 5 * var(--t-stripe-u)),
+    transparent calc(100% - 5 * var(--t-stripe-u)) calc(100% - 4 * var(--t-stripe-u)),
+    var(--t-stripe) calc(100% - 4 * var(--t-stripe-u)) calc(100% - 3 * var(--t-stripe-u)),
+    transparent calc(100% - 3 * var(--t-stripe-u)));
+}
+
+/* Hovering brings the bars up to the border color. The open-editor version of this
+   lives in Plans.css, where it can outrank the resting color those rows set. */
+.landing-card:hover,
+.hp-todo-row:hover,
+.hp-free-todo-option:hover,
+.hp-deck-row:hover,
+.hp-resources-list .st-resource-card:hover,
+.plan-srs-row:hover,
+.plan-resource-row:hover,
+.plan-todo-row:hover { --t-stripe: var(--t-stripe-hi); }
+
+/* The Log Extra templates are half-height rows, so they carry half-size bars.
+   The hover half has to be here too, or it would out-specify the size and the
+   bars would jump as the pointer crossed them. */
+.hp-free-todo-option,
+.hp-free-todo-option:hover { --t-stripe-u: 6px; }
+
+/* The New / Review readouts land on the right of a row, right where the bars are,
+   and blue text over a blue bar disappears. Each one is a solid box in its own
+   family color with white numerals, so the count reads whatever sits behind it. */
+.hp-deck-new,
+.hp-deck-review,
+.plan-srs-count,
+.hp-session-counts span {
+  color: var(--t-accent-fg);
+  border-radius: var(--t-r);
+  padding: 2px 8px;
+  text-align: center;
+}
+/* Tighter rows carry the same box a size down */
+.plan-srs-count,
+.hp-session-counts span { font-size: 11px; font-weight: 600; padding: 1px 6px; }
+
+.hp-deck-new,
+.plan-srs-count--new,
+.hp-session-counts .hp-session-new       { background: var(--t-new); }
+.hp-deck-review,
+.plan-srs-count--review,
+.hp-session-counts .hp-session-review    { background: var(--t-green); }
+
+/* A count of zero renders nothing, and an empty box would show as a blank block */
+.hp-deck-new:empty,
+.hp-deck-review:empty { background: none; }
+
+/* Per-feature stripe colors: bars at rest, then the deeper shade for border and hover */
+.landing-card--plan     { --t-stripe: var(--t-accent-stripe); --t-stripe-hi: var(--t-accent); }
+.landing-card--deck     { --t-stripe: var(--t-blue-bdr);   --t-stripe-hi: var(--t-blue-lt); }
+.landing-card--notebook { --t-stripe: var(--t-plum-stripe);   --t-stripe-hi: var(--t-plum); }
 .landing-card-body { flex: 1; min-width: 0; }
 .landing-card-body > input { width: 100%; box-sizing: border-box; }
 .landing-card-name { font-family: var(--t-font-head); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--t-text); }
@@ -629,7 +728,7 @@ textarea { overflow-y: scroll; }
 .landing-stat--deck      { --stat-c: var(--t-blue); }
 .landing-stat--card      { --stat-c: var(--t-blue); }
 .landing-stat--page      { --stat-c: var(--t-plum); }
-.landing-stat--new       { --stat-c: #6BA6CE; }   /* light sky blue, apart from the deck slate */
+.landing-stat--new       { --stat-c: var(--t-new); }
 .landing-stat--review    { --stat-c: #68AE7E; }   /* lighter than the base green */
 .landing-stat--plan      { --stat-c: var(--t-accent); }
 
@@ -705,10 +804,10 @@ textarea { overflow-y: scroll; }
 
 /* Resource card (name / type / url / notes), shared by Stats + study page: */
 .st-resource-cards { display: flex; flex-direction: column; gap: 6px; }
-.st-resource-card { border: 1px solid var(--t-clay-bdr); background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); border-radius: var(--t-r); padding: 7px 11px; }
-.st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.st-resource-card { --t-stripe: var(--t-clay-bdr); --t-stripe-hi: var(--t-clay-lt); padding: 7px 11px; }
+.st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding-right: var(--t-stripe-gutter); }
 .st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-text); }
 .st-resource-card-type { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
 .st-resource-card-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 3px; cursor: pointer; }
 .st-resource-card-url:hover { filter: brightness(0.8); }
-.st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }
+.st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; padding-right: var(--t-stripe-gutter); }

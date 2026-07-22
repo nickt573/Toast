@@ -1,10 +1,10 @@
 /* Plans subcomponents */
 
-.plan-srs-row { border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 55%); }
+.plan-srs-row { --t-stripe: var(--t-blue-bdr); --t-stripe-hi: var(--t-blue-lt); padding: 12px 14px; margin-bottom: 8px; }
 .plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .plan-srs-name { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
 .plan-srs-name.clickable { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-.plan-srs-counts { font-size: 12px; color: var(--t-text-3); flex-shrink: 0; }
+.plan-srs-counts { display: flex; gap: 6px; flex-shrink: 0; }
 .plan-srs-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
 .plan-srs-tip-wrap { display: inline-flex; align-items: center; gap: 2px; }
 /* Settings and remove-confirm expand inline, to the left of the action buttons */
@@ -17,12 +17,12 @@
 .plan-srs-confirm-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-right: auto; }
 .plan-srs-confirm-sub { font-size: 12px; color: var(--t-text-3); margin-top: 8px; font-style: italic; }
 
-/* SRS add form: carries the deck-family gradient like its clay/yellow siblings */
-.plan-srs-add { border: 1px solid var(--t-blue-bdr); border-radius: var(--t-r); padding: 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 62%); }
+/* SRS add form: carries the deck-family stripes like its clay/yellow siblings */
+.plan-srs-add { --t-stripe: var(--t-blue-bdr); --t-stripe-hi: var(--t-blue-lt); padding: 12px; margin-top: 8px; display: flex; flex-direction: column; gap: 10px; }
 /* One line, same layout as .plan-srs-settings on existing decks */
 .plan-srs-settings-fields { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
-.plan-resource-row { border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r); padding: 12px 14px; margin-bottom: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%); }
+.plan-resource-row { --t-stripe: var(--t-clay-bdr); --t-stripe-hi: var(--t-clay-lt); padding: 12px 14px; margin-bottom: 8px; }
 .plan-resource-edit-form { display: flex; flex-direction: column; gap: 6px; }
 .plan-resource-edit-actions { display: flex; gap: 6px; }
 .plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
@@ -30,7 +30,7 @@
 .plan-resource-name { font-weight: 600; font-size: 17px; color: var(--t-text); }
 /* Raw URLs stay hidden behind a compact arrow */
 .plan-resource-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 2px; text-decoration: none; }
-.plan-resource-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; }
+.plan-resource-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; padding-right: var(--t-stripe-gutter); }
 .plan-resource-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .todo-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .todo-filter-seg { display: flex; gap: 3px; flex-wrap: wrap; }
@@ -41,14 +41,18 @@
 
 .plan-resource-copyfrom { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--t-text-2); }
 .plan-resource-copyfrom select { flex: 1; min-width: 120px; }
-.plan-resource-add { border: 1px solid var(--t-clay-bdr); border-radius: var(--t-r); padding: 12px; display: flex; flex-direction: column; gap: 8px; background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 62%); }
+.plan-resource-add { --t-stripe: var(--t-clay-bdr); --t-stripe-hi: var(--t-clay-lt); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 
 .plan-todo-creator { margin-top: 0; }
-.plan-todo-form { border: 1px solid var(--t-yellow-bdr); border-radius: var(--t-r); padding: 12px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 62%); }
+.plan-todo-form { --t-stripe: var(--t-yellow-stripe); --t-stripe-hi: var(--t-yellow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.plan-todo-row, .plan-todo-edit { --t-stripe: var(--t-yellow-stripe); --t-stripe-hi: var(--t-yellow); padding: 12px; margin-bottom: 10px; }
+/* An open editor holds the highlight the whole time it is open. This has to sit
+   after the resting colors above, which it ties with on specificity. */
+.plan-todo-edit,
+.plan-resource-row.editing { --t-stripe: var(--t-stripe-hi); }
 .plan-form-sublabel { font-size: 12px; margin-bottom: 2px; color: var(--t-text-2); }
 .plan-pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .plan-form-actions { display: flex; gap: 8px; }
-.plan-resources-indent { margin-left: 10px; padding-left: 14px; border-left: 2px solid var(--t-clay); }
 
 /* Previously used but undefined */
 .plan-section-title { font-size: 11px; font-weight: 600; color: var(--t-label); margin-bottom: 2px; }

@@ -104,15 +104,21 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   line-height: 1.5;
 }
 
-/* Plan card: white paper sheet with a state border, hover only darkens */
+/* Plan card: white paper sheet with a state border, hover only darkens. Carries the
+   same color pair a striped box does, so the edge and the center bar can never drift
+   apart: --t-stripe-hi draws the border, --t-stripe rests a shade under it, and
+   hovering brings the bar up to the border color. Restyle a state by changing its
+   pair and both follow. */
 .hp-plan-card {
+  --t-stripe: var(--t-border-2);
+  --t-stripe-hi: var(--t-border-3);
   padding: 22px 24px;
   min-height: 170px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r-lg);
+  border: var(--t-bw) solid var(--t-stripe-hi);
+  border-radius: var(--t-r-stripe);
   cursor: pointer;
   background: var(--t-surface);
   margin-bottom: 14px;
@@ -120,18 +126,20 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   transition: background var(--t-ease);
 }
 .hp-plan-card:hover {
-  background: #F6E7D4;
+  background: #FAF1E5;
 }
 /* Done plans highlight green on hover, not peach. Mixed with white, not the warm surface, so it stays a clean green. */
 .hp-plan-card.is-done:hover {
-  background: color-mix(in srgb, var(--t-green) 16%, #fff);
+  background: color-mix(in srgb, var(--t-green) 11%, #fff);
 }
 .hp-plan-card.has-due {
-  border-color: var(--t-accent-bdr);
+  --t-stripe: var(--t-accent-stripe);
+  --t-stripe-hi: var(--t-accent);
 }
 /* Nothing left due today: green border + check matching .hp-deck-check */
 .hp-plan-card.is-done {
-  border-color: var(--t-green-bdr);
+  --t-stripe: var(--t-green-stripe);
+  --t-stripe-hi: var(--t-green-h);
 }
 .hp-plan-check {
   color: var(--t-green);
@@ -183,12 +191,17 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-stat-num--decks { color: var(--t-blue); }
 .hp-stat-num--zero  { color: var(--t-green); }
 .hp-stat-lbl { font-size: 15px; color: var(--t-text-2); font-weight: 600; }
-.hp-plan-stat-divider { width: 2px; height: 44px; background: var(--t-border); margin: 0 20px; flex-shrink: 0; }
+/* The divider never highlights, in any state. It rests a shade darker than the bar
+   color but still lighter than the card's border. */
+.hp-plan-stat-divider { width: 2px; height: 44px; background: var(--t-stripe); margin: 0 20px; flex-shrink: 0; }
+.hp-plan-card.has-due .hp-plan-stat-divider { background: var(--t-accent); }
 .hp-plan-card.is-done .hp-plan-stat-divider { background: var(--t-green); }
 .hp-plan-card-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
 .hp-plan-open { font-size: 12px; font-weight: 600; color: var(--t-accent); letter-spacing: 0.02em; }
 /* Matches the green border and counts on a finished card */
 .hp-plan-card.is-done .hp-plan-open { color: var(--t-green); }
+.hp-plan-card:hover .hp-plan-open { color: var(--t-accent-h); }
+.hp-plan-card.is-done:hover .hp-plan-open { color: var(--t-green-h); }
 
 /* Plan study page */
 .hp-plan-page {
@@ -257,15 +270,14 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-section-label--todos { color: var(--t-yellow); }
 .hp-section-label--decks { color: var(--t-blue); }
 
-/* Todo rows: yellow gradient bars, borderless */
+/* Todo rows: yellow striped bars */
 .hp-todo-row {
   display: flex;
   flex-direction: column;
   padding: 12px;
-  border: 1px solid var(--t-yellow-bdr);
-  border-radius: var(--t-r);
+  --t-stripe: var(--t-yellow-stripe);
+  --t-stripe-hi: var(--t-yellow);
   margin-bottom: 8px;
-  background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%);
 }
 .hp-todo-row:last-child { margin-bottom: 0; }
 
@@ -285,9 +297,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   text-align: left;
   font-size: 13px;
   padding: 8px 12px;
-  border: 1px solid var(--t-yellow-bdr);
-  border-radius: var(--t-r);
-  background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 55%);
+  --t-stripe: var(--t-yellow-stripe);
+  --t-stripe-hi: var(--t-yellow);
   color: var(--t-text);
   /* Keep full height so the list scrolls instead of squashing rows */
   flex-shrink: 0;
@@ -300,67 +311,68 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Ellipsis lands before the bars rather than under them */
+  padding-right: var(--t-stripe-gutter);
 }
-.hp-free-todo-option:hover {
-  background: linear-gradient(280deg, var(--t-yellow-bg) 0%, var(--t-surface) 95%);
-  border-color: var(--t-yellow-bdr);
-  color: var(--t-text);
-}
+.hp-free-todo-option:hover { color: var(--t-text); }
 .hp-todo-row.done {
-  border-color: var(--t-green-bdr);
-  background: linear-gradient(280deg, var(--t-green-bg) 0%, var(--t-surface) 55%);
+  --t-stripe: var(--t-green-stripe);
+  --t-stripe-hi: var(--t-green);
 }
+/* Matches the shared hover rule, which .hp-todo-row.done would otherwise outrank */
+.hp-todo-row.done:hover { --t-stripe: var(--t-stripe-hi); }
 .hp-todo-row.skipped {
   opacity: 0.5;
 }
 
+/* Deeper than --t-accent so it stands off the yellow todo row instead of sinking into it */
 .hp-todo-skip {
   float: right;
   font-size: 11px;
   padding: 2px 10px;
   margin-left: 10px;
-  background: var(--t-accent);
-  border-color: var(--t-accent);
+  background: var(--t-accent-h);
+  border-color: var(--t-accent-h);
   color: var(--t-accent-fg);
 }
 .hp-todo-skip:hover {
   background: var(--t-accent-h);
   border-color: var(--t-accent-h);
   color: var(--t-accent-fg);
+  filter: brightness(0.92);
 }
 
 .hp-todo-text {
   font-weight: 600;
   color: var(--t-text);
   font-size: 17px;
+  /* Wraps before the bars rather than running under them */
+  padding-right: var(--t-stripe-gutter);
 }
 .hp-todo-text.done {
   text-decoration: line-through;
   color: var(--t-text-3);
 }
 
-/* Deck rows: blue gradient bars, hover only deepens */
+/* Deck rows: blue striped bars, hover only deepens */
 .hp-deck-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-radius: var(--t-r);
-  border: 1px solid var(--t-blue-bdr);
+  --t-stripe: var(--t-blue-bdr);
+  --t-stripe-hi: var(--t-blue-lt);
   margin-bottom: 8px;
   cursor: pointer;
-  background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 55%);
-  transition: background var(--t-ease);
 }
-.hp-deck-row:hover:not(.hp-deck-row--empty) {
-  background: linear-gradient(280deg, var(--t-blue-bg) 0%, var(--t-surface) 95%);
-}
-.hp-deck-row--empty { cursor: default !important; background: linear-gradient(280deg, var(--t-green-bg) 0%, var(--t-surface) 55%) !important; border-color: var(--t-green-bdr) !important; }
+.hp-deck-row--empty { cursor: default !important; --t-stripe: var(--t-green-bdr); --t-stripe-hi: var(--t-green); }
+/* A finished deck row has no counts on the right, so the name is what would reach the bars */
+.hp-deck-row--empty .hp-deck-name { padding-right: var(--t-stripe-gutter); }
 .hp-deck-name { flex: 1; font-weight: 600; font-size: 15px; color: var(--t-text); }
 .hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
 .hp-deck-new, .hp-deck-review { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.hp-deck-new { color: var(--t-blue); min-width: 62px; }
-.hp-deck-review { color: var(--t-green); min-width: 86px; }
+.hp-deck-new { min-width: 78px; }
+.hp-deck-review { min-width: 102px; }
 
 /* Study session */
 .hp-session {
@@ -382,11 +394,11 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-session-header h2 { margin: 0; flex: 1; font-family: var(--t-font-head); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
 .hp-session-counts { font-size: 12px; color: var(--t-text-3); display: flex; gap: 10px; font-variant-numeric: tabular-nums; }
-.hp-session-counts span { min-width: 56px; text-align: right; }
+.hp-session-counts span { min-width: 62px; }
 
 /* Study card: plain paper sheet, crisp edge */
 .hp-card-box {
-  border: 1px solid var(--t-border);
+  border: none;
   border-radius: var(--t-r-xl);
   padding: 32px 28px;
   background: var(--t-surface);
@@ -494,10 +506,11 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 
 .hp-similar {
   margin-top: 16px;
-  border: 1px solid var(--t-border);
+  border: none;
   border-radius: var(--t-r);
   padding: 14px;
   background: var(--t-surface);
+  box-shadow: var(--t-shadow);
 }
 .hp-similar-hdr {
   font-size: 11px;
@@ -567,7 +580,5 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 /* Match the todo/deck row treatment above */
 .hp-resources-list .st-resource-card {
-  background: linear-gradient(280deg, var(--t-clay-bg) 0%, var(--t-surface) 55%);
-  border-radius: var(--t-r);
   padding: 10px 14px;
 }

@@ -715,8 +715,8 @@ function StudySession({ group, onBack, setToast }) {
                     <button className="quiet" onClick={handleBack}>← Back</button>
                     <h2>{group.name}</h2>
                     <div className="hp-session-counts">
-                        <span style={{ color: "var(--t-blue)", opacity: newCount > 0 ? 1 : 0.45 }}>New: {newCount}</span>
-                        <span style={{ color: "var(--t-green)", opacity: reviewCount > 0 ? 1 : 0.45 }}>Review: {reviewCount}</span>
+                        <span className="hp-session-new" style={{ opacity: newCount > 0 ? 1 : 0.45 }}>New: {newCount}</span>
+                        <span className="hp-session-review" style={{ opacity: reviewCount > 0 ? 1 : 0.45 }}>Review: {reviewCount}</span>
                     </div>
                 </div>
 

@@ -1,7 +1,7 @@
 /* Stats view */
 .st-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.st-header { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid var(--t-stat-bdr); background: linear-gradient(280deg, #F4BF95 0%, var(--t-surface) 72%); flex-shrink: 0; } /* deeper orange than --t-stat-bg so it doesn't blend into the peach page */
-.st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 15px; font-weight: 700; color: var(--t-text); }
+.st-header { --hdr-band: color-mix(in srgb, #EABA9D 60%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), #EABA9D); background: var(--hdr-band); flex-shrink: 0; }
+.st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: 17px; font-weight: 700; color: var(--t-text); }
 .st-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
@@ -13,7 +13,6 @@
    looking cramped now that it is wider. */
 .st-metric {
   background: var(--t-surface);
-  border: 1px solid var(--t-stat-bdr);
   border-radius: var(--t-r-lg);
   padding: 12px 8px;
   box-shadow: var(--t-shadow-sm);
@@ -21,7 +20,7 @@
 .st-metric-value { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; color: var(--t-text); }
 .st-metric-label { font-size: 11px; color: var(--t-label); font-weight: 600; }
 
-.st-chart-panel { background: var(--t-surface); border: 1px solid var(--t-stat-bdr); border-radius: var(--t-r-lg); padding: 14px; margin-bottom: 16px; box-shadow: var(--t-shadow-sm); }
+.st-chart-panel { background: var(--t-surface); border-radius: var(--t-r-lg); padding: 14px; margin-bottom: 16px; box-shadow: var(--t-shadow-sm); }
 .st-chart-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 
 .st-legend { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--t-text-2); margin-left: auto; }
@@ -50,7 +49,7 @@
 .st-tab--todos.active::after { background: var(--t-yellow); }
 
 /* Deck cards: deep peach header band over a paper sheet */
-.st-deck-card { background: var(--t-surface); border: 1px solid var(--t-stat-bdr); border-radius: var(--t-r-lg); margin-bottom: 8px; overflow: hidden; box-shadow: var(--t-shadow-sm); }
+.st-deck-card { background: var(--t-surface); border: 1px solid #EDCBAC; border-radius: var(--t-r-lg); margin-bottom: 8px; overflow: hidden; box-shadow: var(--t-shadow-sm); }
 .st-deck-header {
   display: flex;
   align-items: center;
@@ -66,7 +65,7 @@
    still reads as live. Each state keeps its badge's tint, and the states mean
    different things: archived stops counting toward your totals, while deleted and
    merged stats still count. Only the archived name fades, to match. */
-.st-deck-card--dead { border-color: var(--dead-bdr); }
+.st-deck-card--dead { border-color: var(--dead-band); }
 .st-deck-card--dead .st-deck-header,
 .st-deck-card--dead .st-table th { background: var(--dead-band); }
 
@@ -160,7 +159,7 @@
 .st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 11px; font-weight: 700; color: var(--t-label); user-select: none; }
 .st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 2px; background: var(--t-border-2); }
 .st-day-group:first-child .st-day-divider { margin-top: 0; }
-.st-todo-row { background: var(--t-surface); border: 1px solid var(--t-stat-bdr); border-radius: var(--t-r-lg); overflow: hidden; box-shadow: var(--t-shadow-sm); }
+.st-todo-row { background: var(--t-surface); border: 1px solid #EDCBAC; border-radius: var(--t-r-lg); overflow: hidden; box-shadow: var(--t-shadow-sm); }
 /* Collapsed row: name in its own column so it can't push the category tags below */
 .st-todo-collapsed { display: flex; flex-direction: column; gap: 6px; padding: 9px 14px; background: #EDCBAC; cursor: pointer; }
 .st-todo-line { display: flex; align-items: center; gap: 10px; padding-bottom: 6px; }
@@ -194,7 +193,7 @@
 .st-meta-pill--ret-good { background: var(--t-green);  color: var(--t-accent-fg); }
 .st-meta-pill--ret-mid  { background: var(--t-amber);  color: var(--t-text); }
 .st-meta-pill--ret-poor { background: var(--t-red-2);  color: var(--t-accent-fg); }
-.st-todo-expanded { padding: 12px 14px 14px; background: var(--t-surface-2); border-top: 1px solid var(--t-stat-bdr); }
+.st-todo-expanded { padding: 12px 14px 14px; background: var(--t-surface-2); border-top: 1px solid #EDCBAC; }
 .st-todo-notes { margin: 0; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 12px; }
 
 .st-pill-tag { display: inline-block; padding: 2px 8px; border-radius: var(--t-r-tab); font-size: 10px; font-weight: 600; user-select: none; }

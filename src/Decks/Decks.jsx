@@ -605,7 +605,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
 
   if (previewing) {
     return (
-      <div className="dk-editor-pane" ref={paneRef} onScroll={handlePaneScroll}>
+      <div className="dk-editor-pane dk-editor-pane--preview" ref={paneRef} onScroll={handlePaneScroll}>
         <div className="dk-editor-topbar">
           <button className="quiet" onClick={() => setPreviewing(false)}>Edit</button>
           {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
