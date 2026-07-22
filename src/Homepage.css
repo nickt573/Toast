@@ -263,7 +263,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-section-label {
   display: block;
   font-family: var(--t-font-head);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--t-accent);

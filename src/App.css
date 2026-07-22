@@ -745,7 +745,7 @@ textarea { overflow-y: scroll; }
 .plan-builder-cols { display: flex; flex-direction: column; gap: 26px; }
 .plan-col-main { min-width: 0; }
 .plan-col-side { min-width: 0; padding-top: 22px; border-top: 1px solid var(--t-border); }
-.plan-col-label { font-family: var(--t-font-head); font-size: 16px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 10px; }
+.plan-col-label { font-family: var(--t-font-head); font-size: 18px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 10px; }
 .plan-col-label--toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 7px; }
 .plan-col-label-caret { font-size: 10px; color: var(--t-text-3); }
 .plan-col-label--todos     { color: var(--t-yellow); }
