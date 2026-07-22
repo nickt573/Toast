@@ -142,7 +142,7 @@ function DeckList({ setToast, onOpenDeck }) {
 
   const createDeck = async () => {
     const name = newName.trim();
-    if (!name) return;
+    if (!name) { setToast("Please enter a valid name.", "warn"); return; }
     try {
       const deck = await loggedInvoke("create_deck", { name });
       setDecks((prev) => [...prev, deck].sort(byName));
@@ -168,8 +168,8 @@ function DeckList({ setToast, onOpenDeck }) {
 
   const confirmAnkiImport = async () => {
     if (!ankiPending) return;
-    if (ankiFrontFields.length === 0) { setToast("Please select at least one front field."); return; }
-    if (ankiBackFields.length === 0) { setToast("Please select at least one back field."); return; }
+    if (ankiFrontFields.length === 0) { setToast("Please select at least one front field.", "warn"); return; }
+    if (ankiBackFields.length === 0) { setToast("Please select at least one back field.", "warn"); return; }
     // Fields land on the card in the order they're listed here, not the order they were ticked.
     const inListOrder = (picked) => ankiPending.fields.map((f) => f.name).filter((n) => picked.includes(n));
     try {
@@ -198,7 +198,7 @@ function DeckList({ setToast, onOpenDeck }) {
 
   const confirmEdit = async (id) => {
     const name = editingName.trim();
-    if (!name) { setEditingId(null); setToast("Please choose a valid name."); return; }
+    if (!name) { setEditingId(null); setToast("Please enter a valid name.", "warn"); return; }
     try {
       await loggedInvoke("update_deck", { deck: { id, name, group_type: "deck" } });
       setDecks((d) => d.map((dk) => dk.id === id ? { ...dk, name } : dk).sort(byName));
@@ -251,9 +251,9 @@ function DeckList({ setToast, onOpenDeck }) {
   };
 
   const confirmMerge = async () => {
-    if (!mergeDeckA || !mergeDeckB) { setToast("Please select two decks."); return; }
-    if (mergeDeckA === mergeDeckB) { setToast("Please select two different decks."); return; }
-    if (!mergeName.trim()) { setToast("Please enter a name for the merged deck."); return; }
+    if (!mergeDeckA || !mergeDeckB) { setToast("Please select two decks.", "warn"); return; }
+    if (mergeDeckA === mergeDeckB) { setToast("Please select two different decks.", "warn"); return; }
+    if (!mergeName.trim()) { setToast("Please enter a name for the merged deck.", "warn"); return; }
     try {
       // archiveSources only matters with a reset. Without one the merge moves the
       // sources' study onto the new deck and archives them regardless.
@@ -767,8 +767,8 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
   const pickBackAudio  = async () => { const p = await pickFile(["mp3","wav","ogg","m4a"]); if (p) set("back_audio", p); };
 
   const submit = async () => {
-    if (!form.group_id) { setToast("Please select a deck."); return; }
-    if (!form.front.trim() || !form.back.trim()) { setToast("Please enter a valid front and back side."); return; }
+    if (!form.group_id) { setToast("Please select a deck.", "warn"); return; }
+    if (!form.front.trim() || !form.back.trim()) { setToast("Please enter a valid front and back side.", "warn"); return; }
     const payload = {
       ...form,
       support: form.support || null,

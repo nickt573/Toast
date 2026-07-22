@@ -16,7 +16,7 @@ export default function Toast({ message, type = "info" }) {
   }, [message, type]);
 
   return (
-    <div className={`toast${visible ? " show" : ""}${displayType === "error" ? " error" : ""}`}>
+    <div className={`toast${visible ? " show" : ""}${displayType === "error" || displayType === "warn" ? ` ${displayType}` : ""}`}>
       {displayMessage}
     </div>
   );

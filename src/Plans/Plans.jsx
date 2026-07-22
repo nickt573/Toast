@@ -151,7 +151,7 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
     }
 
     async function addGroup() {
-        if (!selectedGroupId) { setToast("Please select a deck."); return; }
+        if (!selectedGroupId) { setToast("Please select a deck.", "warn"); return; }
         try {
             await loggedInvoke("add_group_to_plan", {
                 groupId: selectedGroupId,
@@ -289,7 +289,7 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
     }
 
     async function createResource() {
-        if (!newName.trim()) { setToast("Resource name is required."); return; }
+        if (!newName.trim()) { setToast("Resource name is required.", "warn"); return; }
         try {
             await loggedInvoke("create_resource", {
                 resource: {
@@ -316,7 +316,7 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
     }
 
     async function saveEdit(r) {
-        if (!editName.trim()) { setToast("Resource name is required."); return; }
+        if (!editName.trim()) { setToast("Resource name is required.", "warn"); return; }
         try {
             await loggedInvoke("update_resource", {
                 resource: {
@@ -501,9 +501,9 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
     }
 
     async function submit() {
-        if (!text.trim()) { setToast("Todo description cannot be empty."); return; }
+        if (!text.trim()) { setToast("Todo description cannot be empty.", "warn"); return; }
         const category = computeCategory(categoryMap);
-        if (category === 0) { setToast("Please select at least one category.", "error"); return; }
+        if (category === 0) { setToast("Please select at least one category.", "warn"); return; }
 
         const todo = {
             plan_id: planId,
@@ -708,7 +708,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
 
     async function confirmEdit(id) {
         const trimmed = editingName.trim();
-        if (!trimmed) { setEditingId(null); setToast("Please enter a valid name."); return; }
+        if (!trimmed) { setEditingId(null); setToast("Please enter a valid name.", "warn"); return; }
         try {
             await loggedInvoke("update_plan", { id, name: trimmed });
             setPlans((prev) => prev.map((p) => p.id === id ? { ...p, name: trimmed } : p).sort(byName));
@@ -727,7 +727,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     }
 
     async function createPlan() {
-        if (!name.trim()) { setToast("Please enter a valid name."); return; }
+        if (!name.trim()) { setToast("Please enter a valid name.", "warn"); return; }
         try {
             await loggedInvoke("create_plan", { name: name.trim() });
             await getPlans();

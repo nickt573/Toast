@@ -48,9 +48,9 @@ export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGro
     }
 
     async function updateTodo() {
-        if (!text.trim()) { setToast("Todo description cannot be empty."); return; }
+        if (!text.trim()) { setToast("Todo description cannot be empty.", "warn"); return; }
         const category = computeCategory(categoryMap);
-        if (category === 0) { setToast("Please select at least one category.", "error"); return; }
+        if (category === 0) { setToast("Please select at least one category.", "warn"); return; }
         try {
             await loggedInvoke("update_todo", { todo: {
                 id: todo.id, plan_id: todo.plan_id, text: text.trim(),

@@ -428,7 +428,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
     }
 
     async function submit() {
-        if (!text.trim()) { setToast("Please enter a todo name."); return; }
+        if (!text.trim()) { setToast("Please enter a todo name.", "warn"); return; }
         const category = computeCategory(categoryMap);
         await onConfirm({
             text: text.trim(),
@@ -864,9 +864,9 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
 
     async function confirmComplete(timeSpent, numUnit, details, resourceIds, groupIds, category, text) {
         if (!completingTodo) return;
-        if (!text?.trim()) { setToast("Please enter a todo name."); return; }
-        if (!category || category === 0) { setToast("Select at least one category.", "error"); return; }
-        if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "error"); return; }
+        if (!text?.trim()) { setToast("Please enter a todo name.", "warn"); return; }
+        if (!category || category === 0) { setToast("Select at least one category.", "warn"); return; }
+        if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
         try {
             await loggedInvoke("complete_todo", {
                 todoId: completingTodo.id,
@@ -887,8 +887,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
     }
 
     async function confirmFreeTodo({ text, category, details, timeSpent, numUnit, groupIds, resourceIds, date }) {
-        if (!category || category === 0) { setToast("Select at least one category.", "error"); return; }
-        if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "error"); return; }
+        if (!category || category === 0) { setToast("Select at least one category.", "warn"); return; }
+        if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
         try {
             await loggedInvoke("log_free_todo", {
                 planId: plan.id, text, category, details,
@@ -899,10 +899,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             setToast("Done!");
         } catch (e) {
             logError("catch", e);
-            const msg = String(e).includes("future")
-                ? "Can't log activity for a future date."
-                : "Failed to log activity.";
-            setToast(msg, "error");
+            const future = String(e).includes("future");
+            setToast(future ? "Can't log activity for a future date." : "Failed to log activity.", future ? "warn" : "error");
         }
     }
 

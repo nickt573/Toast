@@ -132,7 +132,7 @@ export default function ToGo({ setToast }) {
     if (busy) return;
     const id = raw.trim();
     if (!UUID_RE.test(id)) {
-      setToast("That doesn't look like a Toast to Go ID.", "error");
+      setToast("That doesn't look like a Toast to Go ID.", "warn");
       return;
     }
 

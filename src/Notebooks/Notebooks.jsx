@@ -88,7 +88,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
 
     const createNotebook = async () => {
         const name = newName.trim();
-        if (!name) {setToast("Please enter a valid name."); return; };
+        if (!name) {setToast("Please enter a valid name.", "warn"); return; };
         try {
             const nb = await loggedInvoke("create_notebook", { name });
             setNotebooks((prev) => [...prev, nb].sort(byName));
@@ -101,7 +101,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
 
     const confirmEdit = async (id) => {
         const name = editingName.trim();
-        if (!name) { setEditingId(null); setToast("Please enter a valid name."); return; }
+        if (!name) { setEditingId(null); setToast("Please enter a valid name.", "warn"); return; }
         try {
             await loggedInvoke("update_notebook", { notebook: { id, plan_id: null, name, group_type: "notebook" } });
             setNotebooks((prev) => prev.map((n) => n.id === id ? { ...n, name } : n).sort(byName));
@@ -144,9 +144,9 @@ function NotebookList({ setToast, onOpenNotebook }) {
     };
 
     const confirmMerge = async () => {
-        if (!mergeNotebookA || !mergeNotebookB) { setToast("Please select two notebooks."); return; }
-        if (mergeNotebookA === mergeNotebookB) { setToast("Please select two different notebooks."); return; }
-        if (!mergeName.trim()) { setToast("Please enter a name for the merged notebook."); return; }
+        if (!mergeNotebookA || !mergeNotebookB) { setToast("Please select two notebooks.", "warn"); return; }
+        if (mergeNotebookA === mergeNotebookB) { setToast("Please select two different notebooks.", "warn"); return; }
+        if (!mergeName.trim()) { setToast("Please enter a name for the merged notebook.", "warn"); return; }
         try {
             const newNb = await loggedInvoke("merge_notebooks", {
                 notebookAId: mergeNotebookA,

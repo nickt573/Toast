@@ -907,11 +907,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
 
   const saveEdit = async (r) => {
     const trimmed = editForm.text.trim();
-    if (!trimmed) return;
+    if (!trimmed) { setToast("Please enter a todo name.", "warn"); return; }
     const category = computeCategory(editForm.categoryMap);
-    if (category === 0) { setToast("Select at least one category.", "error"); return; }
+    if (category === 0) { setToast("Select at least one category.", "warn"); return; }
     const timeSpent = Math.max(0, Math.round(parseFloat(editForm.timeSpent) || 0));
-    if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "error"); return; }
+    if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
     const removeGroupRowIds    = r.groups.map(x => x.row_id).filter(id => !editForm.groups.includes(id));
     const removeResourceRowIds = r.resources.map(x => x.row_id).filter(id => !editForm.resources.includes(id));
     try {

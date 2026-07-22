@@ -412,7 +412,10 @@ textarea { overflow-y: scroll; }
   transition: opacity .18s ease, transform .18s ease;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
+/* Red is only for something that actually broke. Something you are simply not
+   allowed to do yet is amber, and it always says so rather than failing quietly. */
 .toast.error { background: var(--t-red); color: var(--t-btn-fg); }
+.toast.warn { background: var(--t-amber); color: var(--t-btn-fg); }
 
 /* Busy overlay (Toast to Go transfers): */
 .busy-overlay {
