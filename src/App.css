@@ -78,6 +78,8 @@
   --t-plum:          #8A6A96;
   --t-plum-bg:       #ECE0F0;
   --t-plum-bdr:      #C8B4D2;
+  /* Swap during a study session. A lighter plum, so it is nobody's grade and reads apart from the notebook tab wearing the full plum */
+  --t-swap:          #A98BB4;
 
   /* Resources: terracotta (token name kept as legacy "clay") */
   --t-clay:          #C2705A;

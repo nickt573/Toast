@@ -478,8 +478,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-grade-bar .hp-grade-easy:hover,
 .hp-grade-bar .hp-grade-gotit:hover  { background: var(--t-green); color: var(--t-accent-fg); filter: brightness(0.92); }
 
-/* Swap sits under the grades in the same caramel as Flip: both are the session's own
-   controls rather than an answer, so they share an ink the grade colors never use. */
+/* Swap gets a lighter plum, an ink no grade and no other session control uses, so it
+   never reads as one of the answers sitting above it. Lightened off the full plum so it
+   does not read as the notebook tab either. */
 /* Three columns so the button centers on the row itself, not on the button and its
    tooltip together. The empty first column balances the tooltip's. */
 .hp-swap-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin-top: 8px; }
@@ -490,13 +491,13 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   font-weight: 700;
   border-radius: var(--t-r-btn);
   border: none;
-  background: var(--t-accent);
+  background: var(--t-swap);
   color: var(--t-accent-fg);
   cursor: pointer;
   box-shadow: none;
-  transition: background var(--t-ease), transform 0.1s ease;
+  transition: filter var(--t-ease), transform 0.1s ease;
 }
-.hp-swap-btn:hover { background: var(--t-accent-h); color: var(--t-accent-fg); }
+.hp-swap-btn:hover { background: var(--t-swap); color: var(--t-accent-fg); filter: brightness(0.92); }
 .hp-swap-btn:active { transform: translateY(1px); }
 
 .hp-done {
