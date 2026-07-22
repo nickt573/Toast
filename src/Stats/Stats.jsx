@@ -1353,7 +1353,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           {/* Summary metrics */}
           <div className="st-metrics">
             <MetricCard
-              label="Avg. Card Retention"
+              label="Avg. Retention"
               value={metrics.avgRetention !== null ? `${Math.round(metrics.avgRetention * 100)}%` : "-"}
               color={metrics.avgRetention !== null ? retColor : GRAY}
             />
