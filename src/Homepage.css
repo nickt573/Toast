@@ -132,6 +132,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-plan-card.is-done:hover {
   background: color-mix(in srgb, var(--t-green) 11%, #fff);
 }
+/* A plan with nothing due but no study logged yet still counts as open work, so it
+   wears the same caramel as a plan with cards waiting. */
 .hp-plan-card.has-due {
   --t-stripe: var(--t-accent-stripe);
   --t-stripe-hi: var(--t-accent);

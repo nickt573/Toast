@@ -1192,7 +1192,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                             return (
                                 <div
                                     key={plan.id}
-                                    className={`hp-plan-card${hasDue ? " has-due" : ""}${isDone ? " is-done" : ""}`}
+                                    className={`hp-plan-card${hasDue || idle ? " has-due" : ""}${isDone ? " is-done" : ""}`}
                                     onClick={() => { setActivePlan(plan); setView(VIEW_PLAN); }}
                                 >
                                     <div className="hp-plan-card-top">
