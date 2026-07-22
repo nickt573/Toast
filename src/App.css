@@ -667,6 +667,7 @@ textarea { overflow-y: scroll; }
 .hp-free-todo-option:hover,
 .hp-deck-row:hover,
 .hp-resources-list .st-resource-card:hover,
+.st-todo-expanded .st-resource-card:hover,
 .plan-srs-row:hover,
 .plan-resource-row:hover,
 .plan-todo-row:hover { --t-stripe: var(--t-stripe-hi); }
