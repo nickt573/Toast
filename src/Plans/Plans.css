@@ -50,7 +50,7 @@
    after the resting colors above, which it ties with on specificity. */
 .plan-todo-edit,
 .plan-resource-row.editing { --t-stripe: var(--t-stripe-hi); }
-.plan-form-sublabel { font-size: 12px; margin-bottom: 2px; color: var(--t-text-2); }
+.plan-form-sublabel { font-size: 12px; margin-bottom: 2px; color: var(--t-label); }
 .plan-pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .plan-form-actions { display: flex; gap: 8px; }
 
