@@ -83,7 +83,7 @@ export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGro
             <div className="plan-todo-row" style={{ opacity: dimmed ? 0.5 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 17, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ fontSize: 17, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
                             {todo.text}
                         </div>
 

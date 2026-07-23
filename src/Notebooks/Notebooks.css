@@ -2,23 +2,25 @@
 .nb-root { display: flex; flex-direction: column; height: 100%; }
 
 .nb-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
-.nb-notebook-name { font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-text); }
+.nb-notebook-name { font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-title); }
 .nb-notebook-name-input { flex: 1; }
 .nb-new-notebook { display: flex; gap: 8px; padding: 10px var(--t-page-pad); background: var(--t-plum-bdr); flex-shrink: 0; }
 .nb-new-notebook input { flex: 1; border-color: var(--t-plum-bdr); }
 .nb-new-notebook input:focus { border-color: var(--t-accent); }
 
 /* Merge panel extends the landing header so the two read as one band */
-.landing-hdr:has(+ .nb-merge-panel) { border-bottom: none; }
-.nb-merge-panel { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 25%, #fff); padding: 10px var(--t-page-pad); background: var(--hdr-band); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), var(--t-plum-bdr)); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+/* The panel is the bottom of the header stack while it is open, so the shadow is its
+   to cast. */
+.landing-hdr:has(+ .nb-merge-panel) { box-shadow: none; }
+.nb-merge-panel { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 25%, #fff); padding: 10px var(--t-page-pad); background: var(--hdr-band); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 .nb-merge-panel input:not([type="checkbox"]), .nb-merge-panel select { border-color: var(--t-plum-bdr); }
 .nb-merge-panel input:focus, .nb-merge-panel select:focus { border-color: var(--t-accent); }
 .nb-merge-row { display: flex; gap: 8px; align-items: center; }
 .nb-merge-row select { flex: 1; }
 
 .nb-pages-root { display: flex; flex-direction: column; height: 100%; }
-.nb-pages-header { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), var(--t-plum-bdr)); background: var(--hdr-band); flex-shrink: 0; }
-.nb-pages-header:has(+ .nb-search) { border-bottom: none; }
+.nb-pages-header { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
+.nb-pages-header:has(+ .nb-search) { box-shadow: none; }
 .nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
 
 /* Search bar extends the page header so the two read as one band */
@@ -29,8 +31,10 @@
   --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff);
   padding: 6px var(--t-page-pad);
   background: var(--hdr-band);
-  border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), var(--t-plum-bdr));
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--t-shadow-hdr);
 }
 .nb-search input { border-color: var(--t-plum-bdr); }
 .nb-search input:focus { border-color: var(--t-accent); }
@@ -160,7 +164,7 @@
 .nb-inline-prompt input { flex: 1; min-width: 140px; }
 
 /* Page nav: deep peach matching the search band at the top */
-.nb-page-nav { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--t-border-2); background: var(--t-surface-3); flex-shrink: 0; font-size: 13px; color: var(--t-text-2); }
+.nb-page-nav { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--t-border-2); background: var(--t-surface-4); flex-shrink: 0; font-size: 13px; color: var(--t-text-2); }
 .nb-page-nav-indicator { display: inline-flex; align-items: center; gap: 5px; }
 .nb-page-jump { width: 48px; text-align: center; padding: 2px 4px; font-size: 12px; background: var(--t-surface); appearance: textfield; -moz-appearance: textfield; }
 .nb-page-jump::-webkit-outer-spin-button,
@@ -182,14 +186,15 @@
   overflow: hidden; z-index: 5;
 }
 
-/* The handle: docked bar when closed, panel header when open */
+/* The handle: docked bar when closed, panel header when open. Closed, it keeps the same
+   rounded top corners it has as the open panel's header, and rounds its bottoms to match. */
 .nb-card-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   cursor: pointer; user-select: none;
   padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--t-label);
   background: var(--t-surface-4);
   border: none;
-  border-radius: var(--t-r-btn);
+  border-radius: var(--t-r);
   box-shadow: var(--t-shadow-sm);
 }
 .nb-card-toggle:hover { filter: brightness(0.97); }
@@ -205,7 +210,8 @@
 .nb-card-body { display: none; }
 /* Always reserve the scroll track (like .dk-new-card-dark) so content never shifts */
 .nb-card-creator.open .nb-card-body { display: block; flex: 1; min-height: 0; overflow-y: scroll; }
-.nb-card-creator.open .dk-new-card { background: var(--t-surface-2); border-top: none; }
+/* The form and its fields come from the shared .dk-new-card rules, the same as the deck
+   creator. Only this wrapper is notebook-specific. */
 
 .nb-page-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .nb-page-title-row .nb-page-title { flex: 1; margin-bottom: 0; }

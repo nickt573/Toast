@@ -123,7 +123,44 @@ function bucketKey(dateStr, unit) {
   return dateStr;
 }
 
-function buildOverTimeData(groupStats, unit = "day") {
+function nextBucket(key, unit) {
+  if (unit === "month") {
+    let [y, m] = key.split("-").map(Number);
+    if (m === 12) { y += 1; m = 1; } else m += 1;
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }
+  return addDays(key, unit === "week" ? 7 : 1);
+}
+
+// Every bucket between the ends gets a label, empty or not. Otherwise a day nothing was
+// studied on simply vanishes and the bars either side of it read as consecutive. The
+// ends come from the window being shown when there is one, so a 30d page stays 30 wide
+// however little of it was studied, and from the data itself for "All".
+function bucketRange(keys, unit, from = null, to = null) {
+  const sorted = [...keys].sort();
+  const start = from ?? sorted[0];
+  const end   = to   ?? sorted[sorted.length - 1];
+  if (!start || !end) return [];
+  const out = [];
+  for (let k = start; k <= end; k = nextBucket(k, unit)) out.push(k);
+  return out;
+}
+
+// A window starts at its first bucket with something in it, so two sessions in the last
+// three days read as three days rather than four blanks and then three. Blanks after
+// that stay, including a run at the end: not having studied yet today is worth seeing.
+function windowBuckets(byDate, unit, win) {
+  const dates = bucketRange(
+    Object.keys(byDate),
+    unit,
+    win?.start ? bucketKey(win.start, unit) : null,
+    win?.end   ? bucketKey(win.end,   unit) : null,
+  );
+  const first = dates.findIndex(d => byDate[d]);
+  return first === -1 ? [] : dates.slice(first);
+}
+
+function buildOverTimeData(groupStats, unit = "day", win = null) {
   const byDate = {};
   groupStats.forEach(r => {
     const key = bucketKey(r.date, unit);
@@ -135,31 +172,28 @@ function buildOverTimeData(groupStats, unit = "day") {
     byDate[key].d       += r.num_demote;
   });
 
-  const dates = Object.keys(byDate).sort();
-  const labels = dates;
+  const dates = windowBuckets(byDate, unit, win);
+  const at = d => byDate[d] ?? { new: 0, promote: 0, demote: 0, p: 0, d: 0 };
 
   const barData = {
-    labels,
+    labels: dates,
     datasets: [
-      { label: "New",      data: dates.map(d => byDate[d].new),     backgroundColor: BLUE_BG,  stack: "s" },
-      { label: "Promoted", data: dates.map(d => byDate[d].promote), backgroundColor: GREEN_BG, stack: "s" },
-      { label: "Demoted",  data: dates.map(d => byDate[d].demote),  backgroundColor: RED_BG,   stack: "s" },
+      { label: "New",      data: dates.map(d => at(d).new),     backgroundColor: BLUE_BG,  stack: "s" },
+      { label: "Promoted", data: dates.map(d => at(d).promote), backgroundColor: GREEN_BG, stack: "s" },
+      { label: "Demoted",  data: dates.map(d => at(d).demote),  backgroundColor: RED_BG,   stack: "s" },
     ],
   };
 
-  const retentionLabels = [];
-  const retentionData   = [];
-  dates.forEach(d => {
-    const p = byDate[d].p;
-    const total = p + byDate[d].d;
-    if (total > 0) {
-      retentionLabels.push(d);
-      retentionData.push(Math.round((p / total) * 100));
-    }
+  // Retention rides the same labels as the bars so the two line up, but a bucket with
+  // nothing reviewed has no rate to plot, so it goes in as a null and the line breaks.
+  const retentionData = dates.map(d => {
+    const { p, d: dem } = at(d);
+    return (p + dem) > 0 ? Math.round((p / (p + dem)) * 100) : null;
   });
+  const hasRetention = retentionData.some(v => v !== null);
 
   const lineData = {
-    labels: retentionLabels,
+    labels: dates,
     datasets: [
       {
         label: "Retention %",
@@ -173,10 +207,10 @@ function buildOverTimeData(groupStats, unit = "day") {
     ],
   };
 
-  return { barData, lineData };
+  return { barData, lineData, hasRetention };
 }
 
-function buildTimeSpentData(groupStats, todoStats, unit = "day") {
+function buildTimeSpentData(groupStats, todoStats, unit = "day", win = null) {
   const byDate = {};
   const add = (r, kind) => {
     const key = bucketKey(r.date, unit);
@@ -186,14 +220,15 @@ function buildTimeSpentData(groupStats, todoStats, unit = "day") {
   todoStats.forEach(r => add(r, "todo"));
   groupStats.forEach(r => add(r, "deck"));
 
-  const dates = Object.keys(byDate).sort();
+  const dates = windowBuckets(byDate, unit, win);
   const toHours = m => Math.round((m / 60) * 10) / 10;
+  const at = d => byDate[d] ?? { todo: 0, deck: 0 };
 
   return {
     labels: dates,
     datasets: [
-      { label: "Todos", data: dates.map(d => toHours(byDate[d].todo)), backgroundColor: YELLOW_BG, stack: "s" },
-      { label: "Decks", data: dates.map(d => toHours(byDate[d].deck)), backgroundColor: BLUE_BG,   stack: "s" },
+      { label: "Todos", data: dates.map(d => toHours(at(d).todo)), backgroundColor: YELLOW_BG, stack: "s" },
+      { label: "Decks", data: dates.map(d => toHours(at(d).deck)), backgroundColor: BLUE_BG,   stack: "s" },
     ],
   };
 }
@@ -332,7 +367,7 @@ const RANGES = [
   { label: "90d", days: 90 },
 ];
 
-function ChartPanel({ groupStats: allGroupStats, todoStats }) {
+function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const [tab, setTab] = useState("bytime");
   const [range,  setRange]  = useState(30);
   const [offset, setOffset] = useState(0);
@@ -347,9 +382,12 @@ function ChartPanel({ groupStats: allGroupStats, todoStats }) {
   function computeWindow(allDates) {
     const minDate = allDates[0] ?? null;
     const maxDate = allDates[allDates.length - 1] ?? null;
+    // A fixed range ends today rather than on the last day studied, so a quiet stretch
+    // since the last session shows as the blank days it is.
+    const anchor = today ?? maxDate;
     let start = null, end = null;
-    if (range !== null && maxDate) {
-      end   = addDays(maxDate, -offset * range);
+    if (range !== null && anchor) {
+      end   = addDays(anchor, -offset * range);
       start = addDays(end, -(range - 1));
     }
     // "All" keeps every datapoint but widens the unit so a lifetime of history stays
@@ -366,13 +404,16 @@ function ChartPanel({ groupStats: allGroupStats, todoStats }) {
   const inWindow = (win) => (r) => win.start === null || (r.date >= win.start && r.date <= win.end);
 
   const overWin = computeWindow([...new Set(groupStats.map(r => r.date))].sort());
-  const { barData, lineData } = buildOverTimeData(groupStats.filter(inWindow(overWin)), overWin.unit);
+  const { barData, lineData, hasRetention } = buildOverTimeData(
+    groupStats.filter(inWindow(overWin)), overWin.unit, overWin,
+  );
 
   const timeWin = computeWindow([...new Set([...groupStats, ...todoStats].map(r => r.date))].sort());
   const timeData = buildTimeSpentData(
     groupStats.filter(inWindow(timeWin)),
     todoStats.filter(inWindow(timeWin)),
     timeWin.unit,
+    timeWin,
   );
 
   const byDeckData    = buildByDeckData(groupStats);
@@ -480,7 +521,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats }) {
                     <div style={{ height: 200 }}>
                       <Bar data={barData} options={barOpts(true, "Cards", DATE_TICKS)} />
                     </div>
-                    {lineData.labels.length > 0 && (
+                    {hasRetention && (
                       <div style={{ marginTop: 14 }}>
                         <div style={{ fontSize: 11, color: AMBER, marginBottom: 4 }}>Retention %</div>
                         <div style={{ height: 150 }}>
@@ -534,6 +575,8 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
   // How many windows back from the newest session each deck card is paged. 0 is the
   // most recent fortnight.
   const [windowBack, setWindowBack] = useState({});
+  // The one session row a click has selected, so the card's foot acts on it alone.
+  const [selectedRowId, setSelectedRowId] = useState(null);
 
   // One card per deck, a fortnight of days paged inside it.
   //
@@ -640,8 +683,9 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
           return (
             <button
               key={id}
-              className={`st-pill${isActive ? " active" : ""}${dead ? ` st-pill-dead st-pill-dead--${dead}` : ""}`}
-              onClick={() => setDeckFilter(id)}>
+              className={`st-pill st-pill--name${isActive ? " active" : ""}${dead ? ` st-pill-dead st-pill-dead--${dead}` : ""}`}
+              onClick={() => setDeckFilter(id)}
+              title={deckName(id)}>
               {deckName(id)}
             </button>
           );
@@ -662,6 +706,18 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
         const winEnd   = anchor ? addDays(anchor, -back * WINDOW_DAYS) : null;
         const winStart = winEnd ? addDays(winEnd, -(WINDOW_DAYS - 1)) : null;
         const rows = anchor ? deckRows.filter(r => r.date <= winEnd && r.date >= winStart) : [];
+        // Only a row on the current page counts as selected, so paging away drops the
+        // selection and the foot falls back to acting on the whole deck.
+        const selectedRow = rows.find(r => r.id === selectedRowId);
+        // The reset line belongs to the run it introduces, so it is anchored on the
+        // first row of the older run rather than on the row that opened the newer one.
+        // Those two sit either side of the same boundary, so the line lands in the same
+        // place whenever both are on one page, and follows the older rows onto the
+        // previous page when the fortnight splits between them. It also means a reset
+        // with nothing left underneath draws no line at all.
+        const eraFirstRowIds = new Set(
+          deckRows.filter((r, i) => i > 0 && deckRows[i - 1].starts_era).map(r => r.id)
+        );
 
         const totalTime = deckRows.reduce((s, r) => s + r.time_spent_minutes, 0);
         const totalN    = deckRows.reduce((s, r) => s + r.num_new, 0);
@@ -673,39 +729,33 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
         const isGone = deckRows.length > 0 && deckRows[0].group_id === null;
         const wasMerged = deckRows[0]?.is_merged;
         const isArchived = allArchived(deckRows);
-        const dead = deadState(deckRows);
         const step = n => setWindowBack(v => ({ ...v, [cardId]: back + n }));
 
         return (
-          <div key={cardId} className={`st-deck-card${dead ? ` st-deck-card--dead st-deck-card--${dead}` : ""}`}>
+          <div key={cardId} className="st-deck-card">
             <div className="st-deck-header" onClick={() => toggle(cardId)} style={{ cursor: "pointer" }}>
-              <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                <span className="st-deck-name">{name}</span>
-                {isGone && (wasMerged
-                  ? <span className="st-badge st-badge-merged">Merged</span>
-                  : <span className="st-badge st-badge-deleted">Deleted</span>)}
-                {isArchived && (
-                  <span className="st-badge st-badge-archived" title="Every session in this deck is archived, so none of it counts toward your totals">Archived</span>
-                )}
-              </span>
-              <span className="st-deck-meta">
-                <span className="st-meta-pill">{deckRows.length} session{deckRows.length !== 1 ? "s" : ""}</span>
+              <div className="st-deck-line">
+                <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="st-deck-name">{name}</span>
+                </span>
+                <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
+              </div>
+              <div className="st-deck-meta">
                 <span className="st-meta-pill st-meta-pill--new">{totalN} new</span>
                 <span className="st-meta-pill st-meta-pill--promote">+{totalP}</span>
                 <span className="st-meta-pill st-meta-pill--demote">−{totalD}</span>
                 {avgRet !== null && <span className={`st-meta-pill ${retentionPillClass(avgRet)}`}>{Math.round(avgRet * 100)}% ret.</span>}
-                <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
-              </span>
-              <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }} onClick={e => e.stopPropagation()}>
-                {deckRows.length > 0 && (
-                  <>
-                    <ArchiveButton rows={deckRows} label="Archive all"
-                      onArchive={a => archiveStats(deckRows, a)} />
-                    <ConfirmDelete label="Delete all" small onConfirm={() => deleteStats(deckRows)} />
-                  </>
-                )}
-                <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
-              </span>
+                <span className="st-deck-meta-right">
+                  {isGone && (wasMerged
+                    ? <span className="st-badge st-badge-merged">Merged</span>
+                    : <span className="st-badge st-badge-deleted">Deleted</span>)}
+                  {isArchived && (
+                    <span className="st-badge st-badge-archived" title="Every session in this deck is archived, so none of it counts toward your totals">Archived</span>
+                  )}
+                  <span className="st-meta-pill st-meta-pill--count">{deckRows.length} session{deckRows.length !== 1 ? "s" : ""}</span>
+                  <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
+                </span>
+              </div>
             </div>
 
             {isOpen && (
@@ -715,13 +765,13 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>Date</th>
                     <th style={{ color: "var(--t-blue)" }}>New</th>
                     <th style={{ color: "var(--t-green)" }}>Promoted</th>
                     <th style={{ color: "var(--t-red)" }}>Demoted</th>
                     <th>Retention</th>
-                    <th>Time</th>
                     <th></th>
+                    <th>Date</th>
+                    <th>Time</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -732,15 +782,15 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                   )}
                   {rows.map((r, i) => (
                     <Fragment key={r.id}>
-                      <tr className={i % 2 === 1 ? "st-row-alt" : ""}>
-                        <td style={{ fontSize: 12, fontVariantNumeric: "tabular-nums" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                            {r.date}
-                            {r.is_archived && (
-                              <span className="st-badge st-badge-archived" title="Archived, so it isn't counted toward your totals">Archived</span>
-                            )}
-                          </span>
-                        </td>
+                      {eraFirstRowIds.has(r.id) && (
+                        <tr>
+                          <td colSpan={7} className="st-era-divider">Progress Reset</td>
+                        </tr>
+                      )}
+                      <tr
+                        className={`${i % 2 === 1 ? "st-row-alt" : ""}${selectedRowId === r.id ? " st-row-selected" : ""}`}
+                        onClick={() => setSelectedRowId(id => (id === r.id ? null : r.id))}
+                        style={{ cursor: "pointer" }}>
                         <td><span className="st-badge" style={{ background: "var(--t-blue)", color: "var(--t-accent-fg)" }}>{r.num_new}</span></td>
                         <td><span className="st-badge" style={{ background: "var(--t-green)", color: "var(--t-accent-fg)" }}>{r.num_promote}</span></td>
                         <td><span className="st-badge" style={{ background: "var(--t-red)", color: "var(--t-accent-fg)" }}>{r.num_demote}</span></td>
@@ -765,36 +815,48 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                             </div>
                           )}
                         </td>
-                        <td style={{ fontSize: 12, color: "var(--t-text-3)" }}>{fmtTime(r.time_spent_minutes)}</td>
-                        <td>
-                          <span style={{ display: "inline-flex", gap: 4, justifyContent: "flex-end" }}>
-                            <ArchiveButton rows={[r]} onArchive={a => archiveRow(r.id, a)} />
-                            <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
+                        <td></td>
+                        <td className="st-date-cell">
+                          <span className="st-date">
+                            {r.date}
+                            {r.is_archived && (
+                              <span className="st-badge st-badge-archived st-date-arch" title="Archived, so it isn't counted toward your totals">A</span>
+                            )}
                           </span>
                         </td>
+                        <td style={{ fontSize: 12, color: "var(--t-text-3)" }}>{fmtTime(r.time_spent_minutes)}</td>
                       </tr>
-                      {/* Sits under the row that opened the run, since the table reads
-                          newest first, so everything below the line is the run before.
-                          A reset can split a single day, and without this two rows
-                          would share a date with nothing saying why. */}
-                      {r.starts_era && (
-                        <tr>
-                          <td colSpan={7} className="st-era-divider">Progress Reset</td>
-                        </tr>
-                      )}
                     </Fragment>
                   ))}
                 </tbody>
               </table>
             )}
 
-            {isOpen && maxBack > 0 && (
+            {/* Every deck that has been studied gets the bar, whether or not there is a
+                fortnight to page back to, so the deck's own actions always have a home
+                at the foot of the card. */}
+            {isOpen && deckRows.length > 0 && (
               <div className="st-window-nav">
-                <button className="st-btn-sm" disabled={back >= maxBack}
-                  onClick={() => step(1)} title="Earlier sessions">‹</button>
-                <span className="st-window-label">{fmtShortDay(winStart)} - {fmtShortDay(winEnd)}</span>
-                <button className="st-btn-sm" disabled={back <= 0}
-                  onClick={() => step(-1)} title="Later sessions">›</button>
+                {selectedRow ? (
+                  <>
+                    <ArchiveButton rows={[selectedRow]} label="Archive"
+                      onArchive={a => archiveRow(selectedRow.id, a)} />
+                    <ConfirmDelete label="Delete" small onConfirm={() => deleteRow(selectedRow.id)} />
+                  </>
+                ) : (
+                  <>
+                    <ArchiveButton rows={deckRows} label="Archive all"
+                      onArchive={a => archiveStats(deckRows, a)} />
+                    <ConfirmDelete label="Delete all" small onConfirm={() => deleteStats(deckRows)} />
+                  </>
+                )}
+                <span className="st-window-pager">
+                  <button className="st-btn-sm" disabled={back >= maxBack}
+                    onClick={() => step(1)} title="Earlier sessions">‹</button>
+                  <span className="st-window-label">{fmtShortDay(winStart)} - {fmtShortDay(winEnd)}</span>
+                  <button className="st-btn-sm" disabled={back <= 0}
+                    onClick={() => step(-1)} title="Later sessions">›</button>
+                </span>
               </div>
             )}
           </div>
@@ -1000,6 +1062,9 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
           const isOpen    = !!expanded[r.id];
           const isEditing = editingId === r.id;
           const cats      = parseCategories(r.category);
+          // Categories, time and units ride in the collapsed row, not in here, so an
+          // entry can carry those and still have nothing to open up to.
+          const isBare    = !r.details && r.resources.length === 0 && r.groups.length === 0;
           return (
             <div key={r.id} className="st-todo-row">
               <div className="st-todo-collapsed" onClick={() => toggle(r.id)}>
@@ -1012,7 +1077,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
                   ))}
                   <span className="st-todo-meta-right">
-                    {r.num_unit && <span className="st-meta-pill st-todo-unit" title={r.num_unit}>{r.num_unit}</span>}
+                    {r.num_unit && <span className="st-meta-pill st-meta-pill--count st-todo-unit" title={r.num_unit}>{r.num_unit}</span>}
                     <span className="st-meta-pill st-meta-pill--time">{fmtTime(r.time_spent_minutes)}</span>
                   </span>
                 </div>
@@ -1066,10 +1131,20 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       </div>
                     </div>
                   )}
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="st-btn-sm" onClick={() => startEdit(r)}>Edit</button>
-                    <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
-                  </div>
+                  {isBare && (
+                    <div style={{ textAlign: "center", color: "var(--t-text-3)", fontStyle: "italic", padding: "10px 0" }}>
+                      Nothing else recorded for this todo.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* The foot of an open todo, holding its actions the way a deck card's
+                  bar holds Archive all and Delete all. */}
+              {isOpen && !isEditing && (
+                <div className="st-todo-foot">
+                  <button className="st-btn-sm" onClick={() => startEdit(r)}>Edit</button>
+                  <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
                 </div>
               )}
 
@@ -1370,7 +1445,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           </div>
 
           {/* Chart panel */}
-          <ChartPanel groupStats={groupStats} todoStats={todoStats} />
+          <ChartPanel groupStats={groupStats} todoStats={todoStats} today={today} />
 
           {/* Content tabs */}
           <div className="st-tabs">

@@ -218,7 +218,6 @@ const imgStyle = {
     borderRadius: "var(--t-r)",
     display: "block",
     margin: "10px auto 0",
-    border: "1px solid var(--t-border)",
 };
 
 const audioWrapStyle = {

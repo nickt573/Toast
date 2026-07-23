@@ -8,9 +8,11 @@
   height: 44px;
   padding: 0 var(--t-page-pad);
   --hdr-band: color-mix(in srgb, #C6C8C9 35%, #fff);   /* a soft silver tint, in step with the other header bands */
-  border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), #C6C8C9);
   background: var(--hdr-band);
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--t-shadow-hdr);
 }
 .togo-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; color: var(--t-title); }
 .togo-header-sub { margin-left: auto; font-size: 11px; color: var(--t-text-3); }
@@ -135,16 +137,16 @@ button.togo-label:hover { background: none; color: var(--t-text); border-color: 
 /* Close behavior */
 .togo-choices { display: flex; gap: 8px; margin-top: 6px; }
 
-/* A real border rather than an inset shadow, so the chosen option reads as outlined in
-   gold instead of merely tinted. Every state names its own border color, otherwise the
-   global button:hover paints it mauve. */
+/* No border at all, so the chosen option reads by its caramel fill alone. Hover deepens
+   whatever the option is resting on rather than washing it out. */
 button.togo-choice {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
   padding: 9px 12px;
-  border: 1px solid var(--t-border-2);
+  /* Held transparent rather than dropped, so choosing an option doesn't resize the row */
+  border: var(--t-bw) solid transparent;
   border-radius: var(--t-r-btn);
   background: var(--t-bg);
   box-shadow: var(--t-shadow-sm);
@@ -152,16 +154,18 @@ button.togo-choice {
   white-space: normal;
 }
 button.togo-choice:hover {
-  background: var(--t-surface-2);
-  border-color: var(--t-border-3);
+  background: color-mix(in srgb, var(--t-bg) 94%, var(--t-text));
   filter: none;
 }
-button.togo-choice.active,
-button.togo-choice.active:hover {
+/* The chosen option keeps the gold border it always had */
+button.togo-choice.active {
   background: var(--t-accent-bg);
   border-color: var(--t-accent);
   box-shadow: var(--t-shadow-sm);
   filter: none;
+}
+button.togo-choice.active:hover {
+  background: color-mix(in srgb, var(--t-accent-bg) 94%, var(--t-text));
 }
 button.togo-choice.active .togo-choice-label { color: var(--t-accent-h); }
 

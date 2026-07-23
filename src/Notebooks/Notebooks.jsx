@@ -1023,9 +1023,13 @@ export default function Notebooks({ setToast, initialNotebook, onClearInitial, r
     const [activeNotebook, setActiveNotebook] = useState(initialNotebook ?? null);
     const [startNewOnOpen, setStartNewOnOpen] = useState(false);
 
-    // Re-clicking the Notebooks tab comes back here. Skips the first run, which is mount.
+    // Re-clicking the Notebooks tab comes back here. Compared against the count this
+    // mount started on: the effect runs on mount as well, and the count stays above zero
+    // once anything has been re-clicked, so a notebook opened from a plan would be
+    // closed again the moment it opened.
+    const signalAtMount = useRef(homeSignal);
     useEffect(() => {
-        if (!homeSignal) return;
+        if (homeSignal === signalAtMount.current) return;
         setActiveNotebook(null);
         setStartNewOnOpen(false);
         setView(VIEW_NOTEBOOKS);

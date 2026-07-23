@@ -723,8 +723,8 @@ function StudySession({ group, onBack, setToast }) {
                 {card && (
                     <div style={{ marginBottom: 8 }}>
                         {card.tier > 0
-                            ? <span className="pill pill-green">Review</span>
-                            : <span className="pill pill-blue">New</span>}
+                            ? <span className="pill pill-green">Review{card.is_overdue === true && " - Overdue"}</span>
+                            : <span className="pill pill-new">New{card.is_overdue === true && " - Overdue"}</span>}
                     </div>
                 )}
 
@@ -754,7 +754,7 @@ function StudySession({ group, onBack, setToast }) {
                         <span />
                         <button className="hp-swap-btn" onClick={handleSwap}>Swap</button>
                         <span className="hp-swap-tip">
-                            <Tip text="Pause this card and bring in another one that's ready to go (ASAP). Useful when the card is well-known and you would like a more challenging replacement. The paused card stays paused until you unpause it in the deck. If this card is overdue or there are no eligble replacements, a replacement card will not be found." />
+                            <Tip text={`Pause this card and bring in another one that's ready to go (due "ASAP"). Useful when the card is well-known and you would like a more challenging replacement. The paused card stays paused until you unpause it in the deck. If this card is overdue or there are no eligible replacements, a replacement card will not be found.`} />
                         </span>
                     </div>
                 )}
@@ -984,8 +984,10 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 <span className="hp-deck-name">{group.name}</span>
                                 {!isEmpty &&
                                     <span style={{ display: "flex", gap: 10 }}>
-                                        <span className="hp-deck-new">{newDue > 0 && `New: ${newDue}`}</span>
-                                        <span className="hp-deck-review">{reviewDue > 0 && `Review: ${reviewDue}`}</span>
+                                        {/* Both always shown, dimmed at zero the way the session header does it,
+                                            so neither ever slides into the other's place. */}
+                                        <span className="hp-deck-new" style={{ opacity: newDue > 0 ? 1 : 0.45 }}>New: {newDue}</span>
+                                        <span className="hp-deck-review" style={{ opacity: reviewDue > 0 ? 1 : 0.45 }}>Review: {reviewDue}</span>
                                     </span>
                                 }
                             </div>
@@ -1077,10 +1079,13 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
     }, [view]);
 
     // Re-clicking the Home tab drops all the way back to the dashboard, from a plan or
-    // from mid-session. StudySession flushes its elapsed time as it unmounts, so
-    // leaving this way costs nothing. Skips mount.
+    // from mid-session. StudySession flushes its elapsed time as it unmounts, so leaving
+    // this way costs nothing. Compared against the count this mount started on, since
+    // the effect runs on mount too and the count never returns to zero: coming back from
+    // a deck would land on the dashboard instead of the plan it left.
+    const signalAtMount = useRef(homeSignal);
     useEffect(() => {
-        if (!homeSignal) return;
+        if (homeSignal === signalAtMount.current) return;
         setView(VIEW_HOME);
         setActivePlan(null);
         setActiveGroup(null);

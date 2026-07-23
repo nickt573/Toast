@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
@@ -653,9 +653,13 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
 
     const toggleSection = (key) => setCollapsed(c => ({ ...c, [key]: !c[key] }));
 
-    // Re-clicking the Plans tab comes back to the plan list. Skips mount.
+    // Re-clicking the Plans tab comes back to the plan list. Compared against the count
+    // this mount started on, since the effect runs on mount too and the count stays above
+    // zero once anything has been re-clicked: a plan reopened on the way back from a deck
+    // would close itself.
+    const signalAtMount = useRef(homeSignal);
     useEffect(() => {
-        if (homeSignal) setEditingPlan(null);
+        if (homeSignal !== signalAtMount.current) setEditingPlan(null);
     }, [homeSignal]);
 
     useEffect(() => {

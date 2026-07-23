@@ -38,6 +38,9 @@ const parseFile = (file) => {
   return file.split(/[\\/]/).pop();
 };
 
+// A file picker is muted while empty and deepens once it holds something
+const fileFieldClass = (file) => `input-readonly${file ? " has-file" : ""}`;
+
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
@@ -645,7 +648,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
       <div className="dk-field">
         <label>Front Image</label>
         <div className="dk-file-row">
-          <input type="text" value={parseFile(form.front_image ?? "")} readOnly placeholder="No file selected" />
+          <input type="text" className={fileFieldClass(form.front_image)} value={parseFile(form.front_image ?? "")} readOnly placeholder="No file selected" />
           <button onClick={pickFrontImage}>Browse</button>
           {form.front_image && <button onClick={() => set("front_image", null)}>Clear</button>}
         </div>
@@ -654,7 +657,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
       <div className="dk-field">
         <label>Front Audio</label>
         <div className="dk-file-row">
-          <input type="text" value={parseFile(form.front_audio ?? "")} readOnly placeholder="No file selected" />
+          <input type="text" className={fileFieldClass(form.front_audio)} value={parseFile(form.front_audio ?? "")} readOnly placeholder="No file selected" />
           <button onClick={pickFrontAudio}>Browse</button>
           {form.front_audio && <button onClick={() => set("front_audio", null)}>Clear</button>}
         </div>
@@ -678,7 +681,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
       <div className="dk-field">
         <label>Back Image</label>
         <div className="dk-file-row">
-          <input type="text" value={parseFile(form.back_image ?? "")} readOnly placeholder="No file selected" />
+          <input type="text" className={fileFieldClass(form.back_image)} value={parseFile(form.back_image ?? "")} readOnly placeholder="No file selected" />
           <button onClick={pickBackImage}>Browse</button>
           {form.back_image && <button onClick={() => set("back_image", null)}>Clear</button>}
         </div>
@@ -687,7 +690,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
       <div className="dk-field">
         <label>Back Audio</label>
         <div className="dk-file-row">
-          <input type="text" value={parseFile(form.back_audio ?? "")} readOnly placeholder="No file selected" />
+          <input type="text" className={fileFieldClass(form.back_audio)} value={parseFile(form.back_audio ?? "")} readOnly placeholder="No file selected" />
           <button onClick={pickBackAudio}>Browse</button>
           {form.back_audio && <button onClick={() => set("back_audio", null)}>Clear</button>}
         </div>
@@ -816,26 +819,26 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
       <div className="dk-new-card-row"><label>Front</label><textarea rows={2} value={form.front} onChange={(e) => set("front", e.target.value)} /></div>
       <div className="dk-new-card-row">
         <label>Front Image</label>
-        <input type="text" className="input-readonly" value={parseFile(form.front_image ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
+        <input type="text" className={fileFieldClass(form.front_image)} value={parseFile(form.front_image ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickFrontImage}>Browse</button>
         {form.front_image && <button onClick={() => set("front_image", null)}>Clear</button>}
       </div>
       <div className="dk-new-card-row">
         <label>Front Audio</label>
-        <input type="text" className="input-readonly" value={parseFile(form.front_audio ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
+        <input type="text" className={fileFieldClass(form.front_audio)} value={parseFile(form.front_audio ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickFrontAudio}>Browse</button>
         {form.front_audio && <button onClick={() => set("front_audio", null)}>Clear</button>}
       </div>
       <div className="dk-new-card-row"><label>Back</label><textarea rows={2} value={form.back} onChange={(e) => set("back", e.target.value)} /></div>
       <div className="dk-new-card-row">
         <label>Back Image</label>
-        <input type="text" className="input-readonly" value={parseFile(form.back_image ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
+        <input type="text" className={fileFieldClass(form.back_image)} value={parseFile(form.back_image ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickBackImage}>Browse</button>
         {form.back_image && <button onClick={() => set("back_image", null)}>Clear</button>}
       </div>
       <div className="dk-new-card-row">
         <label>Back Audio</label>
-        <input type="text" className="input-readonly" value={parseFile(form.back_audio ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
+        <input type="text" className={fileFieldClass(form.back_audio)} value={parseFile(form.back_audio ?? "")} readOnly placeholder="No file selected" style={{ flex: 1 }} />
         <button onClick={pickBackAudio}>Browse</button>
         {form.back_audio && <button onClick={() => set("back_audio", null)}>Clear</button>}
       </div>
@@ -1270,19 +1273,18 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                           index % 2 === 1 ? "dk-even" : "",
                           card.id === selectedId ? "selected" : "",
                           card.is_due && deck.plan_id
-                            ? (card.tier === 0
-                                ? "is-new-due"
-                                : card.is_overdue === true
-                                  ? "is-review-overdue"
-                                  : "is-review-due")
-                            : (!card.is_due && card.is_overdue === true ? "is-overdue-only" : ""),
+                            ? (card.tier === 0 ? "is-new-due" : "is-review-due")
+                            : "",
                         ].filter(Boolean).join(" ")}
                         onClick={() => setSelectedId(card.id)}>
                         <td><div className="dk-cell-clamp">{front}</div></td>
                         <td><div className="dk-cell-clamp">{back}</div></td>
                         <td>{card.sequence > 0 ? `${card.sequence}d` : (
                           <>
-                            {card.is_due ? "Today" : "ASAP"}
+                            {card.is_due
+                              ? <span className={card.is_overdue === true ? "dk-overdue" : undefined}
+                                  title={card.is_overdue === true ? "Carried over from an earlier day" : undefined}>Today</span>
+                              : "ASAP"}
                             {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star" title="Prioritized">★</span>}
                           </>
                         )}</td>
@@ -1335,9 +1337,13 @@ export default function Decks({ setToast, initialDeck, onClearInitial, returnTo,
   const openDeck = (deck) => { setActiveDeck(deck); setView(VIEW_CARDS); };
   const goBack = () => { setActiveDeck(null); setView(VIEW_DECKS); };
 
-  // Re-clicking the Decks tab comes back here. Skips the first run, which is mount.
+  // Re-clicking the Decks tab comes back here. Compared against the count this mount
+  // started on, since the effect runs on mount too and the count is only zero until the
+  // first re-click anywhere: testing it directly would bounce a deck opened from a plan
+  // straight back out to the list.
+  const signalAtMount = useRef(homeSignal);
   useEffect(() => {
-    if (homeSignal) goBack();
+    if (homeSignal !== signalAtMount.current) goBack();
   }, [homeSignal]);
 
   return (

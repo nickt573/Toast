@@ -1,6 +1,24 @@
 /* Stats view */
-.st-root { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.st-header { --hdr-band: color-mix(in srgb, #EABA9D 60%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); border-bottom: 1px solid color-mix(in srgb, var(--hdr-band), #EABA9D); background: var(--hdr-band); flex-shrink: 0; }
+.st-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  /* The bands a stat card wears, one per family. Both sit deeper and truer than the
+     app's pale -bg tints, which go grey and go sugary at this size: a real blue for a
+     deck, a golden yellow for a todo. Each one is its card's border as well. */
+  --st-deck-band: #B6D4E2;
+  --st-todo-band: #EFCE8F;
+  /* A step deeper than each band, for the strip of pills under a card's name */
+  --st-deck-band-2: #9AC3D8;
+  --st-todo-band-2: #E4BA69;
+  /* The name on a deck or todo card, darker than body ink now that it sits on a band.
+     Its own colour so the rest of what --t-text writes stays put. */
+  --st-card-name: #3A2C2F;
+}
+/* A real orange rather than the peach it used to mix, but muted, so it sits at the same
+   strength as the bands on the other pages. */
+.st-header { --hdr-band: color-mix(in srgb, #DD8A34 52%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 .st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; color: var(--t-title); }
 .st-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
@@ -27,9 +45,15 @@
 .st-legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 3px; }
 
 .st-pills { display: flex; gap: 5px; flex-wrap: wrap; }
-.st-pill { padding: 3px 12px; border-radius: var(--t-r-btn); border: 1px solid var(--t-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; color: var(--t-btn-fg); font-family: inherit; font-weight: 600; transition: background var(--t-ease); user-select: none; }
+/* Stats pills rest on what is the app button's hover mauve, and hover deeper still.
+   Kept local so ordinary buttons elsewhere stay where they are. */
+.st-pill { --st-pill: var(--t-btn-h); --st-pill-h: #64414C; padding: 3px 12px; border-radius: var(--t-r-btn); border: 1px solid var(--st-pill); background: var(--st-pill); font-size: 12px; cursor: pointer; color: var(--t-btn-fg); font-family: inherit; font-weight: 600; transition: background var(--t-ease); user-select: none; }
+/* Pills that carry a deck's name, which can run as long as the user likes. Capped and
+   ellipsised the way the name in a deck card is, so one long deck can't stretch the
+   filter row across the page. The title attribute carries the full name. */
+.st-pill--name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .st-pill.active { background: var(--t-stat); color: var(--t-accent-fg); border-color: var(--t-stat); }
-.st-pill:hover:not(.active) { background: var(--t-btn-h); }
+.st-pill:hover:not(.active) { background: var(--st-pill-h); border-color: var(--st-pill-h); }
 
 /* Tabs: flat underline, no border (see .app-nav-tab.active::after) */
 .st-tabs { display: flex; gap: 0; margin-bottom: 16px; }
@@ -48,63 +72,76 @@
 .st-tab--decks.active::after { background: var(--t-blue); }
 .st-tab--todos.active::after { background: var(--t-yellow); }
 
-/* Deck cards: deep peach header band over a paper sheet */
-.st-deck-card { background: var(--t-surface); border: 1px solid #EDCBAC; border-radius: var(--t-r); margin-bottom: 8px; overflow: hidden; box-shadow: var(--t-shadow-sm); }
+/* Deck cards wear the blue a deck wears everywhere else in the app, as a header band
+   over bare paper. No frame: the shadow is what lifts the sheet off the page. */
+.st-deck-card { background: var(--t-surface); border: none; border-radius: var(--t-r); margin-bottom: 8px; overflow: hidden; box-shadow: var(--t-shadow-sm); }
+/* Two lines, the same shape a todo row has: the name and its actions up top, the
+   readouts underneath with the count on the left and the rest against the right. */
 .st-deck-header {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: #EDCBAC;
+  flex-direction: column;
+  background: var(--st-deck-band-2);
   cursor: pointer;
 }
-.st-deck-name { font-weight: 600; font-size: 15px; color: var(--t-text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-deck-line { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--st-deck-band-2); }
+.st-deck-name { font-weight: 700; font-size: 15px; color: var(--st-card-name); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* A dead deck recolors as a whole: the header band, the table's column heads, and
-   the frame around them all shift off peach together, so nothing inside the card
-   still reads as live. Each state keeps its badge's tint, and the states mean
-   different things: archived stops counting toward your totals, while deleted and
-   merged stats still count. Only the archived name fades, to match. */
-.st-deck-card--dead { border-color: var(--dead-band); }
-.st-deck-card--dead .st-deck-header,
-.st-deck-card--dead .st-table th { background: var(--dead-band); }
-
-.st-deck-card--archived { --dead-band: #DBD3CF; --dead-bdr: #C4BAB5; --dead-bar: #EDE9E7; }
-.st-deck-card--deleted  { --dead-band: #F0CCC2; --dead-bdr: #DCA294; --dead-bar: #F5D8CF; }
-.st-deck-card--merged   { --dead-band: #C8B4D2; --dead-bdr: #B49CC2; --dead-bar: #E9E0EE; }
-.st-deck-card--archived .st-deck-name { color: var(--t-text-2); }
+/* An archived, deleted, or merged deck keeps the blue card every other deck has. Its
+   badge says which it is, and the filter pill up top carries the state's tint, so the
+   card itself doesn't have to change color to tell you. */
 /* Expand/collapse caret, matches .plan-col-label-caret / .hp-resources-caret */
 .st-caret { font-size: 10px; color: var(--t-text-3); flex-shrink: 0; user-select: none; }
-.st-deck-meta { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); white-space: nowrap; flex-shrink: 0; }
+.st-deck-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--t-text-2); padding: 7px 14px; background: var(--st-deck-band); }
 .st-deck-meta > span { min-width: 0; }
+/* Mirrors .st-todo-meta-right: everything but the session count rides the right edge */
+.st-deck-meta-right { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
 
 .st-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 /* No bottom border on the header row, the card frames the table */
-.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-label); background: #EDCBAC; border-bottom: none; font-weight: 700; }
-.st-table th:first-child { text-align: left; }
+.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-label); background: var(--st-deck-band); border-bottom: none; font-weight: 700; }
 .st-table td { padding: 6px 10px; border-bottom: 1px solid var(--t-border); vertical-align: middle; text-align: center; color: var(--t-text-2); overflow: hidden; }
-.st-table td:first-child { text-align: left; }
+/* A clicked session row highlights a step lighter than the reset line's paper, so the
+   two never read as the same mark, and the card's foot retargets its Archive and Delete
+   onto just that row. */
+.st-table tbody tr.st-row-selected { background: color-mix(in srgb, var(--t-surface-3) 82%, var(--t-surface)); }
 .st-table tr:last-child td { border-bottom: none; }
-/* Fixed column widths for Deck Sessions table (7 cols: Date, New, Promoted, Demoted, Retention, Time, Delete) */
-.st-table col:nth-child(1) { width: auto; }
-.st-table col:nth-child(2) { width: 50px; }
-.st-table col:nth-child(3) { width: 76px; }
-.st-table col:nth-child(4) { width: 66px; }
-.st-table col:nth-child(5) { width: 84px; }
-.st-table col:nth-child(6) { width: 54px; }
-.st-table col:nth-child(7) { width: 168px; }
+/* Column widths for Deck Sessions table (7 cols: New, Promoted, Demoted, Retention,
+   spacer, Date, Time). The empty spacer takes all the slack, so the stat columns stay
+   tight on the left while Date and Time group together on the right, each centered
+   under its own header label. */
+/* The three count columns share one width, so their badges sit an equal distance apart
+   and each header label centers over its own number. */
+.st-table col:nth-child(1),
+.st-table col:nth-child(2),
+.st-table col:nth-child(3) { width: 78px; }
+.st-table col:nth-child(4) { width: 84px; }
+.st-table col:nth-child(5) { width: auto; }
+.st-table col:nth-child(6) { width: 100px; }
+.st-table col:nth-child(7) { width: 54px; }
 
 /* Badges: fixed min-width so 1- and 2-digit values align across rows */
 .st-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; padding: 2px 7px; border-radius: var(--t-r-btn); font-size: 11px; font-weight: 600; }
 .st-badge-deleted { border: none; color: var(--t-accent-fg); background: var(--t-red-2); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; }
-.st-row-alt { background: var(--t-surface-2); }
+/* Lighter than the muted surface it used to take. A card has no border now, so an alt
+   row landing last would sit against the page background and lose its bottom edge. */
+.st-row-alt { background: color-mix(in srgb, var(--t-surface-2) 45%, var(--t-surface)); }
 .st-badge-merged { border: none; color: var(--t-accent-fg); background: var(--t-plum); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; min-width: 0; }
 .st-badge-archived { border: none; color: var(--t-accent-fg); background: var(--t-text-3); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; min-width: 0; }
 
-/* Pages back through a deck's sessions a fortnight at a time, newest first. Sits
-   under the table, and only appears once there is more than one window to show. */
-.st-window-nav { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border-top: 1px solid var(--t-border); }
-.st-window-label { font-weight: 700; font-size: 12px; color: var(--t-text); }
+/* The A hangs off the left edge of the date instead of sitting in the flow, so the date
+   never moves for it. The cell has to stop clipping for that, and the rule it overrides
+   is the more specific one. */
+.st-table td.st-date-cell { font-size: 12px; font-variant-numeric: tabular-nums; overflow: visible; }
+.st-date { position: relative; }
+.st-date-arch { position: absolute; right: calc(100% + 5px); top: 50%; transform: translateY(-50%); }
+
+/* The foot of a deck card: its actions on the left, and on the right the pager that
+   walks back through the sessions a fortnight at a time, newest first. The band colour
+   is the only edge it needs, so no rule on top: the last session row would read as if
+   it had a border of its own, which no other row in the table has. */
+.st-window-nav { display: flex; align-items: center; gap: 7px; padding: 7px 14px; }
+.st-window-pager { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; }
+.st-window-label { font-weight: 700; font-size: 12px; color: var(--t-label); }
 
 /* Marks where a reset split the history. Two rows can share a date, so without this
    the boundary would be invisible. Qualified with .st-table td, otherwise that rule
@@ -119,18 +156,19 @@
   user-select: none;
 }
 
-/* Both bars are chrome, not data, so they take a pale tint of the card's own colour:
-   light enough never to be mistaken for a zebra row, still clearly not the header
-   band. Every state carries its own, so a dead card doesn't keep two peach stripes. */
-.st-era-divider,
-.st-window-nav { background: var(--dead-bar, var(--t-stat-bg)); }
+/* The reset line is a third step past the two the rows alternate between, so it reads
+   as deeper paper rather than as the card's blue reaching into the table. */
+.st-era-divider { background: var(--t-surface-3); }
+/* The pager sits under the table as part of the card's frame, so it takes the header's
+   own blue rather than a wash of it */
+.st-window-nav { background: var(--st-deck-band); }
 
 .st-ret-bar-wrap { display: block; width: 100%; }
 .st-ret-bar-track {
   position: relative;
   width: 100%;
   height: 17px;
-  background: var(--t-border);
+  background: var(--t-border-3);
   border-radius: var(--t-r-btn);
   overflow: hidden;
 }
@@ -157,14 +195,16 @@
 /* Day sections: labeled rule replaces per-row dates */
 .st-day-group { display: flex; flex-direction: column; gap: 5px; }
 .st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 11px; font-weight: 700; color: var(--t-label); user-select: none; }
-.st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 2px; background: var(--t-border-2); }
+/* The rules take the date's own ink watered down, so they read as the same mark without shouting */
+.st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 2px; background: color-mix(in srgb, var(--t-label) 45%, var(--t-bg)); }
 .st-day-group:first-child .st-day-divider { margin-top: 0; }
-.st-todo-row { background: var(--t-surface); border: 1px solid #EDCBAC; border-radius: var(--t-r); overflow: hidden; box-shadow: var(--t-shadow-sm); }
+/* Todo rows wear the yellow todos wear everywhere else, unframed like a deck card */
+.st-todo-row { background: var(--t-surface); border: none; border-radius: var(--t-r); overflow: hidden; box-shadow: var(--t-shadow-sm); }
 /* Collapsed row: name in its own column so it can't push the category tags below */
-.st-todo-collapsed { display: flex; flex-direction: column; gap: 6px; padding: 9px 14px; background: #EDCBAC; cursor: pointer; }
-.st-todo-line { display: flex; align-items: center; gap: 10px; padding-bottom: 6px; }
-.st-todo-text { font-weight: 600; flex: 1; min-width: 0; font-size: 15px; color: var(--t-text); overflow-wrap: anywhere; }
-.st-todo-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.st-todo-collapsed { display: flex; flex-direction: column; background: var(--st-todo-band-2); cursor: pointer; }
+.st-todo-line { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--st-todo-band-2); }
+.st-todo-text { font-weight: 700; flex: 1; min-width: 0; font-size: 15px; color: var(--st-card-name); overflow-wrap: anywhere; }
+.st-todo-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; padding: 7px 14px; background: var(--st-todo-band); }
 .st-todo-meta-right { display: inline-flex; gap: 5px; align-items: center; margin-left: auto; }
 /* Unit tab: inline-block (not flex) so ellipsis applies, compound selector outranks .st-meta-pill's display */
 .st-meta-pill.st-todo-unit { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
@@ -186,14 +226,20 @@
   flex-shrink: 0;
   user-select: none;
 }
+.st-meta-pill--count    { background: #64565A;         color: #fff; }
 .st-meta-pill--new      { background: var(--t-blue);   color: var(--t-accent-fg); }
 .st-meta-pill--promote  { background: var(--t-green);  color: var(--t-accent-fg); }
 .st-meta-pill--demote   { background: var(--t-red-2);  color: var(--t-accent-fg); }
-.st-meta-pill--time     { background: var(--t-yellow); color: var(--t-text); }
+/* Its own yellow rather than the app's, which sat too close to the todo band behind it */
+.st-meta-pill--time     { background: #B5811F;        color: var(--t-accent-fg); }
 .st-meta-pill--ret-good { background: var(--t-green);  color: var(--t-accent-fg); }
 .st-meta-pill--ret-mid  { background: var(--t-amber);  color: var(--t-text); }
 .st-meta-pill--ret-poor { background: var(--t-red-2);  color: var(--t-accent-fg); }
-.st-todo-expanded { padding: 12px 14px 14px; background: var(--t-surface-2); border-top: 1px solid #EDCBAC; }
+/* Matches the deck card's bar: the same band, the same strip of actions on the left */
+.st-todo-foot { display: flex; align-items: center; gap: 7px; padding: 7px 14px; background: var(--st-todo-band); }
+/* The body lightens off the muted surface, the same step the table's alt rows take, so
+   an open todo reads as paper against the page rather than another tinted panel */
+.st-todo-expanded { padding: 12px 14px 14px; background: color-mix(in srgb, var(--t-surface-2) 45%, var(--t-surface)); border-top: 1px solid var(--st-todo-band); }
 .st-todo-notes { margin: 0; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 12px; }
 
 .st-pill-tag { display: inline-block; padding: 2px 8px; border-radius: var(--t-r-tab); font-size: 10px; font-weight: 600; user-select: none; }
@@ -211,8 +257,10 @@
    button and what it produces are visibly the same idea. Yellow read as a warning but
    collided with the time pill beside it and fought the colored header bands. Hover has
    to name every property it changes, or the global button:hover paints it mauve. */
-.st-archive-btn { padding: 3px 8px; border: 1px solid var(--t-text-3); border-radius: var(--t-r-btn); background: var(--t-text-3); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-accent-fg); box-shadow: none; white-space: nowrap; }
-.st-archive-btn:hover { background: #877376; border-color: #877376; color: var(--t-accent-fg); box-shadow: none; }
+/* Each state a step darker than it was: what used to be the hover is the resting colour,
+   and the hover goes deeper again. */
+.st-archive-btn { padding: 3px 8px; border: 1px solid #877376; border-radius: var(--t-r-btn); background: #877376; font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-accent-fg); box-shadow: none; white-space: nowrap; }
+.st-archive-btn:hover { background: #6D5B5E; border-color: #6D5B5E; color: var(--t-accent-fg); box-shadow: none; }
 
 /* Solid fill with a matching border, dead must not read translucent */
 /* Dead pills never change text color, only the box darkens; the muted ink is set on
@@ -225,6 +273,8 @@
 .st-pill.st-pill-dead.active,
 .st-pill.st-pill-dead.active:hover { background: var(--dead-pill-a); border-color: var(--dead-pill-a); color: var(--t-text-2); }
 
-.st-pill-dead--archived { --dead-pill: #DBD3CF; --dead-pill-h: #CDC3BE; --dead-pill-a: #B5AAA4; }
-.st-pill-dead--deleted  { --dead-pill: #EFD1C8; --dead-pill-h: #E5BBAF; --dead-pill-a: #D09686; }
-.st-pill-dead--merged   { --dead-pill: #DED1E4; --dead-pill-h: #CDBBD6; --dead-pill-a: #B7A0C4; }
+/* Same step down the dead pills take: the old hover is now the resting tint, with a new
+   deeper one under the cursor. Active stays the darkest of the three. */
+.st-pill-dead--archived { --dead-pill: #CDC3BE; --dead-pill-h: #BFB3AD; --dead-pill-a: #B5AAA4; }
+.st-pill-dead--deleted  { --dead-pill: #E5BBAF; --dead-pill-h: #DAA89A; --dead-pill-a: #D09686; }
+.st-pill-dead--merged   { --dead-pill: #CDBBD6; --dead-pill-h: #C2ADCD; --dead-pill-a: #B7A0C4; }

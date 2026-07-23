@@ -122,7 +122,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   cursor: pointer;
   background: var(--t-surface);
   margin-bottom: 14px;
-  box-shadow: var(--t-shadow-sm);
+  box-shadow: var(--t-shadow-card);
   transition: background var(--t-ease);
 }
 .hp-plan-card:hover {
@@ -130,7 +130,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 /* Done plans highlight green on hover, not peach. Mixed with white, not the warm surface, so it stays a clean green. */
 .hp-plan-card.is-done:hover {
-  background: color-mix(in srgb, var(--t-green) 11%, #fff);
+  background: color-mix(in srgb, var(--t-green) 14%, #fff);
 }
 /* A plan with nothing due but no study logged yet still counts as open work, so it
    wears the same caramel as a plan with cards waiting. */
@@ -229,7 +229,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: 6px;
   background: var(--t-surface);
   border: 1px solid var(--t-border-2);
-  border-radius: var(--t-r);
+  border-radius: var(--t-r-btn);
   padding: 4px 5px 4px 8px;
 }
 .hp-timer-display {
@@ -276,7 +276,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-todo-row {
   display: flex;
   flex-direction: column;
-  padding: 12px;
+  padding: 12px var(--t-stripe-gutter) 12px 12px;
   --t-stripe: var(--t-yellow-stripe);
   --t-stripe-hi: var(--t-yellow);
   margin-bottom: 8px;
@@ -298,7 +298,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: 4px;
   text-align: left;
   font-size: 13px;
-  padding: 8px 12px;
+  padding: 8px var(--t-stripe-gutter) 8px 12px;
   --t-stripe: var(--t-yellow-stripe);
   --t-stripe-hi: var(--t-yellow);
   color: var(--t-text);
@@ -313,8 +313,6 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* Ellipsis lands before the bars rather than under them */
-  padding-right: var(--t-stripe-gutter);
 }
 .hp-free-todo-option:hover { color: var(--t-text); }
 .hp-todo-row.done {
@@ -345,11 +343,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 
 .hp-todo-text {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--t-text);
   font-size: 17px;
-  /* Wraps before the bars rather than running under them */
-  padding-right: var(--t-stripe-gutter);
 }
 .hp-todo-text.done {
   text-decoration: line-through;
@@ -361,16 +357,14 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  --t-stripe: var(--t-blue-bdr);
+  padding: 12px var(--t-stripe-gutter) 12px 16px;
+  --t-stripe: var(--t-blue-stripe);
   --t-stripe-hi: var(--t-blue-lt);
   margin-bottom: 8px;
   cursor: pointer;
 }
 .hp-deck-row--empty { cursor: default !important; --t-stripe: var(--t-green-bdr); --t-stripe-hi: var(--t-green); }
-/* A finished deck row has no counts on the right, so the name is what would reach the bars */
-.hp-deck-row--empty .hp-deck-name { padding-right: var(--t-stripe-gutter); }
-.hp-deck-name { flex: 1; font-weight: 600; font-size: 15px; color: var(--t-text); }
+.hp-deck-name { flex: 1; font-weight: 700; font-size: 17px; color: var(--t-text); }
 .hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
 .hp-deck-new, .hp-deck-review { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hp-deck-new { min-width: 78px; }
@@ -548,7 +542,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
      unselected chips read as solid fields instead of blending in */
   background: var(--t-surface-2);
   border-radius: var(--t-r);
-  padding: 24px;
+  /* The track is always reserved here, so the right padding gives up its 10px and the
+     gap reads the same on both sides, the way every other scroll body in the app does it. */
+  padding: 24px 14px 24px 24px;
   width: 420px;
   display: flex;
   flex-direction: column;
@@ -581,7 +577,11 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: 6px;
   margin-top: 8px;
 }
-/* Match the todo/deck row treatment above */
+/* Match the todo/deck row treatment above. The right side still owes the stripes their
+   gutter, or a long description runs out across the bars. */
 .hp-resources-list .st-resource-card {
-  padding: 10px 14px;
+  padding: 10px var(--t-stripe-gutter) 10px 14px;
 }
+/* Matches the todo and deck rows above it. Scoped here, since the same card also lists
+   resources over in stats, where the names stay as they are. */
+.hp-resources-list .st-resource-card-name { font-weight: 700; }

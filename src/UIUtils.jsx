@@ -66,16 +66,22 @@ export function Tip({ text }) {
 
 export function GroupTypeBadge({ type }) {
   const nb = type === "notebook";
+  // Disc and letter live in one SVG so they rasterise as a single unit. A CSS circle
+  // background and a hinted 9px glyph snap to the pixel grid by different rules, and on
+  // the WebKit webview that disagreement lands a different way depending on the pill's
+  // sub-pixel position, so the letter drifts left or right from one place to the next.
+  // In the SVG they share a coordinate system and the letter stays put on the disc.
   return (
-    <span style={{
-      marginLeft: 4, fontSize: 9, fontWeight: 600, padding: "1px 5px",
-      borderRadius: "var(--t-r-tab)",
-      background: nb ? "var(--t-plum)" : "var(--t-blue)",
-      color: "var(--t-accent-fg)",
-      lineHeight: 1.3,
-    }}>
-      {nb ? "nb" : "dk"}
-    </span>
+    <svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-hidden="true"
+      style={{ flexShrink: 0, verticalAlign: "middle", marginLeft: 4, display: "inline-block" }}>
+      <circle cx="7" cy="7" r="7"
+        fill={nb ? "color-mix(in srgb, var(--t-plum) 75%, #000)" : "color-mix(in srgb, var(--t-blue) 75%, #000)"} />
+      <text x="7" y="7" textAnchor="middle" dominantBaseline="central"
+        fontFamily="var(--t-font-body)" fontSize="9" fontWeight="700"
+        fill="var(--t-accent-fg)">
+        {nb ? "N" : "D"}
+      </text>
+    </svg>
   );
 }
 
