@@ -740,7 +740,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
             <button className="btn-blue" onClick={givePriority}>
               Give Priority
             </button>
-            <Tip text="Gives this card priority for your next study session so it won't get buried behind existing cards in the queue. Priority follows a first-in-first-out structure." />
+            <Tip text="Gives this card priority for your next study session over the other cards in the queue. Priority follows a first-in-first-out structure." />
           </div>
         </div>
       </div>

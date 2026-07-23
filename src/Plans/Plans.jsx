@@ -106,7 +106,7 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                 )}
                 <span className="plan-srs-tip-wrap">
                     <button className="btn-amber" onClick={onClamp}>Trim</button>
-                    <Tip text="Updates the due queue to the max minus cards already studied today. Note that overflow cards may be unscheduled." />
+                    <Tip text="Updates the due queue to the max minus non-overdue cards already studied today. Note that overflow cards may be unscheduled." />
                 </span>
                 <span className="plan-srs-tip-wrap">
                     <button className="btn-blue" onClick={onClampMax}>Fill</button>
