@@ -133,7 +133,7 @@
    is the more specific one. */
 .st-table td.st-date-cell { font-size: 12px; font-variant-numeric: tabular-nums; overflow: visible; }
 .st-date { position: relative; }
-.st-date-arch { position: absolute; right: calc(100% + 5px); top: 50%; transform: translateY(-50%); }
+.st-date-arch { position: absolute; right: calc(100% + 5px); top: 50%; transform: translateY(-50%); display: inline-flex; }
 
 /* The foot of a deck card: its actions on the left, and on the right the pager that
    walks back through the sessions a fortnight at a time, newest first. The band colour

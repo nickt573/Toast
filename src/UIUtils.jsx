@@ -85,6 +85,22 @@ export function GroupTypeBadge({ type }) {
   );
 }
 
+// The archived marker on a session row, drawn the same way as GroupTypeBadge and for
+// the same reason.
+export function ArchivedBadge() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" role="img" aria-hidden="true"
+      style={{ flexShrink: 0, verticalAlign: "middle", display: "inline-block" }}>
+      <circle cx="7" cy="7" r="7" fill="var(--t-text-3)" />
+      <text x="7" y="7" textAnchor="middle" dominantBaseline="central"
+        fontFamily="var(--t-font-body)" fontSize="9" fontWeight="700"
+        fill="var(--t-accent-fg)">
+        A
+      </text>
+    </svg>
+  );
+}
+
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 
 // Renders free text with any pasted links turned into clickable links

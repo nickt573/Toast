@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
-import { ResourceCard, GroupTypeBadge, ConfirmDelete, Linkify } from "../UIUtils";
+import { ResourceCard, GroupTypeBadge, ArchivedBadge, ConfirmDelete, Linkify } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
 import {
   Chart as ChartJS,
@@ -820,7 +820,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                           <span className="st-date">
                             {r.date}
                             {r.is_archived && (
-                              <span className="st-badge st-badge-archived st-date-arch" title="Archived, so it isn't counted toward your totals">A</span>
+                              <span className="st-date-arch" title="Archived, so it isn't counted toward your totals"><ArchivedBadge /></span>
                             )}
                           </span>
                         </td>
