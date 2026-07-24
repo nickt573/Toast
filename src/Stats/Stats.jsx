@@ -783,7 +783,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                   {rows.map((r, i) => (
                     <Fragment key={r.id}>
                       {eraFirstRowIds.has(r.id) && (
-                        <tr>
+                        <tr className="st-era-row">
                           <td colSpan={7} className="st-era-divider">Progress Reset</td>
                         </tr>
                       )}

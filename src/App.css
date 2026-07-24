@@ -144,6 +144,9 @@
   --t-r-input:       4px;   /* fields you type into stay tight, same as the controls. A rounded box is something to read, a square-ish one is somewhere to write */
   --t-r-tab:         5px 5px 1px 1px;   /* index-divider tab badges, a deliberate shape rather than a container */
   --t-ease:          0.12s ease;
+  /* For the things a pointer sweeps across rather than clicks, like a row's bars or a
+     card and everything riding on it. Slower than --t-ease so the change reads as a fade. */
+  --t-ease-hover:    0.16s ease-out;
 
   /* Shadows: crisp paper edges, no glow */
   --t-shadow-sm:     0 1px 0 rgba(74,58,61,0.12);
@@ -617,7 +620,7 @@ textarea { overflow-y: scroll; }
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 /* Gold rather than the accent's peach, which read pink next to the other bands. Its own
    colour, so the caramel the rest of the plan family wears stays where it is. */
-.landing-hdr--plan     { --hdr-band: color-mix(in srgb, #C9A14A 54%, var(--t-surface)); background: var(--hdr-band); }
+.landing-hdr--plan     { --hdr-band: color-mix(in srgb, #D8A430 56%, var(--t-surface)); background: var(--hdr-band); }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); background: var(--hdr-band); }
 .landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); background: var(--hdr-band); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
@@ -662,6 +665,15 @@ textarea { overflow-y: scroll; }
    --t-stripe-u scales the set for smaller rows: it is both the bar thickness and
    the gap. Stops count back from the right edge, so a bar k units back sits k units
    in on every box and height never enters into it. */
+
+/* A plain custom property jumps from one colour to the next, so the bars would snap
+   on hover. Registering it as a colour lets the gradient fade instead. */
+@property --t-stripe {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 .landing-card,
 .st-resource-card,
 .hp-todo-row,
@@ -681,6 +693,7 @@ textarea { overflow-y: scroll; }
      box below spends it as its own right padding, so nothing inside can land on the
      bars and long content wraps or truncates the way that spot already does. */
   --t-stripe-gutter: calc(7 * var(--t-stripe-u));
+  transition: --t-stripe var(--t-ease-hover);
   border: var(--t-bw) solid var(--t-stripe-hi);
   border-radius: var(--t-r);
   background-color: var(--t-surface);

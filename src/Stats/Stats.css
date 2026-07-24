@@ -8,10 +8,10 @@
      app's pale -bg tints, which go grey and go sugary at this size: a real blue for a
      deck, a golden yellow for a todo. Each one is its card's border as well. */
   --st-deck-band: #B6D4E2;
-  --st-todo-band: #EFCE8F;
+  --st-todo-band: #F2D6A0;
   /* A step deeper than each band, for the strip of pills under a card's name */
   --st-deck-band-2: #9AC3D8;
-  --st-todo-band-2: #E4BA69;
+  --st-todo-band-2: #E9C47A;
   /* The name on a deck or todo card, darker than body ink now that it sits on a band.
      Its own colour so the rest of what --t-text writes stays put. */
   --st-card-name: #3A2C2F;
@@ -98,7 +98,7 @@
 
 .st-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 /* No bottom border on the header row, the card frames the table */
-.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-label); background: var(--st-deck-band); border-bottom: none; font-weight: 700; }
+.st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-label); background: var(--st-deck-band); border-bottom: none; font-weight: 800; }
 .st-table td { padding: 6px 10px; border-bottom: 1px solid var(--t-border); vertical-align: middle; text-align: center; color: var(--t-text-2); overflow: hidden; }
 /* A clicked session row highlights a step lighter than the reset line's paper, so the
    two never read as the same mark, and the card's foot retargets its Archive and Delete
@@ -149,16 +149,19 @@
 .st-table td.st-era-divider {
   text-align: left;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.04em;
-  color: var(--t-label);
+  color: var(--t-title);
   padding: 3px 10px;
   user-select: none;
 }
 
-/* The reset line is a third step past the two the rows alternate between, so it reads
-   as deeper paper rather than as the card's blue reaching into the table. */
-.st-era-divider { background: var(--t-surface-3); }
+/* The reset line takes the same blue the column titles sit on, so it reads as part of
+   the card's frame rather than as a row of its own. The rules on either side of it come
+   off, since a line running into the band would only cut the band short. */
+.st-era-divider { background: var(--st-deck-band); }
+.st-table tr.st-era-row td,
+.st-table tr:has(+ tr.st-era-row) td { border-bottom: none; }
 /* The pager sits under the table as part of the card's frame, so it takes the header's
    own blue rather than a wash of it */
 .st-window-nav { background: var(--st-deck-band); }

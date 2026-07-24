@@ -110,6 +110,10 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
    hovering brings the bar up to the border color. Restyle a state by changing its
    pair and both follow. */
 .hp-plan-card {
+  /* The plan card wears a lighter caramel and forest than the rest of the app does.
+     Kept here so the shared colors those two lighten from stay where they are. */
+  --hp-plan-gold:  color-mix(in srgb, var(--t-accent) 66%, #fff);
+  --hp-plan-green: color-mix(in srgb, var(--t-green-h) 66%, #fff);
   --t-stripe: var(--t-border-2);
   --t-stripe-hi: var(--t-border-3);
   padding: 22px 24px;
@@ -123,7 +127,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   background: var(--t-surface);
   margin-bottom: 14px;
   box-shadow: var(--t-shadow-card);
-  transition: background var(--t-ease);
+  transition: background var(--t-ease-hover);
 }
 .hp-plan-card:hover {
   background: #FAF1E5;
@@ -136,12 +140,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
    wears the same caramel as a plan with cards waiting. */
 .hp-plan-card.has-due {
   --t-stripe: var(--t-accent-stripe);
-  --t-stripe-hi: var(--t-accent);
+  --t-stripe-hi: var(--hp-plan-gold);
 }
 /* Nothing left due today: green border + check matching .hp-deck-check */
 .hp-plan-card.is-done {
   --t-stripe: var(--t-green-stripe);
-  --t-stripe-hi: var(--t-green-h);
+  --t-stripe-hi: var(--hp-plan-green);
 }
 .hp-plan-check {
   color: var(--t-green);
@@ -193,13 +197,13 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-stat-num--decks { color: var(--t-blue); }
 .hp-stat-num--zero  { color: var(--t-green); }
 .hp-stat-lbl { font-size: 15px; color: var(--t-text-2); font-weight: 600; }
-/* The divider never highlights, in any state. It rests a shade darker than the bar
-   color but still lighter than the card's border. */
-.hp-plan-stat-divider { width: 2px; height: 44px; background: var(--t-stripe); margin: 0 20px; flex-shrink: 0; }
-.hp-plan-card.has-due .hp-plan-stat-divider { background: var(--t-accent); }
-.hp-plan-card.is-done .hp-plan-stat-divider { background: var(--t-green); }
+/* The divider never highlights, in any state. On a plain card it rests a shade darker
+   than the bar color, and on the two coloured states it takes the card's own edge. */
+.hp-plan-stat-divider { width: 2px; height: 44px; background: var(--t-stripe); margin: 0 20px; flex-shrink: 0; transition: background var(--t-ease-hover); }
+.hp-plan-card.has-due .hp-plan-stat-divider { background: var(--hp-plan-gold); }
+.hp-plan-card.is-done .hp-plan-stat-divider { background: var(--hp-plan-green); }
 .hp-plan-card-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
-.hp-plan-open { font-size: 12px; font-weight: 600; color: var(--t-accent); letter-spacing: 0.02em; }
+.hp-plan-open { font-size: 12px; font-weight: 600; color: var(--t-accent); letter-spacing: 0.02em; transition: color var(--t-ease-hover); }
 /* Matches the green border and counts on a finished card */
 .hp-plan-card.is-done .hp-plan-open { color: var(--t-green); }
 .hp-plan-card:hover .hp-plan-open { color: var(--t-accent-h); }
