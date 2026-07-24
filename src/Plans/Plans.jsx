@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 
 import Todos from "./Todos";
 import { computeFrequency, computeCategory, maskToArray, maskToCategories, FrequencyPicker, CategoryPicker } from "./PlanUtils";
-import { Tip, ConfirmDelete, GroupTypeBadge } from "../UIUtils";
+import { Tip, ConfirmDelete, GroupTypeBadge, CreateMenu } from "../UIUtils";
 import "./Plans.css";
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
@@ -58,12 +58,13 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
     return (
         <div className="plan-srs-row">
             <div className="plan-srs-header">
-                <span
-                    className={`plan-srs-name${onNavigateToGroup ? " clickable" : ""}`}
-                    onClick={() => onNavigateToGroup?.(group, { menu: "plans", label: "Plans" })}
-                >
-                    {group.name}
-                </span>
+                <span className="plan-srs-name">{group.name}</span>
+                {onNavigateToGroup && (
+                    <span className="t-open-arrow" title={`Open ${group.name}`}
+                        onClick={() => onNavigateToGroup(group, { menu: "plans", label: "Plans" })}>
+                        ↗
+                    </span>
+                )}
                 <span className="plan-srs-counts">
                     <span className="plan-srs-count plan-srs-count--new">New: {dueCount[0]}/{scheduler.max_new}</span>
                     <span className="plan-srs-count plan-srs-count--review">Review: {dueCount[1]}/{scheduler.max_review}</span>
@@ -391,7 +392,7 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
                                 <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
                                     <div className="plan-resource-name">{r.name}</div>
                                     {r.url &&
-                                        <a href={r.url} className="plan-resource-url"
+                                        <a href={r.url} className="t-open-arrow plan-resource-url"
                                             onClick={(e) => { e.preventDefault(); openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`); }}>
                                             ↗
                                         </a>}
@@ -638,6 +639,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState("");
+    const [creating, setCreating] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
     const [todos, setTodos] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -737,6 +739,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
             await getPlans();
             setToast(`${name} created.`);
             setName("");
+            setCreating(false);
         } catch (err) { logError("catch", err); setToast(`Failed to create ${name}.`, "error"); }
     }
 
@@ -768,7 +771,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                     <div className="plan-builder-cols">
                         <div className="plan-col-main">
                             <div className="plan-col-label plan-col-label--todos plan-col-label--toggle" onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("todos")}>
-                                Todos <span className="plan-col-label-caret">{collapsed.todos ? "▸" : "▾"}</span>
+                                Todos <span className="t-caret">{collapsed.todos ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.todos && <>
                                 {todos.length === 0 && <div className="empty-bubble">No todos yet.</div>}
@@ -814,7 +817,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                 />
                             </>}
                             <div className="plan-col-label plan-col-label--resources plan-col-label--toggle" style={{ marginTop: 24 }} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("resources")}>
-                                Resources <span className="plan-col-label-caret">{collapsed.resources ? "▸" : "▾"}</span>
+                                Resources <span className="t-caret">{collapsed.resources ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.resources && (
                                 <ResourcesSection planId={editingPlan.id} plans={plans} setToast={setToast} onChanged={refreshResources} />
@@ -823,7 +826,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
 
                         <div className="plan-col-side">
                             <div className="plan-col-label plan-col-label--srs plan-col-label--toggle" onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("srs")}>
-                                Decks <span className="plan-col-label-caret">{collapsed.srs ? "▸" : "▾"}</span>
+                                Decks <span className="t-caret">{collapsed.srs ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.srs && <SrsSection planId={editingPlan.id} setToast={setToast} onNavigateToGroup={navigateFromPlan} />}
                         </div>
@@ -837,6 +840,9 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
         <div className="plans-root">
             <div className="landing-hdr landing-hdr--plan">
                 <h2>Plans</h2>
+                <CreateMenu open={creating} onToggle={() => setCreating((c) => !c)}
+                    value={name} onChange={setName} onCreate={createPlan}
+                    title="New Plan" placeholder="New plan name..." />
             </div>
             <div className="landing-body">
                 {!loading && plans.length === 0 && <div className="landing-empty">No plans yet. Create one below.</div>}
@@ -882,12 +888,6 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                         </div>
                     </div>
                 ))}
-            </div>
-            <div className="landing-footer">
-                <input placeholder="New plan name..." value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && createPlan()} />
-                <button className="primary" onClick={createPlan}>+ Create</button>
             </div>
         </div>
     );

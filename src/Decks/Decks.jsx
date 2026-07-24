@@ -16,7 +16,7 @@ function UploadedHtmlField({ html }) {
     </>
   );
 }
-import { Tip, ConfirmDelete } from "../UIUtils";
+import { Tip, ConfirmDelete, CreateMenu } from "../UIUtils";
 import "./Decks.css";
 
 const VIEW_DECKS = "decks";
@@ -124,6 +124,7 @@ function DeckList({ setToast, onOpenDeck }) {
   const [mergeReset, setMergeReset] = useState(false);
   const [mergeArchive, setMergeArchive] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [creating, setCreating] = useState(false);
 
   const loadSrsSummaries = () =>
     loggedInvoke("get_deck_srs_summaries")
@@ -151,6 +152,7 @@ function DeckList({ setToast, onOpenDeck }) {
       setDecks((prev) => [...prev, deck].sort(byName));
       setToast(`${deck.name} successfully created.`);
       setNewName("");
+      setCreating(false);
     } catch (e) { logError("catch", e); setToast("Unable to create new deck.", "error"); }
   };
 
@@ -160,6 +162,7 @@ function DeckList({ setToast, onOpenDeck }) {
     try {
       const { fields, total_notes } = await loggedInvoke("peek_anki_fields", { path });
       setMerging(false);
+      setCreating(false);
       setAnkiPending({ path, fields, noteCount: total_notes });
       setAnkiFrontFields(fields.length > 0 ? [fields[0].name] : []);
       setAnkiBackFields(fields.length > 1 ? [fields[1].name] : []);
@@ -245,6 +248,7 @@ function DeckList({ setToast, onOpenDeck }) {
 
   const startMerge = () => {
     setAnkiPending(null);
+    setCreating(false);
     setMerging(true);
     setMergeDeckA(decks.length > 0 ? decks[0].id : null);
     setMergeDeckB(decks.length > 1 ? decks[1].id : null);
@@ -285,6 +289,10 @@ function DeckList({ setToast, onOpenDeck }) {
         <h2>Decks</h2>
         <button onClick={pickAnkiFile}>Import Anki</button>
         <button onClick={startMerge} disabled={decks.length < 2}>Merge Decks</button>
+        <CreateMenu open={creating}
+          onToggle={() => { setCreating((c) => !c); setMerging(false); setAnkiPending(null); }}
+          value={newName} onChange={setNewName} onCreate={createDeck}
+          title="New Deck" placeholder="New deck name..." />
       </div>
 
       {merging && (
@@ -441,12 +449,6 @@ function DeckList({ setToast, onOpenDeck }) {
             </div>
           </div>
         ))}
-      </div>
-      <div className="dk-new-deck">
-        <input type="text" placeholder="New deck name..." value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && createDeck()} />
-        <button className="primary" onClick={createDeck}>+ Create</button>
       </div>
     </>
   );
@@ -617,7 +619,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
           </button>
         </div>
         <div className="dk-preview">
-          <div className="dk-preview-label">{previewFlipped ? "Front + Back" : "Front"}</div>
+          <div className="dk-preview-label">{previewFlipped ? "Front + Back + Support" : "Front"}</div>
           <div className="dk-preview-card">
             <CardFace card={form} showBack={previewFlipped} />
           </div>
@@ -734,16 +736,16 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
           {inPlan && (
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <button className="btn-amber" onClick={markForReview}>
-                Mark for Review
+                Make Due
               </button>
-              <Tip text="Makes this card due right now, on top of your daily quota, and puts it ahead of every other card waiting in the queue. The most recently marked card comes first." />
+              <Tip text="Makes this card due right now, on top of your daily quota, and puts it ahead of every other card in the due queue. The most recently marked card comes first." />
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <button className="btn-blue" onClick={givePriority}>
               Give Priority
             </button>
-            <Tip text="Gives this card priority for your next study session over the other cards in the queue. Priority follows a first-in-first-out structure." />
+            <Tip text="Gives this card priority for your next study session over the other cards in the waiting queue by moving up its due date. Priority follows a first-in-first-out structure." />
           </div>
         </div>
       </div>
@@ -945,7 +947,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [viewHeight, setViewHeight] = useState(0);
 
   // Matches the fixed td height in Decks.css so the row window math stays exact
-  const ROW_H = 45;
+  const ROW_H = 51;
 
   // Below this height a released drag snaps the panel closed
   const CREATOR_CLOSE_PX = 60;
@@ -1226,7 +1228,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                   { key: "paused",   label: "Paused"   },
                   { key: "unpaused", label: "Unpaused" },
                   { key: "custom",   label: "Custom"   },
-                  { key: "uploaded", label: "Uploaded" },
+                  { key: "uploaded", label: "Imported" },
                 ].map(f => (
                   <button key={f.key}
                     className={`dk-filter-btn${filter === f.key ? " active" : ""}`}
@@ -1318,7 +1320,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
 
           <div className={`dk-creator-toggle-row${creatorOpen ? " open" : ""}`} ref={toggleRowRef} onMouseDown={startCreatorDrag} onClick={toggleCreator}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>Create a card</span>
-            <span style={{ fontSize: 10, color: "var(--t-text-3)" }}>{creatorOpen ? "▾" : "▸"}</span>
+            <span className="t-caret">{creatorOpen ? "▾" : "▸"}</span>
           </div>
           {creatorOpen && (
             <div className="dk-new-card-dark" style={creatorHeight != null ? { height: creatorHeight, maxHeight: "none" } : undefined}>

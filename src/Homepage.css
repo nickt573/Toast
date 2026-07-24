@@ -125,7 +125,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   border-radius: var(--t-r);
   cursor: pointer;
   background: var(--t-surface);
-  margin-bottom: 14px;
+  /* A plan card is several times the height of a row, so it takes the standard gap and a
+     little over, or the stack reads as one block. */
+  margin-bottom: calc(var(--t-list-gap) + 6px);
   box-shadow: var(--t-shadow-card);
   transition: background var(--t-ease-hover);
 }
@@ -283,11 +285,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   padding: 12px var(--t-stripe-gutter) 12px 12px;
   --t-stripe: var(--t-yellow-stripe);
   --t-stripe-hi: var(--t-yellow);
-  margin-bottom: 8px;
+  margin-bottom: var(--t-list-gap);
 }
 .hp-todo-row:last-child { margin-bottom: 0; }
 
 /* Prescreen todo list, no inner scroll so the whole popup scrolls instead */
+/* Half-height option rows, so they keep the tighter gap the standard lists moved off of */
 .hp-free-todo-list {
   display: flex;
   flex-direction: column;
@@ -364,7 +367,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   padding: 12px var(--t-stripe-gutter) 12px 16px;
   --t-stripe: var(--t-blue-stripe);
   --t-stripe-hi: var(--t-blue-lt);
-  margin-bottom: 8px;
+  margin-bottom: var(--t-list-gap);
   cursor: pointer;
 }
 .hp-deck-row--empty { cursor: default !important; --t-stripe: var(--t-green-bdr); --t-stripe-hi: var(--t-green); }
@@ -392,8 +395,18 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   margin-bottom: 16px;
 }
 .hp-session-header h2 { margin: 0; flex: 1; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
-.hp-session-counts { font-size: 12px; color: var(--t-text-3); display: flex; gap: 10px; font-variant-numeric: tabular-nums; }
-.hp-session-counts span { min-width: 62px; }
+
+/* Card status row: type pill on the left, session counts on the right */
+.hp-session-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.hp-session-counts { display: flex; gap: 6px; }
+/* Sized to their own text, so a pill grows and shrinks with its number instead of holding a fixed slot */
+.hp-session-counts .pill { font-variant-numeric: tabular-nums; }
 
 /* Study card: plain paper sheet, crisp edge */
 .hp-card-box {
@@ -414,7 +427,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   box-sizing: border-box;
   font-size: 13px;
   padding: 8px 10px;
-  border: 1px solid var(--t-border-2);
+  border: 2px solid var(--t-accent);
   border-radius: var(--t-r);
   font-family: inherit;
   resize: vertical;
@@ -422,6 +435,13 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   color: var(--t-text);
   background: var(--t-surface);
   min-height: 60px;
+  overflow-y: auto;
+  box-shadow: none;
+}
+/* Already sits at the accent, so focus just deepens it instead of adding the global glow ring */
+.hp-workspace:focus {
+  border-color: var(--t-accent-h);
+  box-shadow: none;
 }
 .hp-workspace::placeholder { color: var(--t-text-3); }
 
@@ -573,11 +593,10 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   cursor: pointer;
   user-select: none;
 }
-.hp-resources-caret { font-size: 10px; color: var(--t-text-3); }
 .hp-resources-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--t-list-gap);
   margin-top: 8px;
 }
 /* Match the todo/deck row treatment above. The right side still owes the stripes their

@@ -74,7 +74,7 @@
 
 /* Deck cards wear the blue a deck wears everywhere else in the app, as a header band
    over bare paper. No frame: the shadow is what lifts the sheet off the page. */
-.st-deck-card { background: var(--t-surface); border: none; border-radius: var(--t-r); margin-bottom: 8px; overflow: hidden; box-shadow: var(--t-shadow-sm); }
+.st-deck-card { background: var(--t-surface); border: none; border-radius: var(--t-r); margin-bottom: var(--t-list-gap); overflow: hidden; box-shadow: var(--t-shadow-sm); }
 /* Two lines, the same shape a todo row has: the name and its actions up top, the
    readouts underneath with the count on the left and the rest against the right. */
 .st-deck-header {
@@ -89,8 +89,6 @@
 /* An archived, deleted, or merged deck keeps the blue card every other deck has. Its
    badge says which it is, and the filter pill up top carries the state's tint, so the
    card itself doesn't have to change color to tell you. */
-/* Expand/collapse caret, matches .plan-col-label-caret / .hp-resources-caret */
-.st-caret { font-size: 10px; color: var(--t-text-3); flex-shrink: 0; user-select: none; }
 .st-deck-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--t-text-2); padding: 7px 14px; background: var(--st-deck-band); }
 .st-deck-meta > span { min-width: 0; }
 /* Mirrors .st-todo-meta-right: everything but the session count rides the right edge */
@@ -99,7 +97,7 @@
 .st-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 /* No bottom border on the header row, the card frames the table */
 .st-table th { text-align: center; padding: 5px 10px; font-size: 11px; color: var(--t-label); background: var(--st-deck-band); border-bottom: none; font-weight: 800; }
-.st-table td { padding: 6px 10px; border-bottom: 1px solid var(--t-border); vertical-align: middle; text-align: center; color: var(--t-text-2); overflow: hidden; }
+.st-table td { padding: 9px 10px; border-bottom: 1px solid var(--t-border); vertical-align: middle; text-align: center; color: var(--t-text-2); overflow: hidden; }
 /* A clicked session row highlights a step lighter than the reset line's paper, so the
    two never read as the same mark, and the card's foot retargets its Archive and Delete
    onto just that row. */
@@ -194,9 +192,9 @@
   letter-spacing: 0.02em;
 }
 
-.st-todo-list { display: flex; flex-direction: column; gap: 5px; }
+.st-todo-list { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 /* Day sections: labeled rule replaces per-row dates */
-.st-day-group { display: flex; flex-direction: column; gap: 5px; }
+.st-day-group { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 11px; font-weight: 700; color: var(--t-label); user-select: none; }
 /* The rules take the date's own ink watered down, so they read as the same mark without shouting */
 .st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 2px; background: color-mix(in srgb, var(--t-label) 45%, var(--t-bg)); }
@@ -230,7 +228,7 @@
   user-select: none;
 }
 .st-meta-pill--count    { background: #64565A;         color: #fff; }
-.st-meta-pill--new      { background: var(--t-blue);   color: var(--t-accent-fg); }
+.st-meta-pill--new      { background: var(--t-new);    color: var(--t-accent-fg); }
 .st-meta-pill--promote  { background: var(--t-green);  color: var(--t-accent-fg); }
 .st-meta-pill--demote   { background: var(--t-red-2);  color: var(--t-accent-fg); }
 /* Its own yellow rather than the app's, which sat too close to the todo band behind it */

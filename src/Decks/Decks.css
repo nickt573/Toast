@@ -1,14 +1,10 @@
 /* Decks view */
 .dk-root { display: flex; flex-direction: column; height: 100%; }
 
-.dk-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
+/* .dk-list is styled with the other landing lists in App.css */
 .dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-title); }
 .dk-deck-name-input { width: 100%; }
 .dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
-
-.dk-new-deck { display: flex; gap: 8px; padding: 10px var(--t-page-pad); background: var(--t-blue-bdr); flex-shrink: 0; }
-.dk-new-deck input { flex: 1; border-color: var(--t-blue-bdr); }
-.dk-new-deck input:focus { border-color: var(--t-accent); }
 
 /* Merge and Anki panels extend the landing header so the two read as one band */
 /* The panel is the bottom of the header stack while it is open, so the shadow is its
@@ -61,14 +57,14 @@
 .dk-scope-btn { font-size: 11px; padding: 3px 10px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); color: var(--t-btn-fg); cursor: pointer; white-space: nowrap; box-shadow: none; user-select: none; }
 .dk-scope-btn:hover { background: var(--t-btn-h); box-shadow: none; }
 .dk-scope-btn.active,
-.dk-scope-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
+.dk-scope-btn.active:hover { background: var(--t-blue-btn); border-color: var(--t-blue-btn); color: var(--t-btn-fg); }
 
 .dk-sort-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .dk-sort-seg { display: flex; gap: 4px; flex-shrink: 0; }
 .dk-sort-seg button { padding: 3px 11px; font-size: 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; box-shadow: none; user-select: none; }
 .dk-sort-seg button:hover { background: var(--t-btn-h); box-shadow: none; }
 .dk-sort-seg button.active,
-.dk-sort-seg button.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); filter: brightness(1); }
+.dk-sort-seg button.active:hover { background: var(--t-blue-btn); border-color: var(--t-blue-btn); color: var(--t-btn-fg); filter: brightness(1); }
 
 .dk-date-filter { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); flex-wrap: nowrap; }
 .dk-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
@@ -82,11 +78,11 @@
 .dk-filter-bar > span { flex-basis: 100%; height: 0; }
 .dk-filter-toggle { font-size: 11px; padding: 3px 11px; border-radius: var(--t-r-btn); flex-shrink: 0; user-select: none; }
 .dk-filter-toggle.active,
-.dk-filter-toggle.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
+.dk-filter-toggle.active:hover { background: var(--t-blue-btn); border-color: var(--t-blue-btn); color: var(--t-btn-fg); }
 .dk-filter-btn { font-size: 11px; padding: 3px 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; font-family: inherit; font-weight: 600; transition: background var(--t-ease), border-color var(--t-ease); box-shadow: none; user-select: none; }
 .dk-filter-btn:hover { color: var(--t-btn-fg); background: var(--t-btn-h); box-shadow: none; }
 .dk-filter-btn.active,
-.dk-filter-btn.active:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
+.dk-filter-btn.active:hover { background: var(--t-blue-btn); border-color: var(--t-blue-btn); color: var(--t-btn-fg); }
 
 /* Card table uses a native overlay scrollbar (excluded from App.css rules): no track, floating thumb, takes no layout space. */
 .dk-table-head { flex-shrink: 0; background: var(--t-surface-4); }
@@ -102,7 +98,7 @@
 .dk-card-table col.dk-col-due { width: 92px; }
 .dk-card-table col.dk-col-paused { width: 64px; }
 .dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; font-size: 11px; color: var(--t-label); font-weight: 700; }
-.dk-card-table td { padding: 5px 8px; border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: 45px; }
+.dk-card-table td { padding: 5px 8px; border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: 51px; }
 .dk-card-table tbody tr { cursor: pointer; }
 /* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. Class-based because only visible rows are rendered. */
 .dk-card-table tr.dk-even td { background: var(--t-row-stripe); }

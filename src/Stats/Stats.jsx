@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
-import { ResourceCard, GroupTypeBadge, ArchivedBadge, ConfirmDelete, Linkify } from "../UIUtils";
+import { ResourceCard, GroupTypeBadge, ArchivedBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
 import {
   Chart as ChartJS,
@@ -185,30 +185,43 @@ function buildOverTimeData(groupStats, unit = "day", win = null) {
   };
 
   // Retention rides the same labels as the bars so the two line up, but a bucket with
-  // nothing reviewed has no rate to plot, so it goes in as a null and the line breaks.
-  const retentionData = dates.map(d => {
+  // nothing reviewed has no rate to plot, so it goes in as a null. The line runs straight
+  // over those days, they just have no dot of their own to hover.
+  const rate = (p, d) => (p + d) > 0 ? Math.round((p / (p + d)) * 100) : null;
+  const daily = dates.map(d => rate(at(d).p, at(d).d));
+  // Every review in the window up to and including that bucket, so the line shows the
+  // average settling rather than how each day went on its own.
+  let runP = 0, runD = 0;
+  const cumulative = dates.map(d => {
     const { p, d: dem } = at(d);
-    return (p + dem) > 0 ? Math.round((p / (p + dem)) * 100) : null;
+    runP += p;
+    runD += dem;
+    return (p + dem) > 0 ? rate(runP, runD) : null;
   });
-  const hasRetention = retentionData.some(v => v !== null);
 
-  const lineData = {
-    labels: dates,
-    datasets: [
-      {
-        label: "Retention %",
-        data: retentionData,
-        borderColor: AMBER,
-        backgroundColor: "rgba(196,154,68,0.16)",
-        tension: 0.3,
-        fill: true,
-        pointRadius: 3,
-      },
-    ],
-  };
-
-  return { barData, lineData, hasRetention };
+  return { barData, dates, retention: { daily, cumulative }, hasRetention: daily.some(v => v !== null) };
 }
+
+const retentionLine = (dates, data) => ({
+  labels: dates,
+  datasets: [
+    {
+      label: "Retention %",
+      data,
+      borderColor: AMBER,
+      // Spelled out because the flat runs at the edges are drawn by hand and have to
+      // match the line they continue.
+      borderWidth: 3,
+      tension: 0.3,
+      fill: false,
+      pointRadius: 3,
+      spanGaps: true,
+      // Without this the chart trims anything past its top edge, so a 100% day
+      // loses the upper half of its dot.
+      clip: false,
+    },
+  ],
+});
 
 function buildTimeSpentData(groupStats, todoStats, unit = "day", win = null) {
   const byDate = {};
@@ -321,7 +334,13 @@ const DECK_TICKS = {
   },
 };
 
-const barOpts = (stacked = false, yLabel = "", xTicks = null) => ({
+// The cards chart and the retention chart under it are read as one picture, so both give
+// their y axis the same fixed width. Left to themselves they size to their own labels,
+// "9" against "100%", and the two plots start at different x.
+const PAIRED_AXIS_W = 46;
+const pairedAxis = (scale) => { scale.width = PAIRED_AXIS_W; };
+
+const barOpts = (stacked = false, yLabel = "", xTicks = null, pairedY = false) => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: { legend: { display: false } },
@@ -332,6 +351,7 @@ const barOpts = (stacked = false, yLabel = "", xTicks = null) => ({
       beginAtZero: true,
       ticks: { stepSize: 1, font: { size: 10 } },
       title: { display: !!yLabel, text: yLabel, font: { size: 10 }, color: "var(--t-text-3)" },
+      ...(pairedY ? { afterFit: pairedAxis } : {}),
     },
   },
 });
@@ -339,11 +359,41 @@ const barOpts = (stacked = false, yLabel = "", xTicks = null) => ({
 const lineOpts = {
   responsive: true,
   maintainAspectRatio: false,
-  layout: { padding: { top: 10, right: 4 } },
+  layout: { padding: { top: 10 } },
   plugins: { legend: { display: false } },
   scales: {
-    x: { grid: { display: false }, ticks: DATE_TICKS },
-    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%", font: { size: 10 } } },
+    // A line normally starts hard against the left edge, a bar sits in the middle of its
+    // slot. offset gives the line the same slots, so a day lands under its own bars.
+    x: { offset: true, grid: { display: false, offset: true }, ticks: DATE_TICKS },
+    y: { beginAtZero: true, max: 100, afterFit: pairedAxis, ticks: { callback: v => v + "%", font: { size: 10 } } },
+  },
+};
+
+// Sitting in the bars' slots leaves the line short of both edges by half a slot, and an
+// end with nothing reviewed leaves it shorter still. This carries the first and last rate
+// out flat to the edges so the line spans the chart. Nothing is drawn on those runs, so
+// there is no dot out there to hover and no reading to misread.
+const stretchRetention = {
+  id: "stretchRetention",
+  beforeDatasetsDraw(chart) {
+    const points = chart.getDatasetMeta(0).data.filter(p => !p.skip);
+    if (points.length === 0) return;
+    const set = chart.data.datasets[0];
+    const { left, right } = chart.chartArea;
+    const first = points[0];
+    const last = points[points.length - 1];
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = set.borderColor;
+    ctx.lineWidth = set.borderWidth;
+    for (const [x0, x1, y] of [[left, first.x, first.y], [last.x, right, last.y]]) {
+      if (x1 - x0 < 0.5) continue;
+      ctx.beginPath();
+      ctx.moveTo(x0, y);
+      ctx.lineTo(x1, y);
+      ctx.stroke();
+    }
+    ctx.restore();
   },
 };
 
@@ -360,6 +410,11 @@ function MetricCard({ label, value, color }) {
 
 // Chart panel:
 
+const RET_MODES = [
+  { key: "daily",      label: "Daily" },
+  { key: "cumulative", label: "Cumulative" },
+];
+
 const RANGES = [
   { label: "All", days: null },
   { label: "7d",  days: 7 },
@@ -371,6 +426,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const [tab, setTab] = useState("bytime");
   const [range,  setRange]  = useState(30);
   const [offset, setOffset] = useState(0);
+  const [retMode, setRetMode] = useState("daily");
 
   const groupStats = counted(allGroupStats);
 
@@ -404,9 +460,10 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const inWindow = (win) => (r) => win.start === null || (r.date >= win.start && r.date <= win.end);
 
   const overWin = computeWindow([...new Set(groupStats.map(r => r.date))].sort());
-  const { barData, lineData, hasRetention } = buildOverTimeData(
+  const { barData, dates, retention, hasRetention } = buildOverTimeData(
     groupStats.filter(inWindow(overWin)), overWin.unit, overWin,
   );
+  const lineData = retentionLine(dates, retention[retMode]);
 
   const timeWin = computeWindow([...new Set([...groupStats, ...todoStats].map(r => r.date))].sort());
   const timeData = buildTimeSpentData(
@@ -519,13 +576,23 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
                 ? <div className="empty-bubble">No study recorded in this period.</div>
                 : <>
                     <div style={{ height: 200 }}>
-                      <Bar data={barData} options={barOpts(true, "Cards", DATE_TICKS)} />
+                      <Bar data={barData} options={barOpts(true, "Cards", DATE_TICKS, true)} />
                     </div>
                     {hasRetention && (
                       <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: 11, color: AMBER, marginBottom: 4 }}>Retention %</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, color: AMBER }}>Retention %</span>
+                          <div className="st-pills" style={{ marginLeft: "auto" }}>
+                            {RET_MODES.map(m => (
+                              <button key={m.key} className={`st-pill${retMode === m.key ? " active" : ""}`}
+                                onClick={() => setRetMode(m.key)}>
+                                {m.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <div style={{ height: 150 }}>
-                          <Line data={lineData} options={lineOpts} />
+                          <Line data={lineData} options={lineOpts} plugins={[stretchRetention]} />
                         </div>
                       </div>
                     )}
@@ -738,7 +805,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                 <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
                   <span className="st-deck-name">{name}</span>
                 </span>
-                <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
+                <span className="t-caret">{isOpen ? "▾" : "▸"}</span>
               </div>
               <div className="st-deck-meta">
                 <span className="st-meta-pill st-meta-pill--new">{totalN} new</span>
@@ -765,7 +832,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                 </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ color: "var(--t-blue)" }}>New</th>
+                    <th style={{ color: "var(--t-new)" }}>New</th>
                     <th style={{ color: "var(--t-green)" }}>Promoted</th>
                     <th style={{ color: "var(--t-red)" }}>Demoted</th>
                     <th>Retention</th>
@@ -791,7 +858,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                         className={`${i % 2 === 1 ? "st-row-alt" : ""}${selectedRowId === r.id ? " st-row-selected" : ""}`}
                         onClick={() => setSelectedRowId(id => (id === r.id ? null : r.id))}
                         style={{ cursor: "pointer" }}>
-                        <td><span className="st-badge" style={{ background: "var(--t-blue)", color: "var(--t-accent-fg)" }}>{r.num_new}</span></td>
+                        <td><span className="st-badge" style={{ background: "var(--t-new)", color: "var(--t-accent-fg)" }}>{r.num_new}</span></td>
                         <td><span className="st-badge" style={{ background: "var(--t-green)", color: "var(--t-accent-fg)" }}>{r.num_promote}</span></td>
                         <td><span className="st-badge" style={{ background: "var(--t-red)", color: "var(--t-accent-fg)" }}>{r.num_demote}</span></td>
                         <td>
@@ -1070,7 +1137,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
               <div className="st-todo-collapsed" onClick={() => toggle(r.id)}>
                 <div className="st-todo-line">
                   <span className="st-todo-text">{r.text}</span>
-                  <span className="st-caret">{isOpen ? "▾" : "▸"}</span>
+                  <span className="t-caret">{isOpen ? "▾" : "▸"}</span>
                 </div>
                 <div className="st-todo-tags">
                   {cats.map(c => (
@@ -1432,7 +1499,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={metrics.avgRetention !== null ? `${Math.round(metrics.avgRetention * 100)}%` : "-"}
               color={metrics.avgRetention !== null ? retColor : GRAY}
             />
-            <MetricCard label="New Cards Seen" value={metrics.newCardsStudied} color="var(--t-blue)" />
+            <MetricCard label="Unique Cards Seen" value={metrics.newCardsStudied} color="var(--t-blue)" />
             <MetricCard label="Total Cards Seen" value={metrics.totalCardsStudied} color="var(--t-blue)" />
             <MetricCard label="Todos Done"    value={metrics.todosDone}     color="var(--t-yellow)" />
             <MetricCard

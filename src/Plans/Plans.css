@@ -1,10 +1,11 @@
 /* Plans subcomponents */
 
-.plan-srs-row { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: 8px; }
+.plan-srs-row { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: var(--t-list-gap); }
 .plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.plan-srs-name { flex: 1; min-width: 0; font-weight: 700; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
-.plan-srs-name.clickable { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-.plan-srs-counts { display: flex; gap: 6px; flex-shrink: 0; }
+.plan-srs-name { min-width: 0; font-weight: 700; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
+/* The name no longer eats the leftover space, so the counts are what hold the right edge
+   and the arrow can sit against the name it opens */
+.plan-srs-counts { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
 .plan-srs-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
 .plan-srs-tip-wrap { display: inline-flex; align-items: center; gap: 2px; }
 /* Settings and remove-confirm expand inline, to the left of the action buttons */
@@ -22,14 +23,15 @@
 /* One line, same layout as .plan-srs-settings on existing decks */
 .plan-srs-settings-fields { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
-.plan-resource-row { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: 8px; }
+.plan-resource-row { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: var(--t-list-gap); }
 .plan-resource-edit-form { display: flex; flex-direction: column; gap: 6px; }
 .plan-resource-edit-actions { display: flex; gap: 6px; }
 .plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
 .plan-resource-body { flex: 1; min-width: 0; }
 .plan-resource-name { font-weight: 700; font-size: 17px; color: var(--t-text); }
 /* Raw URLs stay hidden behind a compact arrow */
-.plan-resource-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 2px; text-decoration: none; }
+/* Only the nudge off the baseline it shares with the name, the mark itself is .t-open-arrow */
+.plan-resource-url { margin-top: 2px; }
 .plan-resource-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; }
 .plan-resource-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .todo-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -45,7 +47,7 @@
 
 .plan-todo-creator { margin-top: 0; }
 .plan-todo-form { --t-stripe: var(--t-yellow-stripe); --t-stripe-hi: var(--t-yellow); padding: 12px var(--t-stripe-gutter) 12px 12px; display: flex; flex-direction: column; gap: 10px; }
-.plan-todo-row, .plan-todo-edit { --t-stripe: var(--t-yellow-stripe); --t-stripe-hi: var(--t-yellow); padding: 12px var(--t-stripe-gutter) 12px 12px; margin-bottom: 10px; }
+.plan-todo-row, .plan-todo-edit { --t-stripe: var(--t-yellow-stripe); --t-stripe-hi: var(--t-yellow); padding: 12px var(--t-stripe-gutter) 12px 12px; margin-bottom: var(--t-list-gap); }
 /* An open editor holds the highlight the whole time it is open. This has to sit
    after the resting colors above, which it ties with on specificity. */
 .plan-todo-edit,
