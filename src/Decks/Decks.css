@@ -99,7 +99,7 @@
    outer edges render. A separate-border table drops those outer edges in WebKit, which is
    what left the top row with no border under the header. */
 .dk-card-table { width: 100%; border-collapse: collapse; background: var(--t-row-base); table-layout: fixed; }
-.dk-card-table col.dk-col-due { width: 64px; }
+.dk-card-table col.dk-col-due { width: 92px; }
 .dk-card-table col.dk-col-paused { width: 64px; }
 .dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; font-size: 11px; color: var(--t-label); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: 45px; }
@@ -170,7 +170,14 @@
 .dk-card-log { font-size: 11px; color: var(--t-text-3); padding: 8px 10px; margin-top: 2px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-btn); }
 .dk-log-new    { color: #6BA6CE;  font-weight: 700; }   /* sky blue, apart from the deck slate */
 .dk-log-review { color: var(--t-green); font-weight: 700; }
-.dk-priority-star { color: #D9A521; margin-left: 3px; font-size: 11px; }
+.dk-priority-star { color: #D9A521; font-size: 12px; line-height: 1; }
+/* A hidden copy of the marks on the left balances the real ones on the right, so the
+   date stays centered while the marks trail at a fixed gap. nowrap stops the narrow
+   column from breaking "Today" apart. */
+.dk-due-cell { display: flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; }
+.dk-due-marks { display: inline-flex; align-items: center; gap: 3px; }
+.dk-due-marks--ghost { visibility: hidden; }
+.dk-cram-mark { color: var(--t-plum); font-size: 12px; font-weight: 700; line-height: 1; -webkit-text-stroke: 0.4px var(--t-plum); }
 
 /* Anki import tab on cards */
 .dk-uploaded-badge { font-size: 11px; background: var(--t-blue); color: var(--t-accent-fg); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; font-weight: 600; user-select: none; }

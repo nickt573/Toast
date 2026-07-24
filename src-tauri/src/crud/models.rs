@@ -81,6 +81,7 @@ pub struct Card {
     pub is_due: bool,
     pub is_overdue: Option<bool>,
     pub is_paused: bool,
+    pub is_cram: bool,
 
     pub position: Option<i64>,
 }

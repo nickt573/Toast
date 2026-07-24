@@ -82,7 +82,8 @@ pub fn archive_deck_stats(group_id: i64, state: tauri::State<AppState>) -> Resul
     scheduling::archive_deck_stats(group_id, &conn).map_err(|e| e.to_string())
 }
 
-/// Fetch one random is_due item for a group session.
+/// Fetch one card for a group session: due cards (new + review) first, then cram
+/// cards once no due cards remain.
 #[tauri::command]
 pub fn get_next_due_card(
     group_id: i64,
@@ -90,65 +91,29 @@ pub fn get_next_due_card(
     state: tauri::State<AppState>,
 ) -> Result<Option<Card>, String> {
     let conn = state.conn.lock().unwrap();
-
-    let exclude_clause = if exclude_id.is_some() {
-        "AND id != ?2"
-    } else {
-        ""
-    };
-
-    let result = conn.query_row(
-        &format!(
-            r#"
-            SELECT id, group_id, front, back, support,
-                   imported_front, imported_back, imported_support,
-                   front_image, back_image, front_audio, back_audio,
-                   tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded,
-                   position
-            FROM card
-            WHERE group_id = ?1 AND is_due = TRUE AND is_paused = FALSE {exclude_clause}
-            ORDER BY RANDOM()
-            LIMIT 1
-            "#
-        ),
-        rusqlite::params_from_iter(std::iter::once(group_id as i64).chain(exclude_id.into_iter())),
-        |row| {
-            Ok(Card {
-                id: row.get(0)?,
-                group_id: row.get(1)?,
-                front: row.get(2)?,
-                back: row.get(3)?,
-                support: row.get(4)?,
-                imported_front: row.get(5)?,
-                imported_back: row.get(6)?,
-                imported_support: row.get(7)?,
-                front_image: row.get(8)?,
-                back_image: row.get(9)?,
-                front_audio: row.get(10)?,
-                back_audio: row.get(11)?,
-                tier: row.get(12)?,
-                ease: row.get(13)?,
-                sequence: row.get(14)?,
-                is_searchable: row.get(15)?,
-                is_due: row.get(16)?,
-                is_overdue: row.get(17)?,
-                is_paused: row.get(18)?,
-                is_uploaded: row.get(19)?,
-                position: row.get(20)?,
-            })
-        },
-    );
-    match result {
-        Ok(card) => Ok(Some(card)),
-        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(e.to_string()),
-    }
+    read::next_session_card(&conn, group_id, exclude_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn count_due_items(group_id: i64, state: tauri::State<AppState>) -> Result<(i64, i64), String> {
+pub fn count_due_items(
+    group_id: i64,
+    state: tauri::State<AppState>,
+) -> Result<(i64, i64, i64), String> {
     let conn = state.conn.lock().unwrap();
     scheduling::count_due_items(&group_id, &conn).map_err(|e| e.to_string())
+}
+
+/// Grade a cram card. keep = true ("One More Time") leaves it in the cram pool;
+/// keep = false ("Got It") clears it. Never touches tier/ease/sequence.
+#[tauri::command]
+pub fn grade_cram(card_id: i64, keep: bool, state: tauri::State<AppState>) -> Result<(), String> {
+    if keep {
+        return Ok(());
+    }
+    let conn = state.conn.lock().unwrap();
+    conn.execute("UPDATE card SET is_cram = FALSE WHERE id = ?1", [card_id])
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]

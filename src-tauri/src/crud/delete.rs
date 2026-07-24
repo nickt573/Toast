@@ -254,12 +254,12 @@ pub fn remove_group_from_plan(group_id: i64, reset: bool, conn: &mut Connection)
 
         if reset {
             tx.execute(
-                r#"UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE WHERE group_id = ?1"#,
+                r#"UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE, is_cram = FALSE WHERE group_id = ?1"#,
                 [group_id],
             )?;
         } else {
             tx.execute(
-                "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1",
+                "UPDATE card SET is_due = FALSE, is_overdue = NULL, is_cram = FALSE WHERE group_id = ?1",
                 [group_id],
             )?;
         }

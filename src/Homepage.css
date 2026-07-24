@@ -366,9 +366,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-deck-row--empty { cursor: default !important; --t-stripe: var(--t-green-bdr); --t-stripe-hi: var(--t-green); }
 .hp-deck-name { flex: 1; font-weight: 700; font-size: 17px; color: var(--t-text); }
 .hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
-.hp-deck-new, .hp-deck-review { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.hp-deck-new { min-width: 78px; }
-.hp-deck-review { min-width: 102px; }
+.hp-deck-counts { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.hp-deck-new, .hp-deck-review, .hp-deck-cram { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 92px; box-sizing: border-box; }
 
 /* Study session */
 .hp-session {

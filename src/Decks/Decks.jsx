@@ -1091,6 +1091,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     else if (filter === "unpaused") result = result.filter(c => !c.is_paused);
     else if (filter === "due") result = deck.plan_id ? result.filter(c => c.is_due) : [];
     else if (filter === "overdue") result = deck.plan_id ? result.filter(c => c.is_overdue === true) : [];
+    else if (filter === "cram") result = deck.plan_id ? result.filter(c => c.is_cram) : [];
     else if (filter === "new") result = result.filter(c => c.tier == 0);
     else if (filter === "review") result = result.filter(c => c.tier != 0);
     else if (filter === "custom") result = result.filter(c => !c.is_uploaded);
@@ -1210,6 +1211,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                   { key: "all",     label: "All"      },
                   { key: "due",     label: "Due" },
                   { key: "overdue", label: "Overdue"   },
+                  { key: "cram",    label: "Cram"      },
                   { key: "new",     label: "New"       },
                   { key: "review",  label: "Review"    },
                 ].map(f => (
@@ -1239,7 +1241,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
           {filtered.length === 0 ? (
             <div className="dk-table-scroll">
               <div className="dk-table-empty">
-                {(filter === "due" || filter === "overdue") && !deck.plan_id
+                {(filter === "due" || filter === "overdue" || filter === "cram") && !deck.plan_id
                   ? "This deck isn't linked to a plan."
                   : search || filter !== "all" || dateSince
                     ? "No cards match your filters."
@@ -1279,15 +1281,30 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                         onClick={() => setSelectedId(card.id)}>
                         <td><div className="dk-cell-clamp">{front}</div></td>
                         <td><div className="dk-cell-clamp">{back}</div></td>
-                        <td>{card.sequence > 0 ? `${card.sequence}d` : (
-                          <>
-                            {card.is_due
-                              ? <span className={card.is_overdue === true ? "dk-overdue" : undefined}
-                                  title={card.is_overdue === true ? "Carried over from an earlier day" : undefined}>Today</span>
-                              : "ASAP"}
-                            {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star" title="Prioritized">★</span>}
-                          </>
-                        )}</td>
+                        <td>
+                          <div className="dk-due-cell">
+                            {(card.sequence < PRIORITY_CEIL || card.is_cram) && (
+                              <span className="dk-due-marks dk-due-marks--ghost" aria-hidden="true">
+                                {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star">★</span>}
+                                {card.is_cram && <span className="dk-cram-mark">↻</span>}
+                              </span>
+                            )}
+                            <span className="dk-due-label">
+                              {card.sequence > 0
+                                ? `${card.sequence}d`
+                                : card.is_due
+                                  ? <span className={card.is_overdue === true ? "dk-overdue" : undefined}
+                                      title={card.is_overdue === true ? "Carried over from an earlier day" : undefined}>Today</span>
+                                  : "ASAP"}
+                            </span>
+                            {(card.sequence < PRIORITY_CEIL || card.is_cram) && (
+                              <span className="dk-due-marks">
+                                {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star" title="Prioritized">★</span>}
+                                {card.is_cram && <span className="dk-cram-mark" title="Cram">↻</span>}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td>{card.is_paused ? "Yes" : "—"}</td>
                       </tr>
                     );

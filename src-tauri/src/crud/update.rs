@@ -748,6 +748,7 @@ mod tests {
             is_due: false,
             is_overdue: None,
             is_paused: false,
+            is_cram: false,
             position: None,
         };
         update_card(card, &conn, tmp.path()).unwrap();

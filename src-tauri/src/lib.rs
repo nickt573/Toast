@@ -129,6 +129,7 @@ pub fn run() {
             commands::cards::get_next_due_card,
             commands::cards::count_due_items,
             commands::cards::grade_item,
+            commands::cards::grade_cram,
             commands::cards::get_card_grade_log,
             commands::cards::get_card_last_seen_dates,
             commands::pages::create_page,

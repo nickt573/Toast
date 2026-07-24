@@ -503,6 +503,7 @@ textarea { overflow-y: scroll; }
 /* The sky the new-card counts wear, so the pill over a card matches the count above it */
 .pill-new    { background: var(--t-new);   color: var(--t-accent-fg); }
 .pill-plum   { background: var(--t-plum);  color: var(--t-accent-fg); }
+.pill-cram   { background: var(--t-plum);  color: var(--t-accent-fg); }
 .pill-clay   { background: var(--t-clay);  color: var(--t-accent-fg); }
 .pill-pink   { background: var(--t-pink);  color: var(--t-text); }
 .pill-neutral { background: var(--t-text-3); color: var(--t-surface); }
@@ -717,6 +718,7 @@ textarea { overflow-y: scroll; }
    weight of a count instead of trailing off as loose text. */
 .hp-deck-new,
 .hp-deck-review,
+.hp-deck-cram,
 .plan-srs-count,
 .hp-session-counts span {
   color: var(--t-accent-fg);
@@ -734,6 +736,8 @@ textarea { overflow-y: scroll; }
 .hp-deck-review,
 .plan-srs-count--review,
 .hp-session-counts .hp-session-review    { background: var(--t-green); }
+.hp-deck-cram,
+.hp-session-counts .hp-session-cram      { background: var(--t-plum); }
 
 
 /* Per-feature stripe colors: bars at rest, then the deeper shade for border and hover */

@@ -160,9 +160,24 @@ function StudyTimer({ planId }) {
 
 // Grade Buttons
 
-function GradeButtons({ onGrade, card }) {
+function GradeButtons({ onGrade, onCramGrade, isCram, card }) {
     // Rendering without a card would throw and unmount the whole app
     if (!card) return null;
+
+    // Cram turn: two plain choices, no tier/ease/sequence change and no interval.
+    if (isCram) {
+        return (
+            <div className="hp-grade-bar">
+                <button onClick={() => onCramGrade(true)} className="hp-grade-btn hp-grade-omt">
+                    <span>One More Time</span>
+                </button>
+                <button onClick={() => onCramGrade(false)} className="hp-grade-btn hp-grade-gotit">
+                    <span>Got It</span>
+                </button>
+            </div>
+        );
+    }
+
     const gradeDeltas = card.tier > 0 ? [
         { label: "Nope",  tierDelta: -2, grade: 0, cls: "hp-grade-nope",  easeDelta: -0.12 },
         { label: "Rough", tierDelta: -1, grade: 1, cls: "hp-grade-rough", easeDelta: -0.08 },
@@ -566,23 +581,29 @@ function StudySession({ group, onBack, setToast }) {
     const [similarItems, setSimilarItems] = useState({ front: [], back: [] });
     const [newCount, setNewCount] = useState(0);
     const [reviewCount, setReviewCount] = useState(0);
+    const [cramCount, setCramCount] = useState(0);
     const [done, setDone] = useState(false);
     const lastShownId = useRef(null);
     const lastFlush = useRef(Date.now());
     // Drops re-entrant grades so a double-press can't grade the same card twice
     const grading = useRef(false);
     const isCard = group.group_type === "deck";
+    // A card served from the cram pool always has is_due = false (the due pool would
+    // have caught any due card first), so the flag alone tells us it is a cram turn.
+    const isCramTurn = !!card && card.is_due === false;
 
     async function fetchNext() {
         try {
             const counts = await loggedInvoke("count_due_items", { groupId: group.id });
-            const totalDue = counts[0] + counts[1];
+            // Always exclude the last card; the backend repeats it only when it is the
+            // sole card left, so this never ends the session early.
             const next = await loggedInvoke("get_next_due_card", {
                 groupId: group.id,
-                excludeId: totalDue > 1 ? lastShownId.current : null,
+                excludeId: lastShownId.current,
             });
             setNewCount(counts[0]);
             setReviewCount(counts[1]);
+            setCramCount(counts[2]);
             if (!next) { setDone(true); return; }
             lastShownId.current = next.id;
             setCard(next);
@@ -610,6 +631,19 @@ function StudySession({ group, onBack, setToast }) {
         grading.current = true;
         try {
             await loggedInvoke("grade_item", { itemId, grade });
+            await fetchNext();
+        } catch (e) { logError("catch", e); setToast("Failed to grade card", "error"); }
+        finally { grading.current = false; }
+    }
+
+    // Cram turn: keep loops the card back in, otherwise it leaves the cram pool.
+    async function handleCramGrade(keep) {
+        if (!isCard) throw new Error("Attempted Notebook SRS");
+        const cardId = card?.id;
+        if (!cardId || grading.current) return;
+        grading.current = true;
+        try {
+            await loggedInvoke("grade_cram", { cardId, keep });
             await fetchNext();
         } catch (e) { logError("catch", e); setToast("Failed to grade card", "error"); }
         finally { grading.current = false; }
@@ -681,6 +715,11 @@ function StudySession({ group, onBack, setToast }) {
             if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.isContentEditable) return;
             if (e.key === " " && !flipped) { e.preventDefault(); handleFlip(); return; }
             if (flipped && card) {
+                if (isCramTurn) {
+                    const cramMap = { "1": true, "2": true, "3": false, "4": false };
+                    if (cramMap[e.key] !== undefined) handleCramGrade(cramMap[e.key]);
+                    return;
+                }
                 const gradeMap = card.tier > 0
                     ? { "1": 0, "2": 1, "3": 2, "4": 3 }
                     : { "1": 4, "2": 4, "3": 5, "4": 5 };
@@ -689,7 +728,7 @@ function StudySession({ group, onBack, setToast }) {
         }
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [flipped, card]);
+    }, [flipped, card, isCramTurn]);
 
     if (done) {
         return (
@@ -717,14 +756,17 @@ function StudySession({ group, onBack, setToast }) {
                     <div className="hp-session-counts">
                         <span className="hp-session-new" style={{ opacity: newCount > 0 ? 1 : 0.45 }}>New: {newCount}</span>
                         <span className="hp-session-review" style={{ opacity: reviewCount > 0 ? 1 : 0.45 }}>Review: {reviewCount}</span>
+                        {cramCount > 0 && <span className="hp-session-cram">Cram: {cramCount}</span>}
                     </div>
                 </div>
 
                 {card && (
                     <div style={{ marginBottom: 8 }}>
-                        {card.tier > 0
-                            ? <span className="pill pill-green">Review{card.is_overdue === true && " - Overdue"}</span>
-                            : <span className="pill pill-new">New{card.is_overdue === true && " - Overdue"}</span>}
+                        {isCramTurn
+                            ? <span className="pill pill-cram">Cram</span>
+                            : card.tier > 0
+                                ? <span className="pill pill-green">Review{card.is_overdue === true && " - Overdue"}</span>
+                                : <span className="pill pill-new">New{card.is_overdue === true && " - Overdue"}</span>}
                     </div>
                 )}
 
@@ -746,10 +788,10 @@ function StudySession({ group, onBack, setToast }) {
                 {!flipped ? (
                     <button className="hp-flip-btn" onClick={handleFlip}>Flip</button>
                 ) : (
-                    <GradeButtons onGrade={handleGrade} card={card} />
+                    <GradeButtons onGrade={handleGrade} onCramGrade={handleCramGrade} isCram={isCramTurn} card={card} />
                 )}
 
-                {flipped && (
+                {flipped && !isCramTurn && (
                     <div className="hp-swap-row">
                         <span />
                         <button className="hp-swap-btn" onClick={handleSwap}>Swap</button>
@@ -801,8 +843,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         async function loadCounts() {
             const entries = await Promise.all(
                 srsGroups.map(async ([group]) => {
-                    const [newDue, reviewDue] = await loggedInvoke("count_due_items", { groupId: group.id });
-                    return [group.id, { newDue, reviewDue }];
+                    const [newDue, reviewDue, cramDue] = await loggedInvoke("count_due_items", { groupId: group.id });
+                    return [group.id, { newDue, reviewDue, cramDue }];
                 })
             );
             setDueCounts(Object.fromEntries(entries));
@@ -971,9 +1013,9 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         <div className="empty-bubble">No decks linked for study.</div>
                     )}
                     {srsGroups.map(([group]) => {
-                        const counts = dueCounts[group.id] || { newDue: 0, reviewDue: 0 };
-                        const { newDue, reviewDue } = counts;
-                        const isEmpty = newDue === 0 && reviewDue === 0;
+                        const counts = dueCounts[group.id] || { newDue: 0, reviewDue: 0, cramDue: 0 };
+                        const { newDue, reviewDue, cramDue } = counts;
+                        const isEmpty = newDue === 0 && reviewDue === 0 && cramDue === 0;
                         return (
                             <div
                                 key={group.id}
@@ -983,11 +1025,12 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 {isEmpty && <span className="hp-deck-check">✓</span>}
                                 <span className="hp-deck-name">{group.name}</span>
                                 {!isEmpty &&
-                                    <span style={{ display: "flex", gap: 10 }}>
-                                        {/* Both always shown, dimmed at zero the way the session header does it,
-                                            so neither ever slides into the other's place. */}
+                                    <span className="hp-deck-counts">
+                                        {/* Stacked, dimmed at zero the way the session header does it,
+                                            so none ever slides into another's place. Cram only appears when present. */}
                                         <span className="hp-deck-new" style={{ opacity: newDue > 0 ? 1 : 0.45 }}>New: {newDue}</span>
                                         <span className="hp-deck-review" style={{ opacity: reviewDue > 0 ? 1 : 0.45 }}>Review: {reviewDue}</span>
+                                        {cramDue > 0 && <span className="hp-deck-cram">Cram: {cramDue}</span>}
                                     </span>
                                 }
                             </div>
@@ -1124,8 +1167,8 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                     srs
                         .filter(([group]) => group.group_type === "deck")
                         .map(async ([group]) => {
-                            const [n, r] = await loggedInvoke("count_due_items", { groupId: group.id });
-                            return n + r;
+                            const [n, r, c] = await loggedInvoke("count_due_items", { groupId: group.id });
+                            return n + r + c;
                         })
                 );
                 const totalDue = deckDueCounts.reduce((a, b) => a + b, 0);

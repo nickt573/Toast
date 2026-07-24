@@ -155,6 +155,12 @@ fn tick_all(conn: &Connection) -> Result<()> {
             [group_id],
         )?;
 
+        // A new day clears the cram pool.
+        conn.execute(
+            "UPDATE card SET is_cram = FALSE WHERE group_id = ?1",
+            [group_id],
+        )?;
+
         // Step 4: Fill up to max
         fill_group(*group_id, conn)?;
     }
@@ -162,19 +168,20 @@ fn tick_all(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-pub fn count_due_items(group_id: &i64, conn: &Connection) -> Result<(i64, i64)> {
+pub fn count_due_items(group_id: &i64, conn: &Connection) -> Result<(i64, i64, i64)> {
     conn.query_row(
         r#"
         SELECT
-            COUNT(*) FILTER (WHERE tier = 0) AS new_due,
-            COUNT(*) FILTER (WHERE tier > 0) AS review_due
+            COUNT(*) FILTER (WHERE is_due = TRUE AND tier = 0) AS new_due,
+            COUNT(*) FILTER (WHERE is_due = TRUE AND tier > 0) AS review_due,
+            COUNT(*) FILTER (WHERE is_cram = TRUE) AS cram_due
         FROM card
         WHERE group_id = ?1
-          AND is_due = TRUE
           AND is_paused = FALSE
+          AND (is_due = TRUE OR is_cram = TRUE)
         "#,
         [group_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )
 }
 
@@ -362,12 +369,20 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     let is_due = new_sequence <= 0;
     let is_overdue = if is_due { old_overdue } else { None };
 
+    let is_new = old_tier == 0 && new_tier > 0;
+    let is_promote = old_tier > 0 && new_tier > old_tier;
+    // A same-tier grade on a graduated card counts as a demotion: tier clamps at 1,
+    // so grading "again" on tier 1 keeps the tier but is still a failed review.
+    let is_demote = old_tier > 0 && new_tier <= old_tier;
+
+    // A demoted review card enters the cram pool; other grades leave the flag as-is.
     tx.execute(
         r#"
         UPDATE card
         SET tier = ?1, ease = ?2, sequence = ?3,
-            is_due = ?4, is_overdue = ?5
-        WHERE id = ?6
+            is_due = ?4, is_overdue = ?5,
+            is_cram = CASE WHEN ?6 THEN 1 ELSE is_cram END
+        WHERE id = ?7
         "#,
         rusqlite::params![
             new_tier,
@@ -375,6 +390,7 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
             new_sequence,
             is_due,
             is_overdue,
+            is_demote,
             item_id
         ],
     )?;
@@ -385,12 +401,6 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
         "INSERT INTO card_grade_log (card_id, grade, graded_at, old_tier, new_tier) VALUES (?1, ?2, ?3, ?4, ?5)",
         rusqlite::params![item_id, grade, today, old_tier, new_tier],
     )?;
-
-    let is_new = old_tier == 0 && new_tier > 0;
-    let is_promote = old_tier > 0 && new_tier > old_tier;
-    // A same-tier grade on a graduated card counts as a demotion: tier clamps at 1,
-    // so grading "again" on tier 1 keeps the tier but is still a failed review.
-    let is_demote = old_tier > 0 && new_tier <= old_tier;
 
     // Only non-overflow cards (is_overdue == FALSE) consume the daily quota;
     // overflow carry-overs (TRUE) and off-schedule grades (NULL) are free.
@@ -512,7 +522,7 @@ pub fn add_group_time(group_id: i64, minutes: f64, conn: &Connection) -> Result<
 /// remove_group_from_plan. Archiving what came before is a separate, optional step.
 pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
-        "UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE WHERE group_id = ?1",
+        "UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE, is_cram = FALSE WHERE group_id = ?1",
         [group_id],
     )?;
     conn.execute(

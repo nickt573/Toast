@@ -267,6 +267,7 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
         "starts_era",
         "BOOLEAN NOT NULL DEFAULT FALSE",
     )?;
+    add_column_if_missing(conn, "card", "is_cram", "BOOLEAN NOT NULL DEFAULT FALSE")?;
     // v1.6.0: stats outlive the deck and plan they belong to, so a rowid handed out
     // twice hands one thing's history to the next thing created. Runs last, since the
     // rebuilt tables have to include every column added above.
@@ -404,6 +405,7 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 is_overdue BOOLEAN DEFAULT NULL, -- true if overdue, false if newly scheduled, null if is_due == false
                 is_due BOOLEAN NOT NULL DEFAULT FALSE, -- flagged to TRUE by scheduler
                 is_paused BOOLEAN NOT NULL DEFAULT FALSE, -- ignored by scheduler, does not progress sequence
+                is_cram BOOLEAN NOT NULL DEFAULT FALSE, -- set when a review card is demoted, cleared by day tick or Got It
 
                 position INTEGER DEFAULT NULL, -- zipper order set on deck merge; tiebreaker in fill_track
 

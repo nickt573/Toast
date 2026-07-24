@@ -53,7 +53,7 @@ pub fn get_similar_cards(
     // so LIKE against decoded tokens drops valid matches. Matching is done on tokenized text below.
     let sql = "SELECT id, group_id, front, back, support, imported_front, imported_back, imported_support, \
          front_image, back_image, front_audio, back_audio, \
-         tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded, position \
+         tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded, position, is_cram \
          FROM card WHERE is_searchable = TRUE AND id != ?1 AND group_id = ?2";
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
@@ -81,6 +81,7 @@ pub fn get_similar_cards(
                 is_paused: row.get(18)?,
                 is_uploaded: row.get(19)?,
                 position: row.get(20)?,
+                is_cram: row.get(21)?,
             })
         })
         .map_err(|e| e.to_string())?

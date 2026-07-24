@@ -120,7 +120,7 @@ const CARD_COLUMNS: &str = r#"
     id, group_id, front, back, is_searchable, support,
     imported_front, imported_back, imported_support,
     front_image, back_image, front_audio, back_audio, is_uploaded,
-    tier, ease, sequence, is_due, is_overdue, is_paused, position
+    tier, ease, sequence, is_due, is_overdue, is_paused, position, is_cram
 "#;
 
 fn card_from_row(row: &rusqlite::Row) -> Result<Card> {
@@ -146,6 +146,7 @@ fn card_from_row(row: &rusqlite::Row) -> Result<Card> {
         is_overdue: row.get(18)?,
         is_paused: row.get(19)?,
         position: row.get(20)?,
+        is_cram: row.get(21)?,
     })
 }
 
@@ -155,6 +156,43 @@ pub fn get_card(card_id: i64, conn: &Connection) -> Result<Card> {
         [card_id],
         card_from_row,
     )
+}
+
+/// Picks the next card for a study session. Preference order: a due card other than
+/// the one just shown; the just-shown due card if it is the only one left (a repeat
+/// beats dropping into cram early, so cram never appears while any due card remains);
+/// then the same two steps for the cram pool.
+pub fn next_session_card(
+    conn: &Connection,
+    group_id: i64,
+    exclude_id: Option<i64>,
+) -> Result<Option<Card>> {
+    let attempts: [(&str, bool); 4] = [
+        ("is_due = TRUE", true),
+        ("is_due = TRUE", false),
+        ("is_cram = TRUE", true),
+        ("is_cram = TRUE", false),
+    ];
+    for (pool_clause, use_exclude) in attempts {
+        let exclude = use_exclude && exclude_id.is_some();
+        let exclude_clause = if exclude { "AND id != ?2" } else { "" };
+        let sql = format!(
+            "SELECT {CARD_COLUMNS} FROM card
+             WHERE group_id = ?1 AND {pool_clause} AND is_paused = FALSE {exclude_clause}
+             ORDER BY RANDOM() LIMIT 1"
+        );
+        let result = if exclude {
+            conn.query_row(&sql, rusqlite::params![group_id, exclude_id.unwrap()], card_from_row)
+        } else {
+            conn.query_row(&sql, rusqlite::params![group_id], card_from_row)
+        };
+        match result {
+            Ok(card) => return Ok(Some(card)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => continue,
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(None)
 }
 
 pub fn get_cards(deck_id: i64, conn: &Connection) -> Result<Vec<Card>> {
@@ -618,4 +656,104 @@ pub fn get_card_grade_log(card_id: i64, conn: &Connection) -> Result<Vec<CardGra
         })
     })?
     .collect()
+}
+
+#[cfg(test)]
+mod cram_tests {
+    use super::next_session_card;
+    use crate::crud::create::add_group_to_plan;
+    use crate::crud::models::NewScheduler;
+    use crate::crud::read::get_card;
+    use crate::crud::scheduling::{count_due_items, grade_item, mark_for_review, update_date};
+    use crate::db::init_schema;
+    use rusqlite::Connection;
+    use std::path::PathBuf;
+
+    fn counts(conn: &Connection) -> (i64, i64, i64) {
+        count_due_items(&1, conn).unwrap()
+    }
+
+    fn is_cram(conn: &Connection, id: i64) -> bool {
+        get_card(id, conn).unwrap().is_cram
+    }
+
+    // Reproduces the reported session: a due new card plus a card that gets crammed,
+    // then the mark-for-review-while-crammed case, then a day tick.
+    #[test]
+    fn cram_serving_counts_and_clearing() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        init_schema(&conn, &PathBuf::from("/tmp/toast-cram-test")).unwrap();
+        conn.execute_batch(
+            "INSERT INTO \"group\" (id, name, group_type) VALUES (1, 'deck', 'deck');
+             INSERT INTO plan (id, name) VALUES (1, 'plan');",
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO app_date (id, date) VALUES (0, ?1)",
+            [chrono::Local::now().date_naive().to_string()],
+        )
+        .unwrap();
+        add_group_to_plan(
+            1,
+            1,
+            NewScheduler { group_id: 1, max_new: 10, max_review: 10, can_overflow: false },
+            &mut conn,
+        )
+        .unwrap();
+        // id 10 is a fresh new card, id 20 a graduated review card. fill_group (run by
+        // add_group_to_plan) schedules whatever exists, so insert then top up.
+        conn.execute_batch(
+            "INSERT INTO card (id, group_id, front, back, tier, ease, sequence)
+             VALUES (10, 1, 'nf', 'nb', 0, 0.0, 0), (20, 1, 'rf', 'rb', 3, 0.0, 0);",
+        )
+        .unwrap();
+        crate::crud::scheduling::fill_group(1, &conn).unwrap();
+        assert_eq!(counts(&conn), (1, 1, 0), "one new + one review due, no cram");
+
+        // Rate the review card poorly: it should leave the due pool and enter cram.
+        grade_item(20, 1, &mut conn).unwrap();
+        assert!(is_cram(&conn, 20), "demote flags the card as cram");
+        assert!(!get_card(20, &conn).unwrap().is_due, "a crammed card is not due");
+        assert_eq!(counts(&conn), (1, 0, 1), "review clears, cram appears");
+
+        // The bug: spamming One More Time on the new card kept it due; cram must not
+        // surface while a due card remains, even when that card is the one excluded.
+        grade_item(10, 4, &mut conn).unwrap();
+        assert!(get_card(10, &conn).unwrap().is_due, "One More Time keeps the new card due");
+        for _ in 0..8 {
+            let served = next_session_card(&conn, 1, Some(10)).unwrap().unwrap();
+            assert_eq!(served.id, 10, "the lone due card repeats instead of dropping into cram");
+            assert!(served.is_due, "served as a real due card, not cram");
+        }
+
+        // Clear the new card. Now cram is the legitimate next serving, and it is is_due
+        // = false so the frontend renders the cram buttons.
+        grade_item(10, 5, &mut conn).unwrap();
+        assert_eq!(counts(&conn), (0, 0, 1), "only the cram card is left");
+        let served = next_session_card(&conn, 1, Some(10)).unwrap().unwrap();
+        assert_eq!(served.id, 20, "cram card served once no due cards remain");
+        assert!(!served.is_due, "cram serving carries is_due = false");
+
+        // One More Time on the last cram card loops it rather than ending the session.
+        let looped = next_session_card(&conn, 1, Some(20)).unwrap().unwrap();
+        assert_eq!(looped.id, 20, "the sole cram card repeats");
+
+        // Mark-for-review while crammed: the card counts in BOTH pools (+1 each).
+        mark_for_review(20, &conn).unwrap();
+        assert_eq!(counts(&conn), (0, 1, 1), "counts as review AND cram at once");
+        let review = next_session_card(&conn, 1, None).unwrap().unwrap();
+        assert_eq!(review.id, 20);
+        assert!(review.is_due, "served from the due pool first, as review");
+
+        // Rating the review version poorly clears the review but keeps the cram flag.
+        grade_item(20, 1, &mut conn).unwrap();
+        assert_eq!(counts(&conn), (0, 0, 1), "review cleared, still crammed");
+        assert!(!next_session_card(&conn, 1, None).unwrap().unwrap().is_due, "back to cram-only");
+
+        // A new day clears every cram.
+        conn.execute("UPDATE app_date SET date = date(date, '-1 day')", []).unwrap();
+        update_date(&conn).unwrap();
+        assert!(!is_cram(&conn, 20), "the day tick clears the cram flag");
+        assert_eq!(counts(&conn).2, 0, "no cram cards after the tick");
+    }
 }

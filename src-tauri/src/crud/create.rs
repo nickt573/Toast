@@ -126,15 +126,15 @@ pub fn merge_decks(
             r#"
             UPDATE card
             SET tier = 0, ease = 0.0, sequence = 0,
-                is_due = FALSE, is_overdue = NULL, is_paused = FALSE
+                is_due = FALSE, is_overdue = NULL, is_paused = FALSE, is_cram = FALSE
             WHERE group_id = ?1
             "#,
             [new_deck_id],
         )?;
     } else {
-        // The merged deck starts unlinked from any plan, so nothing can be due.
+        // The merged deck starts unlinked from any plan, so nothing can be due or crammed.
         tx.execute(
-            "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1",
+            "UPDATE card SET is_due = FALSE, is_overdue = NULL, is_cram = FALSE WHERE group_id = ?1",
             [new_deck_id],
         )?;
     }
@@ -470,6 +470,7 @@ pub fn create_card_imported(card: NewCard, conn: &Connection) -> Result<Card> {
         is_due: false,
         is_overdue: None,
         is_paused: false,
+        is_cram: false,
         position: None,
     })
 }
