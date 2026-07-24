@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { NewCardForm } from "../Decks/Decks";
-import { ConfirmDelete } from "../UIUtils";
+import { ConfirmDelete, CreateMenu } from "../UIUtils";
 import { mediaSrc } from "../mediaPaths";
 import { AudioPlayer } from "../Decks/CardFace";
 import { loggedInvoke, logError } from "../logger";
@@ -74,6 +74,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
     const [editingId, setEditingId] = useState(null);
     const [editingName, setEditingName] = useState("");
 
+    const [creating, setCreating] = useState(false);
     const [merging, setMerging] = useState(false);
     const [mergeNotebookA, setMergeNotebookA] = useState(null);
     const [mergeNotebookB, setMergeNotebookB] = useState(null);
@@ -94,6 +95,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
             setNotebooks((prev) => [...prev, nb].sort(byName));
             setToast(`${nb.name} successfully created.`);
             setNewName("");
+            setCreating(false);
         } catch (e) { logError("catch", e); setToast("Failed to create notebook.", "error"); }
     };
 
@@ -137,6 +139,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
     };
 
     const startMerge = () => {
+        setCreating(false);
         setMerging(true);
         setMergeNotebookA(notebooks.length > 0 ? notebooks[0].id : null);
         setMergeNotebookB(notebooks.length > 1 ? notebooks[1].id : null);
@@ -165,6 +168,10 @@ function NotebookList({ setToast, onOpenNotebook }) {
             <div className="landing-hdr landing-hdr--notebook">
                 <h2>Notebooks</h2>
                 <button onClick={startMerge} disabled={notebooks.length < 2}>Merge Notebooks</button>
+                <CreateMenu open={creating}
+                    onToggle={() => { setCreating((c) => !c); setMerging(false); }}
+                    value={newName} onChange={setNewName} onCreate={createNotebook}
+                    title="New Notebook" placeholder="New notebook name..." />
             </div>
             {merging && (
                 <div className="nb-merge-panel">
@@ -233,12 +240,6 @@ function NotebookList({ setToast, onOpenNotebook }) {
                         </div>
                     </div>
                 ))}
-            </div>
-            <div className="nb-new-notebook">
-                <input type="text" placeholder="New notebook name..." value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && createNotebook()} />
-                <button className="primary" onClick={createNotebook}>+ Create</button>
             </div>
         </>
     );
@@ -541,7 +542,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                                     {value === null ? "Default" : ""}
                                 </button>
                             ))}
-                            <button className="nb-tb-btn" onClick={() => setColorPrompt(false)}>Cancel</button>
+                            <button className="nb-tb-btn quiet" onClick={() => setColorPrompt(false)}>Cancel</button>
                         </div>
                     )}
                     <div className={`nb-toolbar-wrap${tbScroll.l ? " scroll-l" : ""}${tbScroll.r ? " scroll-r" : ""}`}>
@@ -676,7 +677,7 @@ function CardCreatorPanel({ setToast }) {
         >
             <div className="nb-card-toggle" onMouseDown={startDrag} onClick={toggle}>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>Create a card</span>
-                <span style={{ fontSize: 10, color: "var(--t-text-3)" }}>{open ? "▾" : "▸"}</span>
+                <span className="t-caret">{open ? "▾" : "▸"}</span>
             </div>
             {/* Kept mounted while closed so in-progress input survives toggling. */}
             <div className="nb-card-body">

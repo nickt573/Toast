@@ -18,6 +18,9 @@
   --t-border:        #F0D9CC;   /* default dividers */
   --t-border-2:      #E8CDBD;   /* input / hairline rule color */
   --t-border-3:      #DCBBA9;   /* deep rules: notebook tables, reveal blocks, hr */
+  /* Body ink let well off: the rule between a card's front and its answer. Thin enough
+     that the full ink would read as flat black rather than as the brown it is */
+  --t-espresso-lt:   color-mix(in srgb, var(--t-text) 64%, var(--t-surface));
 
   /* Rest-stripe: the bar a row wears at rest. Lighter than the border it deepens to on
      hover, so highlighting a row is a clear jump rather than a nudge. Each family mixes
@@ -74,8 +77,10 @@
   --t-blue-bg:       #D8E4F1;
   --t-blue-bdr:      #9DB8D2;
   --t-blue-lt:       #7695B8;   /* the navy lightened, for a deck row's stripes and border */
+  --t-blue-dk:       #2F4D71;   /* the navy deepened, so the Anki Import pill sits behind the blue buttons */
+  --t-blue-btn:      color-mix(in srgb, var(--t-blue) 82%, #fff);   /* the deck + button, and the selected state its card-view buttons share */
   --t-blue-stripe:   color-mix(in srgb, var(--t-blue-bdr) 70%, #fff);   /* a deck row's resting bars, lighter than the border they deepen to */
-  --t-new:           #6BA6CE;   /* new cards: a lighter sky, kept apart from the deck slate */
+  --t-new:           #5C93BC;   /* new cards: a sky a step down from the old light one, still kept apart from the deck slate */
 
   /* Warning / at-risk: weak yellow-tan (amber) */
   --t-amber:         #C49A44;
@@ -134,6 +139,10 @@
   /* Spacing / shape */
   --t-nav-h:         54px;
   --t-page-pad:      24px;
+  /* The air between one content item and the next: rows in a list, cards in a landing
+     page, a deck's table and the one under it. Every list in the app measures from this,
+     so the whole app loosens or tightens together. */
+  --t-list-gap:      12px;
   /* Two corners and no more. Anything that holds content rounds the same amount,
      whether it is a panel, a table card, a striped row, an input, or a sheet, so
      nothing ever sits next to something almost-but-not-quite as round. Buttons keep
@@ -486,6 +495,26 @@ textarea { overflow-y: scroll; }
   color: var(--t-label);
 }
 
+/* Every expand/collapse caret in the app: section headers, deck cards, todo rows, the two
+   card creators. Full espresso ink, so the one mark that says a thing opens is legible
+   rather than a grey hint. Carets that sit on coloured ground keep their own colour. */
+.t-caret { font-size: 10px; color: var(--t-text); flex-shrink: 0; user-select: none; }
+
+/* The mark that opens a resource or a deck, wherever one is listed. The arrow glyph is a
+   hairline at this size, so it takes a stroke to be seen without hunting for it. */
+.t-open-arrow {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--t-blue);
+  text-decoration: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-text-stroke: 0.6px currentColor;
+}
+.t-open-arrow:hover { filter: brightness(0.8); }
+
 /* Badges: solid ink index-divider tabs */
 .pill {
   display: inline-flex;
@@ -620,18 +649,44 @@ textarea { overflow-y: scroll; }
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 /* Gold rather than the accent's peach, which read pink next to the other bands. Its own
    colour, so the caramel the rest of the plan family wears stays where it is. */
-.landing-hdr--plan     { --hdr-band: color-mix(in srgb, #D8A430 56%, var(--t-surface)); background: var(--hdr-band); }
-.landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); background: var(--hdr-band); }
-.landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); background: var(--hdr-band); }
+.landing-hdr--plan     { --hdr-band: color-mix(in srgb, #D8A430 56%, var(--t-surface)); --hdr-btn: color-mix(in srgb, #D8A430 88%, #000); background: var(--hdr-band); }
+.landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); background: var(--hdr-band); }
+.landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); background: var(--hdr-band); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
-.landing-body { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: 6px; }
-.landing-footer { display: flex; gap: 8px; padding: 10px var(--t-page-pad); background: var(--t-accent-bdr); flex-shrink: 0; }
-/* Both button and band are caramel, so the button sits a shade deeper to stay legible */
-.landing-footer button.primary { background: var(--t-accent-h); border-color: var(--t-accent-h); }
-.landing-footer button.primary:hover { filter: brightness(0.92); }
-.landing-footer input { flex: 1; border-color: var(--t-accent-bdr); }
-.landing-footer input:focus { border-color: var(--t-accent); }
+/* Action buttons in a landing header take the family colour, matching the round +.
+   Direct children only, so the popup's own Create/Cancel keep their own styling. */
+.landing-hdr > button:not(.quiet):not(.primary):not(.danger) { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); }
+.landing-hdr > button:not(.quiet):not(.primary):not(.danger):hover { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); filter: brightness(0.92); }
+/* The scrolling list of cards a landing page is made of. Plans, decks and notebooks all
+   render the same thing, so they share the one rule rather than keeping a copy each. */
+.landing-body,
+.dk-list,
+.nb-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
+
+/* Round "+" in a landing header opens a small create popup, replacing the old bottom bar.
+   The family colour comes from --hdr-btn on the header (gold / blue / plum). */
+.t-add-wrap { position: relative; display: inline-flex; margin-left: 4px; }
+.t-add-btn {
+  width: 28px; height: 28px; padding: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 22px; line-height: 0; font-weight: 400; padding-bottom: 3.20px;
+  background: var(--hdr-btn, var(--t-accent)); border-color: var(--hdr-btn, var(--t-accent));
+  color: var(--t-accent-fg);
+}
+.t-add-btn:hover { background: var(--hdr-btn, var(--t-accent)); border-color: var(--hdr-btn, var(--t-accent)); color: var(--t-accent-fg); filter: brightness(0.92); }
+.t-add-btn.open { filter: brightness(0.86); }
+.t-add-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 20;
+  width: 300px; display: flex; flex-direction: column; gap: 8px;
+  padding: 12px; background: var(--t-surface);
+  border-radius: var(--t-r); box-shadow: 0 4px 16px rgba(0,0,0,0.16);
+}
+.t-add-menu-title { font-size: 13px; font-weight: 600; color: var(--t-title); }
+.t-add-menu input:focus { border-color: var(--hdr-btn, var(--t-accent)); }
+.t-add-menu-actions { display: flex; gap: 8px; }
+.t-add-menu button.primary { background: var(--hdr-btn, var(--t-accent)); border-color: var(--hdr-btn, var(--t-accent)); }
+.t-add-menu button.primary:hover { filter: brightness(0.92); }
 
 /* Empty-section placeholder bubble */
 .empty-bubble {
@@ -732,25 +787,20 @@ textarea { overflow-y: scroll; }
 .hp-deck-new,
 .hp-deck-review,
 .hp-deck-cram,
-.plan-srs-count,
-.hp-session-counts span {
+.plan-srs-count {
   color: var(--t-accent-fg);
   border-radius: var(--t-r-btn);
   padding: 2px 8px;
   text-align: center;
 }
 /* Tighter rows carry the same box a size down */
-.plan-srs-count,
-.hp-session-counts span { font-size: 11px; font-weight: 600; padding: 1px 6px; }
+.plan-srs-count { font-size: 11px; font-weight: 600; padding: 1px 6px; }
 
 .hp-deck-new,
-.plan-srs-count--new,
-.hp-session-counts .hp-session-new       { background: var(--t-new); }
+.plan-srs-count--new       { background: var(--t-new); }
 .hp-deck-review,
-.plan-srs-count--review,
-.hp-session-counts .hp-session-review    { background: var(--t-green); }
-.hp-deck-cram,
-.hp-session-counts .hp-session-cram      { background: var(--t-plum); }
+.plan-srs-count--review    { background: var(--t-green); }
+.hp-deck-cram      { background: var(--t-plum); }
 
 
 /* Per-feature stripe colors: bars at rest, then the deeper shade for border and hover */
@@ -800,7 +850,6 @@ textarea { overflow-y: scroll; }
 .plan-col-side { min-width: 0; padding-top: 22px; border-top: var(--t-bw) solid var(--t-border-2); }
 .plan-col-label { font-family: var(--t-font-head); font-size: 18px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 10px; }
 .plan-col-label--toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 7px; }
-.plan-col-label-caret { font-size: 10px; color: var(--t-text-3); }
 .plan-col-label--todos     { color: var(--t-yellow); }
 .plan-col-label--resources { color: var(--t-clay); }
 .plan-col-label--srs       { color: var(--t-blue); }
@@ -828,7 +877,7 @@ textarea { overflow-y: scroll; }
   color: var(--t-text-2);
   /* A step off the deep peach the section headers wear, so a quote sits quietly in the
      middle of a page instead of reading as a header band. */
-  background: color-mix(in srgb, var(--t-surface-3) 62%, var(--t-surface));
+  background: color-mix(in srgb, var(--t-surface-3) 24%, var(--t-surface));
   border-radius: var(--t-r);
 }
 .nb-editor-scroll .ProseMirror img {
@@ -861,11 +910,11 @@ textarea { overflow-y: scroll; }
 .nb-view-content .ProseMirror a { cursor: pointer; }
 
 /* Resource card (name / type / url / notes), shared by Stats + study page: */
-.st-resource-cards { display: flex; flex-direction: column; gap: 6px; }
+.st-resource-cards { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .st-resource-card { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 7px var(--t-stripe-gutter) 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-text); }
 .st-resource-card-type { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
-.st-resource-card-url { display: inline-flex; align-items: center; font-size: 12px; color: var(--t-blue); margin-top: 3px; cursor: pointer; }
-.st-resource-card-url:hover { filter: brightness(0.8); }
+/* Only the nudge off the baseline it shares with the name, the mark itself is .t-open-arrow */
+.st-resource-card-url { margin-top: 3px; }
 .st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }

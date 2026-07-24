@@ -230,6 +230,21 @@ const audioWrapStyle = {
 
 const audioStyle = { width: "100%", maxWidth: 320 };
 
+const answerBlockStyle = {
+    width: "100%",
+    boxSizing: "border-box",
+};
+
+// Short and centred rather than a rule across the whole card, wearing the same edge the
+// audio buttons do. Only the front and the answer get one, support carries on separating
+// by spacing alone.
+const frontBackRuleStyle = {
+    width: 400,
+    height: 2,
+    background: "var(--t-espresso-lt)",
+    margin: "16px auto",
+};
+
 export function CardFace({ card, showBack }) {
     const frontAudioSrcs = extractRawAudioSrcs(card.imported_front);
     const backAudioSrcs  = extractRawAudioSrcs(card.imported_back);
@@ -269,8 +284,8 @@ export function CardFace({ card, showBack }) {
             )}
 
             {showBack && (
-                <>
-                    <hr style={{ border: "none", borderTop: "1px solid var(--t-border)", margin: "14px 0" }} />
+                <div style={answerBlockStyle}>
+                    <div style={frontBackRuleStyle} />
                     <div style={{ textAlign: "center" }}>
                         {card.imported_back && (
                             <div style={{ fontSize: 15, color: "var(--t-text)", fontFamily: "inherit" }}
@@ -282,7 +297,7 @@ export function CardFace({ card, showBack }) {
                             </div>
                         )}
                         {(card.imported_support || card.support) && (
-                            <div style={{ fontSize: 13, color: "var(--t-text-2)", marginTop: 10, whiteSpace: "pre-wrap", borderTop: "1px solid var(--t-border)", paddingTop: 10 }}>
+                            <div style={{ fontSize: 13, color: "var(--t-text-2)", marginTop: 14, whiteSpace: "pre-wrap" }}>
                                 {card.imported_support && (
                                     <div dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(card.imported_support)) }} />
                                 )}
@@ -307,7 +322,7 @@ export function CardFace({ card, showBack }) {
                     {backAudio.length > 0 && (
                         <div style={audioWrapStyle}>{backAudio}</div>
                     )}
-                </>
+                </div>
             )}
         </div>
     );

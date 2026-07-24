@@ -27,7 +27,7 @@ pub fn update_scheduler(scheduler: Scheduler, conn: &Connection) -> Result<()> {
 
 pub fn pause_all(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
-        "UPDATE card SET is_due = FALSE, is_overdue = NULL, is_paused = TRUE WHERE group_id = ?1",
+        "UPDATE card SET is_due = FALSE, is_overdue = NULL, is_paused = TRUE, is_cram = FALSE WHERE group_id = ?1",
         [group_id],
     )?;
     Ok(())
@@ -287,7 +287,7 @@ pub fn on_pause_changed(
 ) -> Result<()> {
     if now_paused {
         conn.execute(
-            "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE id = ?1",
+            "UPDATE card SET is_due = FALSE, is_overdue = NULL, is_cram = FALSE WHERE id = ?1",
             [card_id],
         )?;
     }

@@ -591,6 +591,8 @@ function StudySession({ group, onBack, setToast }) {
     // A card served from the cram pool always has is_due = false (the due pool would
     // have caught any due card first), so the flag alone tells us it is a cram turn.
     const isCramTurn = !!card && card.is_due === false;
+    // The count pill for the current card keeps its colour, the rest grey out
+    const currentType = isCramTurn ? "cram" : card && card.tier > 0 ? "review" : "new";
 
     async function fetchNext() {
         try {
@@ -753,20 +755,20 @@ function StudySession({ group, onBack, setToast }) {
                 <div className="hp-session-header">
                     <button className="quiet" onClick={handleBack}>← Back</button>
                     <h2>{group.name}</h2>
-                    <div className="hp-session-counts">
-                        <span className="hp-session-new" style={{ opacity: newCount > 0 ? 1 : 0.45 }}>New: {newCount}</span>
-                        <span className="hp-session-review" style={{ opacity: reviewCount > 0 ? 1 : 0.45 }}>Review: {reviewCount}</span>
-                        {cramCount > 0 && <span className="hp-session-cram">Cram: {cramCount}</span>}
-                    </div>
                 </div>
 
                 {card && (
-                    <div style={{ marginBottom: 8 }}>
+                    <div className="hp-session-status">
                         {isCramTurn
                             ? <span className="pill pill-cram">Cram</span>
                             : card.tier > 0
                                 ? <span className="pill pill-green">Review{card.is_overdue === true && " - Overdue"}</span>
                                 : <span className="pill pill-new">New{card.is_overdue === true && " - Overdue"}</span>}
+                        <div className="hp-session-counts">
+                            <span className="pill pill-new" style={{ opacity: currentType === "new" ? 1 : 0.4 }}>New: {newCount}</span>
+                            <span className="pill pill-green" style={{ opacity: currentType === "review" ? 1 : 0.4 }}>Review: {reviewCount}</span>
+                            {cramCount > 0 && <span className="pill pill-cram" style={{ opacity: currentType === "cram" ? 1 : 0.4 }}>Cram: {cramCount}</span>}
+                        </div>
                     </div>
                 )}
 
@@ -1042,7 +1044,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                 {planResources.length > 0 && (
                     <div className="hp-resources">
                         <span className="hp-resources-toggle" onClick={() => setShowResources(s => !s)}>
-                            Resources <span className="hp-resources-caret">{showResources ? "▾" : "▸"}</span>
+                            Resources <span className="t-caret">{showResources ? "▾" : "▸"}</span>
                         </span>
                         {showResources && (
                             <div className="hp-resources-list">
