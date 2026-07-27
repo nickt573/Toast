@@ -43,6 +43,25 @@ const FONT_COLORS = [
     { label: "Grey",       value: "#6B5458" },
 ];
 
+// A fill belongs to the cell rather than to the text in it, so it stays put while the
+// contents are edited and survives a row or column moving.
+const cellFillAttribute = {
+    backgroundColor: {
+        default: null,
+        parseHTML: (el) => el.style.backgroundColor || null,
+        renderHTML: (attrs) =>
+            attrs.backgroundColor ? { style: `background-color: ${attrs.backgroundColor}` } : {},
+    },
+};
+
+const FillableTableCell = TableCell.extend({
+    addAttributes() { return { ...this.parent?.(), ...cellFillAttribute }; },
+});
+
+const FillableTableHeader = TableHeader.extend({
+    addAttributes() { return { ...this.parent?.(), ...cellFillAttribute }; },
+});
+
 async function pickFile(extensions) {
     try {
         const path = await open({ multiple: false, filters: [{ name: "File", extensions }] });
@@ -163,10 +182,17 @@ function NotebookList({ setToast, onOpenNotebook }) {
         } catch (e) { logError("catch", e); setToast("Failed to merge notebooks.", "error"); }
     };
 
+    const totalPages = notebooks.reduce((s, nb) => s + (pageCounts[nb.id] ?? 0), 0);
+
     return (
         <>
             <div className="landing-hdr landing-hdr--notebook">
                 <h2>Notebooks</h2>
+                {notebooks.length > 0 && (
+                    <span className="hdr-context">
+                        {notebooks.length} {notebooks.length === 1 ? "notebook" : "notebooks"} · {totalPages.toLocaleString()} {totalPages === 1 ? "page" : "pages"}
+                    </span>
+                )}
                 <button onClick={startMerge} disabled={notebooks.length < 2}>Merge Notebooks</button>
                 <CreateMenu open={creating}
                     onToggle={() => { setCreating((c) => !c); setMerging(false); }}
@@ -388,6 +414,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
     const [linkText, setLinkText] = useState("");
     const [linkUrl, setLinkUrl] = useState("");
     const [colorPrompt, setColorPrompt] = useState(false);
+    const [fillPrompt, setFillPrompt] = useState(false);
     const audio = useAudioRecorder({ audioFile, onAudioChange: onAudioChange ?? (() => {}) });
 
     const toolbarRef = useRef(null);
@@ -425,8 +452,8 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
             }).configure({ allowBase64: false }),
             Table.configure({ resizable: true }),
             TableRow,
-            TableCell,
-            TableHeader,
+            FillableTableCell,
+            FillableTableHeader,
             TextAlign.configure({ types: ["paragraph"] }),
             RevealBlock,
         ],
@@ -499,11 +526,21 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         (value ? chain.setColor(value) : chain.unsetColor()).run();
     }, [editor]);
 
+    // Fills every cell the selection touches, so dragging across a row paints the row.
+    const applyFill = useCallback((value) => {
+        setFillPrompt(false);
+        editor.chain().focus().setCellAttribute("backgroundColor", value).run();
+    }, [editor]);
+
     if (!editor) return null;
 
     const textStyle = editor.getAttributes("textStyle");
     const activeFontSize = parseInt(textStyle.fontSize, 10) || DEFAULT_FONT_SIZE;
     const activeColor = textStyle.color ?? null;
+    const inTable = editor.isActive("table");
+    const activeFill = (editor.isActive("tableHeader")
+        ? editor.getAttributes("tableHeader")
+        : editor.getAttributes("tableCell")).backgroundColor ?? null;
 
     return (
         <div className="nb-editor-wrap">
@@ -545,6 +582,19 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                             <button className="nb-tb-btn quiet" onClick={() => setColorPrompt(false)}>Cancel</button>
                         </div>
                     )}
+                    {fillPrompt && inTable && (
+                        <div className="nb-inline-prompt nb-color-prompt">
+                            {FONT_COLORS.map(({ label, value }) => (
+                                <button key={label} title={label}
+                                    className={`nb-color-swatch${value === null ? " nb-color-swatch--default" : ""}${activeFill === value ? " active" : ""}`}
+                                    style={value ? { background: value } : undefined}
+                                    onClick={() => applyFill(value)}>
+                                    {value === null ? "Default" : ""}
+                                </button>
+                            ))}
+                            <button className="nb-tb-btn quiet" onClick={() => setFillPrompt(false)}>Cancel</button>
+                        </div>
+                    )}
                     <div className={`nb-toolbar-wrap${tbScroll.l ? " scroll-l" : ""}${tbScroll.r ? " scroll-r" : ""}`}>
                     <div className="nb-toolbar" ref={toolbarRef} onScroll={updateTbScroll} onWheel={handleTbWheel}>
                         <AudioControls audioFile={audioFile} audio={audio} />
@@ -580,7 +630,11 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                         <button className="nb-tb-btn" onClick={() => editor.chain().focus().setHorizontalRule().run()}>―</button>
                         <div className="nb-tb-sep" />
                         <button className="nb-tb-btn" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>⊞ Table</button>
-                        {editor.isActive("table") && <>
+                        {inTable && <>
+                            <button className={`nb-tb-btn nb-tb-color-btn${fillPrompt ? " active" : ""}`} title="Cell fill"
+                                onClick={() => setFillPrompt((p) => !p)}>
+                                ▧<span className="nb-tb-color-chip" style={{ background: activeFill ?? "var(--t-surface)" }} />
+                            </button>
                             <button className="nb-tb-btn" onClick={() => editor.chain().focus().addRowAfter().run()}>+Row</button>
                             <button className="nb-tb-btn" onClick={() => editor.chain().focus().addColumnAfter().run()}>+Col</button>
                             <button className="nb-tb-btn" onClick={() => editor.chain().focus().deleteRow().run()}>-Row</button>
@@ -891,7 +945,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                     <button className="quiet" onClick={() => handleBack(onBack)}>← Back</button>
                 )}
                 <h2>{notebook.name}</h2>
-                <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>{allPages.length} page{allPages.length !== 1 ? "s" : ""}</span>
+                <span className="hdr-context">{allPages.length.toLocaleString()} page{allPages.length !== 1 ? "s" : ""}</span>
                 {!editing && <button onClick={startNew}>+ New Page</button>}
             </div>
 
