@@ -14,7 +14,8 @@
       {
         "title": "Toast",
         "width": 1000,
-        "height": 830
+        "height": 830,
+        "maxWidth": 1000
       }
     ],
     "security": {
