@@ -214,6 +214,12 @@ export default function ToGo({ setToast }) {
       )}
       <header className="togo-header">
         <h2>Toast to Go</h2>
+        {cfg && (
+          <span className="hdr-context">
+            {cfg.last_push ? `Last pushed ${timeAgo(cfg.last_push)}` : "Never pushed"}
+            {cfg.last_pull && ` · Last pulled ${timeAgo(cfg.last_pull)}`}
+          </span>
+        )}
       </header>
 
       <div className="togo-body">

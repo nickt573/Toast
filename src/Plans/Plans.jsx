@@ -118,7 +118,7 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
             </div>
             {removing && (
                 <div className="plan-srs-confirm-sub">
-                    Preserve maintains all progress. Reset wipes all progress, and can
+                    Preserve maintains all progress. Reset wipes all progress with the option to
                     archive this deck's old stats so they stop counting.
                 </div>
             )}
@@ -759,6 +759,8 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
 
     // A day preview hides todos disabled that day, or keeps them dimmed in "all" mode.
     const displayTodos = weekDay === null || dayMode === "all" ? todos : todos.filter((t) => activeOnDay(t, weekDay));
+    const totalTodos = plans.reduce((s, p) => s + (summaries[p.id]?.todos ?? 0), 0);
+    const totalResources = plans.reduce((s, p) => s + (summaries[p.id]?.resources ?? 0), 0);
 
     if (editingPlan) {
         return (
@@ -840,6 +842,11 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
         <div className="plans-root">
             <div className="landing-hdr landing-hdr--plan">
                 <h2>Plans</h2>
+                {plans.length > 0 && (
+                    <span className="hdr-context">
+                        {plans.length} {plans.length === 1 ? "plan" : "plans"} · {totalTodos} {totalTodos === 1 ? "todo" : "todos"} · {totalResources} {totalResources === 1 ? "resource" : "resources"}
+                    </span>
+                )}
                 <CreateMenu open={creating} onToggle={() => setCreating((c) => !c)}
                     value={name} onChange={setName} onCreate={createPlan}
                     title="New Plan" placeholder="New plan name..." />

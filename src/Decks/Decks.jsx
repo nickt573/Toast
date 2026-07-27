@@ -283,10 +283,17 @@ function DeckList({ setToast, onOpenDeck }) {
     } catch (e) { logError("catch", e); setToast("Failed to merge decks.", "error"); }
   };
 
+  const totalCards = decks.reduce((s, d) => s + (cardCounts[d.id] ?? 0), 0);
+
   return (
     <>
       <div className="landing-hdr landing-hdr--deck">
         <h2>Decks</h2>
+        {decks.length > 0 && (
+          <span className="hdr-context">
+            {decks.length} {decks.length === 1 ? "deck" : "decks"} · {totalCards.toLocaleString()} {totalCards === 1 ? "card" : "cards"}
+          </span>
+        )}
         <button onClick={pickAnkiFile}>Import Anki</button>
         <button onClick={startMerge} disabled={decks.length < 2}>Merge Decks</button>
         <CreateMenu open={creating}
@@ -1161,7 +1168,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
         )}
         <h2>{deck.name}</h2>
         {planName && <span className="dk-cards-plan">{planName}</span>}
-        <span style={{ fontSize: 12, color: "var(--t-text-3)", marginLeft: "auto" }}>{cards.length} card{cards.length !== 1 ? "s" : ""}</span>
+        <span className="hdr-context">{cards.length.toLocaleString()} card{cards.length !== 1 ? "s" : ""}</span>
         <DeckActions onPauseAll={pauseAll} onUnpauseAll={unpauseAll}
           onAllSearchable={() => setAllSearchable(true)} onAllNotSearchable={() => setAllSearchable(false)}
           onResetRequest={() => setConfirmReset(true)} />

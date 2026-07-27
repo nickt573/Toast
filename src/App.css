@@ -653,6 +653,9 @@ textarea { overflow-y: scroll; }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); background: var(--hdr-band); }
 .landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); background: var(--hdr-band); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
+/* What the page is holding right now, told quietly at the right of any header bar. Every
+   page bar shares it, so it reads the same on the ones with buttons and the ones without. */
+.hdr-context { margin-left: auto; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: color-mix(in srgb, var(--t-title) 62%, transparent); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Action buttons in a landing header take the family colour, matching the round +.
    Direct children only, so the popup's own Create/Cancel keep their own styling. */
 .landing-hdr > button:not(.quiet):not(.primary):not(.danger) { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); }
