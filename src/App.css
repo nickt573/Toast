@@ -42,34 +42,27 @@
   /* Plans / primary accent: wheat / caramel */
   --t-accent:        #C99A63;
   --t-accent-h:      #B5854E;
-  --t-accent-d:      #9C6F3C;   /* deepest caramel, for a card edge that has to hold on its own */
   --t-accent-bg:     #F3E4CF;
   --t-accent-bdr:    #DFC59C;
   --t-accent-fg:     #FFF9F4;   /* text on ink fills */
 
   /* Todos: sunflower yellow (incomplete / pending) */
   --t-yellow:        #E0A92E;
-  --t-yellow-bg:     #FBEBC4;
   --t-yellow-bdr:    #EBD08A;
   --t-time:          #B96A2B;   /* time spent, readable orange from the stat-table family */
 
   /* Done / safe: forest green */
   --t-green:         #4A8C5E;
   --t-green-h:       #3E764F;   /* hover deepens */
-  --t-green-bg:      #D9E8D6;
   --t-green-bdr:     #A6C6A8;
 
   /* Destructive: red */
   --t-red:           #B85454;
   --t-red-h:         #A34646;   /* danger ink hover deepens */
   --t-red-bg:        #F5E0E0;
-  --t-red-bg-h:      #EFCBCB;
-  --t-red-bdr:       #D8AEAE;
 
   /* Stat reds (demoted / poor retention): warmer than the danger ink */
   --t-red-2:         #B04A42;
-  --t-red-2-bg:      #F7D3C9;
-  --t-red-2-bdr:     #E0A99C;
 
   /* Decks / Cards: light navy. The old slate lost its blue as it lightened and the
      tints came out grey, so these hold their saturation on the way up. */
@@ -77,20 +70,16 @@
   --t-blue-bg:       #D8E4F1;
   --t-blue-bdr:      #9DB8D2;
   --t-blue-lt:       #7695B8;   /* the navy lightened, for a deck row's stripes and border */
-  --t-blue-dk:       #2F4D71;   /* the navy deepened, so the Anki Import pill sits behind the blue buttons */
   --t-blue-btn:      color-mix(in srgb, var(--t-blue) 82%, #fff);   /* the deck + button, and the selected state its card-view buttons share */
   --t-blue-stripe:   color-mix(in srgb, var(--t-blue-bdr) 70%, #fff);   /* a deck row's resting bars, lighter than the border they deepen to */
   --t-new:           #5C93BC;   /* new cards: a sky a step down from the old light one, still kept apart from the deck slate */
 
   /* Warning / at-risk: weak yellow-tan (amber) */
   --t-amber:         #C49A44;
-  --t-amber-bg:      #F5EAD2;
-  --t-amber-bdr:     #D8C088;
 
   /* Notebooks: plum */
   --t-plum:          #8A6A96;
   --t-plum-lt:       #B49CBD;   /* the plum lightened, for a notebook card's stripes and border */
-  --t-plum-bg:       #ECE0F0;
   --t-plum-bdr:      #C8B4D2;
   /* Swap during a study session. A lighter plum, so it is nobody's grade and reads apart from the notebook tab wearing the full plum */
   --t-swap:          #A98BB4;
@@ -99,27 +88,18 @@
      terracotta washed out to peach once it was tinted, so the tints hold their
      saturation rather than fading toward white. */
   --t-clay:          #BD5540;
-  --t-clay-bg:       #F7E0D9;
   --t-clay-bdr:      #DB8B77;
   --t-clay-lt:       #C96A55;   /* deeper than the border, for a hovered row's stripes */
   --t-clay-stripe:   color-mix(in srgb, var(--t-clay-bdr) 70%, #fff);   /* a resource row's resting bars, lighter than the border they deepen to */
 
   /* Stats: dark / burnt orange (distinct from caramel plans) */
   --t-stat:          #C85A2A;
-  --t-stat-h:        #B04A1F;
-  --t-stat-bg:       #F7DDC9;
-  --t-stat-bdr:      #E5B091;
 
   /* Toast to Go: silver. A utility tab, not a feature family */
   --t-silver:        #A4A6A7;
-  --t-silver-bg:     #EAEBEB;
-  --t-silver-bdr:    #ADB0B1;   /* deeper than the rest of the silver family so it holds up against the peach background */
 
   /* Strawberry pink: homepage identity + decorative accent */
   --t-pink:          #F6A7B8;
-  --t-pink-2:        #F8C1C9;
-  --t-pink-bg:       #FDE0E6;
-  --t-pink-bdr:      #F2B8C4;
 
   /* Neutral (maintenance) buttons: rich mauve ink from the nav family */
   --t-btn:           #8B5F6B;

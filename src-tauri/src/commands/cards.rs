@@ -63,8 +63,6 @@ pub fn reset_deck(group_id: i64, state: tauri::State<AppState>) -> Result<(), St
     scheduling::reset_deck(group_id, &conn).map_err(|e| e.to_string())
 }
 
-/// Swapping a card out mid-session: pausing it frees its slot, so the queue refills
-/// with an eligible card from the same track.
 #[tauri::command]
 pub fn set_card_paused(
     card_id: i64,
@@ -73,6 +71,15 @@ pub fn set_card_paused(
 ) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
     update::set_card_paused(card_id, paused, &conn).map_err(|e| e.to_string())
+}
+
+/// Swapping a card out mid-session: pausing it frees its slot, so the queue refills
+/// with an eligible card from the same track. True when one came in, false when nothing
+/// was eligible and the session is simply one card shorter.
+#[tauri::command]
+pub fn swap_card(card_id: i64, state: tauri::State<AppState>) -> Result<bool, String> {
+    let conn = state.conn.lock().unwrap();
+    update::swap_card(card_id, &conn).map_err(|e| e.to_string())
 }
 
 /// Archives every stat row a deck has, in every plan. Offered after a reset.

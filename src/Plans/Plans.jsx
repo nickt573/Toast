@@ -89,7 +89,7 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                                 onKeyDown={(e) => { if (e.key === "Enter") saveSettings(); }}
                                 className="plan-srs-settings-input" />
                         </label>
-                        <label className="plan-srs-settings-label with-gap">
+                        <label className="plan-srs-settings-label">
                             <input type="checkbox" checked={canOverflow}
                                 onChange={(e) => setCanOverflow(e.target.checked)} />
                             Overflow
@@ -232,7 +232,7 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
                                 onChange={(e) => setMaxReview(Number(e.target.value))}
                                 className="plan-srs-settings-input" />
                         </label>
-                        <label className="plan-srs-settings-label with-gap">
+                        <label className="plan-srs-settings-label">
                             <input type="checkbox" checked={canOverflow}
                                 onChange={(e) => setCanOverflow(e.target.checked)} />
                             Overflow

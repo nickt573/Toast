@@ -364,7 +364,9 @@ const barOpts = (stacked = false, yLabel = "", xTicks = null, pairedY = false) =
       stacked,
       beginAtZero: true,
       ticks: { stepSize: 1, font: { size: 10 } },
-      title: { display: !!yLabel, text: yLabel, font: { size: 10 }, color: "var(--t-text-3)" },
+      // A literal, not the token: this is drawn onto a canvas, and an unresolved
+      // var() is silently ignored there rather than falling back to anything.
+      title: { display: !!yLabel, text: yLabel, font: { size: 10 }, color: GRAY },
       ...(pairedY ? { afterFit: pairedAxis } : {}),
     },
   },
@@ -1445,7 +1447,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       setActivePlans(ps);
       setDeletedPlans(dp);
       setAllGroups(gs);
-      loadTotals([...ps, ...dp].map(p => p.id));
+      loadTotals();
       const firstId = returnContext?.selectedPlanId ?? ps[0]?.id ?? dp[0]?.id ?? null;
       setSelectedPlanId(firstId);
       if (returnContext) onConsumeReturnContext();
@@ -1482,28 +1484,18 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
     }).catch(e => { logError("catch", e); setToast("Failed to load stats.", "error"); });
   };
 
-  // The header speaks for the whole record rather than the plan on screen, so it reads
-  // every plan, deleted ones included. The oldest first record sets the day count, which
-  // is why it keeps climbing after the plan that started it has been put down.
-  const loadTotals = (planIds) => {
-    Promise.all(planIds.map(id => Promise.all([
-      loggedInvoke("get_group_stats", { planId: id }),
-      loggedInvoke("get_todo_stats",  { planId: id }),
-    ]))).then(perPlan => {
-      let deckMins = 0, todoMins = 0, earliest = null;
-      perPlan.forEach(([gs, ts]) => {
-        deckMins += counted(gs).reduce((s, r) => s + r.time_spent_minutes, 0);
-        todoMins += ts.reduce((s, r) => s + r.time_spent_minutes, 0);
-        // Archived rows still date the record, the same way they do for one plan
-        [...gs, ...ts].forEach(r => { if (earliest === null || r.date < earliest) earliest = r.date; });
-      });
-      setTotals({ deckMins, todoMins, earliest });
-    }).catch(e => logError("catch", e));
+  // The header speaks for the whole record rather than the plan on screen, so the sum is
+  // taken across every plan at once in the backend. The oldest first record sets the day
+  // count, which is why it keeps climbing after the plan that started it has been put down.
+  const loadTotals = () => {
+    loggedInvoke("get_record_totals")
+      .then(t => setTotals({ deckMins: t.deck_mins, todoMins: t.todo_mins, earliest: t.earliest }))
+      .catch(e => logError("catch", e));
   };
 
   const refreshStats = () => {
     loadStats(selectedPlanId);
-    loadTotals([...activePlans, ...deletedPlans].map(p => p.id));
+    loadTotals();
   };
 
   const deleteDeletedPlan = async (planId) => {
@@ -1516,7 +1508,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
         const next = activePlans[0]?.id ?? dp[0]?.id ?? null;
         setSelectedPlanId(next);
       }
-      loadTotals([...activePlans, ...dp].map(p => p.id));
+      loadTotals();
       setToast("Plan stats deleted.");
     } catch(e) {
       logError("catch", e);

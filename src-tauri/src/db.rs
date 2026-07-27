@@ -172,6 +172,12 @@ fn has_autoincrement(conn: &Connection, table: &str) -> rusqlite::Result<bool> {
 ///
 /// Follows SQLite's documented rebuild procedure. legacy_alter_table keeps the rename
 /// from rewriting other tables' foreign keys, which already name the real table.
+///
+/// The two pragmas have to be set outside the transaction, since foreign_keys is a no-op
+/// inside one, so they are turned back on whichever way the rebuild goes. Everything that
+/// touches data sits inside a real transaction rather than a literal BEGIN in the batch:
+/// a statement failing halfway through a batch leaves the transaction open, and the
+/// half-rebuilt table and the connection's borrowed pragmas would both outlive the error.
 fn rebuild_with_autoincrement(
     conn: &Connection,
     table: &str,
@@ -184,27 +190,31 @@ fn rebuild_with_autoincrement(
     }
     let high: i64 = conn.query_row(high_water_sql, [], |r| r.get(0))?;
 
-    conn.execute_batch(&format!(
-        r#"
-        PRAGMA foreign_keys = OFF;
-        PRAGMA legacy_alter_table = ON;
-        BEGIN;
-        {create_rebuild}
-        INSERT INTO "{table}_rebuild" ({columns}) SELECT {columns} FROM "{table}";
-        DROP TABLE "{table}";
-        ALTER TABLE "{table}_rebuild" RENAME TO "{table}";
-        COMMIT;
-        PRAGMA legacy_alter_table = OFF;
-        PRAGMA foreign_keys = ON;
-        "#
-    ))?;
+    conn.execute_batch("PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON;")?;
 
-    conn.execute("DELETE FROM sqlite_sequence WHERE name = ?1", [table])?;
-    conn.execute(
-        "INSERT INTO sqlite_sequence (name, seq) VALUES (?1, ?2)",
-        rusqlite::params![table, high],
-    )?;
-    Ok(())
+    let rebuild = || -> rusqlite::Result<()> {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(&format!(
+            r#"
+            {create_rebuild}
+            INSERT INTO "{table}_rebuild" ({columns}) SELECT {columns} FROM "{table}";
+            DROP TABLE "{table}";
+            ALTER TABLE "{table}_rebuild" RENAME TO "{table}";
+            "#
+        ))?;
+        // The counter lives in a table SQLite creates the moment the rebuilt table is
+        // declared AUTOINCREMENT, so it only exists from inside this transaction.
+        tx.execute("DELETE FROM sqlite_sequence WHERE name = ?1", [table])?;
+        tx.execute(
+            "INSERT INTO sqlite_sequence (name, seq) VALUES (?1, ?2)",
+            rusqlite::params![table, high],
+        )?;
+        tx.commit()
+    };
+    let result = rebuild();
+
+    conn.execute_batch("PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;")?;
+    result
 }
 
 /// Migrations for databases created by older releases. Each call is idempotent.

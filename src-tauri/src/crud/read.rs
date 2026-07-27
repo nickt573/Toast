@@ -497,6 +497,24 @@ pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>
     .collect()
 }
 
+/// Deck minutes, todo minutes, and the first day anything was logged, across the whole
+/// record rather than one plan. Archived deck lines are left out of the time the same
+/// way every other total leaves them out, but they still date the record: a merged or
+/// reset deck was studied on the day it says it was.
+pub fn get_record_totals(conn: &Connection) -> Result<(f64, f64, Option<String>)> {
+    conn.query_row(
+        r#"
+        SELECT
+            (SELECT COALESCE(SUM(time_spent_minutes), 0) FROM group_stats WHERE is_archived = FALSE),
+            (SELECT COALESCE(SUM(time_spent_minutes), 0) FROM todo_stats),
+            (SELECT MIN(date) FROM (SELECT date FROM group_stats
+                                    UNION ALL SELECT date FROM todo_stats))
+        "#,
+        [],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    )
+}
+
 /// Every reset belonging to a deck this plan has lines for. A reset is deck-wide, so the
 /// same one is handed to every plan the deck was studied in and each draws its own
 /// boundary from it, wherever its own lines fall either side of the mark.
