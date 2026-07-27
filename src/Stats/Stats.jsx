@@ -1552,9 +1552,9 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           {totals?.earliest && (
             <span className="hdr-context">
               {[
-                `${fmtTime(totals.deckMins)} deck time`,
-                `${fmtTime(totals.todoMins)} todo time`,
-                recordDays !== null ? plural(recordDays, "day") : null,
+                `${fmtTime(totals.deckMins)} Total Deck Time`,
+                `${fmtTime(totals.todoMins)} Total Todo Time`,
+                recordDays !== null ? plural(recordDays, "total day") : null,
               ].filter(Boolean).join(" · ")}
             </span>
           )}
@@ -1598,6 +1598,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
             <MetricCard label="Unique Cards Seen" value={metrics.newCardsStudied} color="var(--t-blue)" />
             <MetricCard label="Total Cards Seen" value={metrics.totalCardsStudied} color="var(--t-blue)" />
             <MetricCard label="Todos Done"    value={metrics.todosDone}     color="var(--t-yellow)" />
+            <MetricCard label="Deck Time" value={fmtTime(metrics.studyMins)} color="var(--t-time)" />
+            <MetricCard label="Todo Time"  value={fmtTime(metrics.todoMins)}  color="var(--t-time)" />
             <MetricCard
               label="Study Streak"
               value={`${streakInfo.streak}d`}
@@ -1608,8 +1610,6 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={totalDays !== null ? `${totalDays}d` : "-"}
               color={totalDays !== null ? "var(--t-time)" : GRAY}
             />
-            <MetricCard label="Deck Study Time" value={fmtTime(metrics.studyMins)} color="var(--t-time)" />
-            <MetricCard label="Todo Time"  value={fmtTime(metrics.todoMins)}  color="var(--t-time)" />
           </div>
 
           {/* Chart panel */}
