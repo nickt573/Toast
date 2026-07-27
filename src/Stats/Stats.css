@@ -25,14 +25,22 @@
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
 
 /* Seven fixed columns so the metric cards fill the row edge to edge, no wrapping. minmax(0,1fr) lets them shrink to share the width evenly. */
-.st-metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 16px; }
-/* Narrow gap and tight side padding buy each card enough width to keep the longest
-   label ("Avg. Retention") on one line. Taller padding keeps the card from
-   looking cramped now that it is wider. */
+.st-metrics { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin-bottom: 16px; }
+/* Eight cards across the window leaves about 103px of room inside each one, which the
+   longest label ("Unique Cards Seen") and the longest value both clear by a few pixels.
+   The gap and the side padding are what buy that room, so neither can grow. Taller
+   padding keeps the card from looking cramped. */
+/* Every card is stretched to the tallest one in the row, and the labels that wrap to two
+   lines are what set that height. Stacking the contents and centring them keeps the
+   one-line cards from sitting high in their own box. */
 .st-metric {
   background: var(--t-surface);
   border-radius: var(--t-r);
-  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding: 12px 6px;
   box-shadow: var(--t-shadow-sm);
 }
 .st-metric-value { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; color: var(--t-text); }
@@ -142,14 +150,14 @@
 .st-window-label { font-weight: 700; font-size: 12px; color: var(--t-label); }
 
 /* Marks where a reset split the history. Two rows can share a date, so without this
-   the boundary would be invisible. Qualified with .st-table td, otherwise that rule
-   outranks this one and quietly supplies the colour. */
+   the boundary would be invisible. Same type as the column titles it shares a band
+   with, only left aligned and on a tighter line. Qualified with .st-table td, otherwise
+   that rule outranks this one and quietly supplies the colour. */
 .st-table td.st-era-divider {
   text-align: left;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--t-title);
+  color: var(--t-label);
   padding: 3px 10px;
   user-select: none;
 }
@@ -250,6 +258,7 @@
 /* Resource names stay compact inside the expanded todo, the 15px size is for full-width lists */
 .st-todo-expanded .st-resource-card-name { font-size: 13px; }
 .st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
+.st-todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
 .st-btn-sm { padding: 3px 8px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-btn-fg); box-shadow: none; }
 .st-btn-sm:hover { background: var(--t-btn-h); box-shadow: none; }

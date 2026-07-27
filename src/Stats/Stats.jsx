@@ -45,6 +45,10 @@ function fmtTime(minutes) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+function plural(n, word) {
+  return `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+}
+
 function retentionColor(rate) {
   if (rate >= 0.8) return GREEN;
   if (rate >= 0.5) return AMBER;
@@ -93,6 +97,16 @@ function categoryStringToMap(catStr) {
 // otherwise a merge inflates the plan.
 function counted(groupStats) {
   return groupStats.filter(r => !r.is_archived);
+}
+
+// How long the plan has been going, measured by its own record: the first day it logged
+// anything through today, counting that first day. Archived rows count here even though
+// every other aggregate skips them, since a merged or reset deck still dates the plan.
+function totalPlanDays(groupStats, todoStats, today) {
+  if (!today) return null;
+  let earliest = null;
+  [...groupStats, ...todoStats].forEach(r => { if (earliest === null || r.date < earliest) earliest = r.date; });
+  return earliest === null ? null : daysBetween(earliest, today) + 1;
 }
 
 function computeMetrics(groupStats, todoStats) {
@@ -636,7 +650,7 @@ function ArchiveButton({ rows, onArchive, label = "Archive" }) {
 // How many days of sessions one page of a deck's table covers.
 const WINDOW_DAYS = 14;
 
-function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast }) {
+function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted, setToast }) {
   const [deckFilter, setDeckFilter]   = useState("all");
   const [expanded, setExpanded]       = useState({});
   // How many windows back from the newest session each deck card is paged. 0 is the
@@ -776,14 +790,25 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
         // Only a row on the current page counts as selected, so paging away drops the
         // selection and the foot falls back to acting on the whole deck.
         const selectedRow = rows.find(r => r.id === selectedRowId);
-        // The reset line belongs to the run it introduces, so it is anchored on the
-        // first row of the older run rather than on the row that opened the newer one.
-        // Those two sit either side of the same boundary, so the line lands in the same
-        // place whenever both are on one page, and follows the older rows onto the
-        // previous page when the fortnight splits between them. It also means a reset
-        // with nothing left underneath draws no line at all.
-        const eraFirstRowIds = new Set(
-          deckRows.filter((r, i) => i > 0 && deckRows[i - 1].starts_era).map(r => r.id)
+        // A reset marks the highest line id there was when it happened, so its boundary
+        // sits above the newest row at or below that mark. Anchoring it on that older
+        // row keeps the line in the same place whichever fortnight is on screen, and
+        // draws nothing when the run it ended has been cleared out from under it.
+        //
+        // Repeat resets with no session between them mark the same place, so they land
+        // on one row and the page draws one line. A reset the deck picked up while it
+        // was being studied in another plan does the same here: this plan has no row
+        // between the two marks, so there is nothing to separate.
+        const deckOrigin = deckRows[0]?.origin_group_id ?? null;
+        // A reset with nothing studied after it would only ever draw at the very top of
+        // the table, with no run under way to separate from the one it ended, so it stays
+        // hidden until the deck is studied again.
+        const resetRowIds = new Set(
+          deckResets
+            .filter(x => deckOrigin !== null && x.origin_group_id === deckOrigin)
+            .filter(x => deckRows[0]?.id > x.after_stat_id)
+            .map(x => deckRows.find(r => r.id <= x.after_stat_id)?.id)
+            .filter(id => id !== undefined)
         );
 
         const totalTime = deckRows.reduce((s, r) => s + r.time_spent_minutes, 0);
@@ -807,6 +832,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                 </span>
                 <span className="t-caret">{isOpen ? "▾" : "▸"}</span>
               </div>
+              {!isOpen && (
               <div className="st-deck-meta">
                 <span className="st-meta-pill st-meta-pill--new">{totalN} new</span>
                 <span className="st-meta-pill st-meta-pill--promote">+{totalP}</span>
@@ -823,6 +849,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                   <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
                 </span>
               </div>
+              )}
             </div>
 
             {isOpen && (
@@ -849,7 +876,7 @@ function DeckSessionsTab({ groupStats, planDecks, planId, onDeleted, setToast })
                   )}
                   {rows.map((r, i) => (
                     <Fragment key={r.id}>
-                      {eraFirstRowIds.has(r.id) && (
+                      {resetRowIds.has(r.id) && (
                         <tr className="st-era-row">
                           <td colSpan={7} className="st-era-divider">Progress Reset</td>
                         </tr>
@@ -1018,6 +1045,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     setEditingId(r.id);
     setEditForm({
       text: r.text,
+      date: r.date,
       categoryMap: categoryStringToMap(r.category),
       details: r.details || "",
       timeSpent: r.time_spent_minutes,
@@ -1041,11 +1069,14 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     if (category === 0) { setToast("Select at least one category.", "warn"); return; }
     const timeSpent = Math.max(0, Math.round(parseFloat(editForm.timeSpent) || 0));
     if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
+    if (!editForm.date) { setToast("Please pick a date.", "warn"); return; }
+    if (today && editForm.date > today) { setToast("An entry can't be dated in the future.", "warn"); return; }
     const removeGroupRowIds    = r.groups.map(x => x.row_id).filter(id => !editForm.groups.includes(id));
     const removeResourceRowIds = r.resources.map(x => x.row_id).filter(id => !editForm.resources.includes(id));
     try {
       await loggedInvoke("update_todo_stat", {
         id: r.id,
+        date: editForm.date,
         text: trimmed,
         category,
         details: editForm.details.trim() || null,
@@ -1129,8 +1160,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
           const isOpen    = !!expanded[r.id];
           const isEditing = editingId === r.id;
           const cats      = parseCategories(r.category);
-          // Categories, time and units ride in the collapsed row, not in here, so an
-          // entry can carry those and still have nothing to open up to.
+          // Time and units ride in the collapsed row, not in here, so an entry can
+          // carry those and still have nothing to open up to.
           const isBare    = !r.details && r.resources.length === 0 && r.groups.length === 0;
           return (
             <div key={r.id} className="st-todo-row">
@@ -1139,6 +1170,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                   <span className="st-todo-text">{r.text}</span>
                   <span className="t-caret">{isOpen ? "▾" : "▸"}</span>
                 </div>
+                {!isOpen && (
                 <div className="st-todo-tags">
                   {cats.map(c => (
                     <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
@@ -1148,6 +1180,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     <span className="st-meta-pill st-meta-pill--time">{fmtTime(r.time_spent_minutes)}</span>
                   </span>
                 </div>
+                )}
               </div>
 
               {isOpen && !isEditing && (
@@ -1156,6 +1189,16 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     <div className="st-todo-section">
                       <div className="st-todo-section-label">Details</div>
                       <p className="st-todo-notes"><Linkify text={r.details} /></p>
+                    </div>
+                  )}
+                  {cats.length > 0 && (
+                    <div className="st-todo-section">
+                      <div className="st-todo-section-label">Categories</div>
+                      <div className="st-todo-section-pills">
+                        {cats.map(c => (
+                          <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {r.resources.length > 0 && (
@@ -1235,6 +1278,17 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     />
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Date</div>
+                      <input
+                        type="date"
+                        value={editForm.date}
+                        max={today ?? undefined}
+                        onKeyDown={editKey(r)}
+                        onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                        style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
+                      />
+                    </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Time (minutes)</div>
                       <input
@@ -1369,6 +1423,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [deletedPlans,   setDeletedPlans]  = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [groupStats,     setGroupStats]    = useState([]);
+  const [deckResets,     setDeckResets]    = useState([]);
   const [todoStats,      setTodoStats]     = useState([]);
   const [streakInfo,     setStreakInfo]    = useState({ streak: 0, studied_today: false });
   const [contentTab,     setContentTab]    = useState(() => returnContext?.contentTab ?? "decks");
@@ -1377,6 +1432,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [allGroups,      setAllGroups]     = useState([]);
   const [planDecks,      setPlanDecks]     = useState([]);
   const [planResources,  setPlanResources] = useState([]);
+  const [totals,         setTotals]        = useState(null);
 
   useEffect(() => {
     loggedInvoke("get_current_date").then(setToday).catch(e => logError("catch", e));
@@ -1389,6 +1445,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       setActivePlans(ps);
       setDeletedPlans(dp);
       setAllGroups(gs);
+      loadTotals([...ps, ...dp].map(p => p.id));
       const firstId = returnContext?.selectedPlanId ?? ps[0]?.id ?? dp[0]?.id ?? null;
       setSelectedPlanId(firstId);
       if (returnContext) onConsumeReturnContext();
@@ -1414,13 +1471,39 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       // A deck in the plan that hasn't been studied has no stat rows to be found in,
       // so its card comes from plan membership instead
       loggedInvoke("get_plan_srs_groups", { planId }),
-    ]).then(([gs, ts, si, res, srs]) => {
+      loggedInvoke("get_plan_resets",     { planId }),
+    ]).then(([gs, ts, si, res, srs, rst]) => {
       setGroupStats(gs);
       setTodoStats(ts);
       setStreakInfo(si);
       setPlanResources(res);
       setPlanDecks(srs.map(([g]) => g).filter(g => g.group_type === "deck"));
+      setDeckResets(rst);
     }).catch(e => { logError("catch", e); setToast("Failed to load stats.", "error"); });
+  };
+
+  // The header speaks for the whole record rather than the plan on screen, so it reads
+  // every plan, deleted ones included. The oldest first record sets the day count, which
+  // is why it keeps climbing after the plan that started it has been put down.
+  const loadTotals = (planIds) => {
+    Promise.all(planIds.map(id => Promise.all([
+      loggedInvoke("get_group_stats", { planId: id }),
+      loggedInvoke("get_todo_stats",  { planId: id }),
+    ]))).then(perPlan => {
+      let deckMins = 0, todoMins = 0, earliest = null;
+      perPlan.forEach(([gs, ts]) => {
+        deckMins += counted(gs).reduce((s, r) => s + r.time_spent_minutes, 0);
+        todoMins += ts.reduce((s, r) => s + r.time_spent_minutes, 0);
+        // Archived rows still date the record, the same way they do for one plan
+        [...gs, ...ts].forEach(r => { if (earliest === null || r.date < earliest) earliest = r.date; });
+      });
+      setTotals({ deckMins, todoMins, earliest });
+    }).catch(e => logError("catch", e));
+  };
+
+  const refreshStats = () => {
+    loadStats(selectedPlanId);
+    loadTotals([...activePlans, ...deletedPlans].map(p => p.id));
   };
 
   const deleteDeletedPlan = async (planId) => {
@@ -1433,6 +1516,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
         const next = activePlans[0]?.id ?? dp[0]?.id ?? null;
         setSelectedPlanId(next);
       }
+      loadTotals([...activePlans, ...dp].map(p => p.id));
       setToast("Plan stats deleted.");
     } catch(e) {
       logError("catch", e);
@@ -1443,6 +1527,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   useEffect(() => {
     if (!selectedPlanId) {
       setGroupStats([]);
+      setDeckResets([]);
       setTodoStats([]);
       setStreakInfo({ streak: 0, studied_today: false });
       setPlanResources([]);
@@ -1452,6 +1537,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   }, [selectedPlanId]);
 
   const metrics = computeMetrics(counted(groupStats), todoStats);
+  const totalDays = totalPlanDays(groupStats, todoStats, today);
+  const recordDays = totals?.earliest && today ? daysBetween(totals.earliest, today) + 1 : null;
   const retColor = metrics.avgRetention !== null ? retentionColor(metrics.avgRetention) : GRAY;
   const atRisk = streakInfo.streak > 0 && !streakInfo.studied_today;
 
@@ -1462,6 +1549,15 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           <div style={{ flex: 1 }}>
             <h2>Stats</h2>
           </div>
+          {totals?.earliest && (
+            <span className="hdr-context">
+              {[
+                `${fmtTime(totals.deckMins)} deck time`,
+                `${fmtTime(totals.todoMins)} todo time`,
+                recordDays !== null ? plural(recordDays, "day") : null,
+              ].filter(Boolean).join(" · ")}
+            </span>
+          )}
         </div>
         <div className="st-body">
           {/* Plan selector */}
@@ -1507,6 +1603,11 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={`${streakInfo.streak}d`}
               color={streakInfo.streak === 0 ? GRAY : atRisk ? AMBER : "var(--t-green)"}
             />
+            <MetricCard
+              label="Total Days"
+              value={totalDays !== null ? `${totalDays}d` : "-"}
+              color={totalDays !== null ? "var(--t-time)" : GRAY}
+            />
             <MetricCard label="Deck Study Time" value={fmtTime(metrics.studyMins)} color="var(--t-time)" />
             <MetricCard label="Todo Time"  value={fmtTime(metrics.todoMins)}  color="var(--t-time)" />
           </div>
@@ -1523,9 +1624,10 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           {contentTab === "decks" && (
             <DeckSessionsTab
               groupStats={groupStats}
+              deckResets={deckResets}
               planDecks={planDecks}
               planId={selectedPlanId}
-              onDeleted={() => loadStats(selectedPlanId)}
+              onDeleted={refreshStats}
               setToast={setToast}
             />
           )}
@@ -1533,7 +1635,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
             <TodosTab
               todoStats={todoStats}
               today={today}
-              onDeleted={() => loadStats(selectedPlanId)}
+              onDeleted={refreshStats}
               setToast={setToast}
               allGroups={allGroups}
               planResources={planResources}
