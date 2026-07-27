@@ -410,69 +410,27 @@ pub fn delete_resource(id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// A reset's boundary is recorded on the line it opened, so deleting that line would
-/// take the boundary with it and the run would silently merge into the one before.
-/// Hand the marker to the run's next line instead. If nothing is left to carry it, the
-/// deck is flagged again so the next session opens a fresh line, which is where the
-/// boundary would have been all along.
+/// A reset is kept until the last stat line of the deck it belongs to is gone, which is
+/// what lets it outlive the deck, the plan, and any single line. SQLite has no foreign
+/// key for "the last row referencing this", so every path that deletes stat lines calls
+/// this afterwards.
 ///
-/// Call before the row goes. The search stays inside the same plan so clearing one
-/// plan's history can't stamp a divider onto another's, while the fallback flag is
-/// deck-wide because that is the scope a reset actually has.
-fn carry_era_marker(id: i64, conn: &Connection) -> Result<()> {
-    let (starts_era, origin, group_id, plan_id, date): (
-        bool,
-        Option<i64>,
-        Option<i64>,
-        i64,
-        String,
-    ) = match conn.query_row(
-        "SELECT starts_era, origin_group_id, group_id, plan_id, date
-         FROM group_stats WHERE id = ?1",
-        [id],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
-    ) {
-        Ok(v) => v,
-        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(()),
-        Err(e) => return Err(e),
-    };
-    if !starts_era {
-        return Ok(());
-    }
-
-    // Scalar subquery, so this returns exactly one row and NULL means nothing follows
-    let next: Option<i64> = conn.query_row(
-        "SELECT (SELECT id FROM group_stats
-                 WHERE origin_group_id IS ?1 AND plan_id = ?2 AND id != ?3
-                   AND (date > ?4 OR (date = ?4 AND id > ?3))
-                 ORDER BY date ASC, id ASC LIMIT 1)",
-        rusqlite::params![origin, plan_id, id, date],
-        |r| r.get(0),
+/// Lines whose deck was deleted keep their origin_group_id, so they hold their resets
+/// here the same way a live deck's lines do. Rows old enough to have no origin at all
+/// can hold nothing, and no reset was ever recorded against one.
+fn sweep_orphan_resets(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "DELETE FROM deck_reset
+         WHERE origin_group_id NOT IN
+             (SELECT origin_group_id FROM group_stats WHERE origin_group_id IS NOT NULL)",
+        [],
     )?;
-
-    match next {
-        Some(next_id) => {
-            conn.execute(
-                "UPDATE group_stats SET starts_era = TRUE WHERE id = ?1",
-                [next_id],
-            )?;
-        }
-        None => {
-            if let Some(gid) = group_id {
-                conn.execute(
-                    r#"UPDATE "group" SET was_reset = TRUE WHERE id = ?1"#,
-                    [gid],
-                )?;
-            }
-        }
-    }
     Ok(())
 }
 
 pub fn delete_group_stat(id: i64, conn: &Connection) -> Result<()> {
-    carry_era_marker(id, conn)?;
     conn.execute("DELETE FROM group_stats WHERE id = ?1", [id])?;
-    Ok(())
+    sweep_orphan_resets(conn)
 }
 
 /// Clears the lines behind one deck card on the stats page. The page is what decides
@@ -480,10 +438,9 @@ pub fn delete_group_stat(id: i64, conn: &Connection) -> Result<()> {
 /// and nothing more, instead of re-deriving the grouping from a description.
 pub fn delete_group_stats(ids: &[i64], conn: &Connection) -> Result<()> {
     for id in ids {
-        carry_era_marker(*id, conn)?;
         conn.execute("DELETE FROM group_stats WHERE id = ?1", [id])?;
     }
-    Ok(())
+    sweep_orphan_resets(conn)
 }
 
 pub fn delete_todo_stat(id: i64, conn: &Connection) -> Result<()> {
@@ -494,7 +451,7 @@ pub fn delete_todo_stat(id: i64, conn: &Connection) -> Result<()> {
 pub fn delete_deleted_plan_stats(plan_id: i64, conn: &Connection) -> Result<()> {
     conn.execute("DELETE FROM group_stats WHERE plan_id = ?1", [plan_id])?;
     conn.execute("DELETE FROM todo_stats WHERE plan_id = ?1", [plan_id])?;
-    Ok(())
+    sweep_orphan_resets(conn)
 }
 
 #[cfg(test)]

@@ -157,6 +157,7 @@ pub fn run() {
             commands::resources::delete_resource,
             commands::stats::get_plan_streak,
             commands::stats::get_group_stats,
+            commands::stats::get_plan_resets,
             commands::stats::get_todo_stats,
             commands::stats::delete_group_stat,
             commands::stats::delete_group_stats,

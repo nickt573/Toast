@@ -856,17 +856,21 @@ mod stat_row_invariant_tests {
         Some(deck)
     }
 
-    // One ordinary line per deck, plan, and day. A day can hold more than one line,
-    // but only because a reset split it, and those extras are marked as run starts.
+    // One line per deck, plan, and day, unless something closed the earlier one. Only
+    // two things can: a reset, or archiving it. So a line that is not the newest of its
+    // day has to be archived or have a reset standing at or above its id.
     fn check_one_plain_line_per_day(conn: &Connection, trace: &str) {
         let dupes: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM (
-                    SELECT 1 FROM group_stats
-                    WHERE starts_era = FALSE
-                    GROUP BY origin_group_id, plan_id, date
-                    HAVING COUNT(*) > 1
-                 )",
+                "SELECT COUNT(*) FROM group_stats a
+                 WHERE a.is_archived = FALSE
+                   AND EXISTS (SELECT 1 FROM group_stats b
+                               WHERE b.origin_group_id IS a.origin_group_id
+                                 AND b.plan_id = a.plan_id AND b.date = a.date
+                                 AND b.id > a.id)
+                   AND NOT EXISTS (SELECT 1 FROM deck_reset dr
+                                   WHERE dr.origin_group_id IS a.origin_group_id
+                                     AND dr.after_stat_id >= a.id)",
                 [],
                 |r| r.get(0),
             )
@@ -883,20 +887,41 @@ mod stat_row_invariant_tests {
         assert_eq!(now, before, "line count moved without a session after {trace}");
     }
 
-    // A session inside a plan always consumes a pending reset, so the flag can never
-    // outlive the line it was meant to open.
-    fn check_sessions_clear_the_reset_flag(conn: &Connection, deck: i64, op: Op, trace: &str) {
+    // A reset always has a run on the older side of it, which is the run it ended, and
+    // it never belongs to a deck with no history at all. A mark with nothing under it
+    // would draw a boundary between one run and nothing.
+    fn check_resets_have_a_run_behind_them(conn: &Connection, trace: &str) {
+        let stranded: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM deck_reset dr
+                 WHERE NOT EXISTS (SELECT 1 FROM group_stats gs
+                                   WHERE gs.origin_group_id = dr.origin_group_id
+                                     AND gs.id <= dr.after_stat_id)",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(stranded, 0, "a reset marks nothing after {trace}");
+    }
+
+    // Study after a reset opens its own line, so no line that a reset closed is ever the
+    // one a session would write into next: the deck's newest line always sits above
+    // every reset it has.
+    fn check_no_session_writes_below_a_reset(conn: &Connection, deck: i64, op: Op, trace: &str) {
         if !matches!(op, Op::Study) || !in_plan(conn, deck) {
             return;
         }
-        let flag: bool = conn
+        let reopened: i64 = conn
             .query_row(
-                r#"SELECT was_reset FROM "group" WHERE id = ?1"#,
+                "SELECT COUNT(*) FROM deck_reset dr
+                 WHERE dr.origin_group_id = ?1
+                   AND dr.after_stat_id >= (SELECT MAX(id) FROM group_stats
+                                            WHERE origin_group_id = ?1)",
                 [deck],
                 |r| r.get(0),
             )
             .unwrap();
-        assert!(!flag, "reset flag survived a session after {trace}");
+        assert_eq!(reopened, 0, "a session wrote below a reset after {trace}");
     }
 
     fn sweep(depth: usize) {
@@ -931,7 +956,8 @@ mod stat_row_invariant_tests {
                 }
 
                 check_one_plain_line_per_day(&conn, &trace);
-                check_sessions_clear_the_reset_flag(&conn, deck, op, &trace);
+                check_resets_have_a_run_behind_them(&conn, &trace);
+                check_no_session_writes_below_a_reset(&conn, deck, op, &trace);
             }
         }
     }
@@ -1003,18 +1029,46 @@ mod stat_row_tests {
             .unwrap()
     }
 
-    fn era_rows(conn: &Connection, deck: i64) -> i64 {
+    fn resets(conn: &Connection, deck: i64) -> i64 {
         conn.query_row(
-            "SELECT COUNT(*) FROM group_stats WHERE group_id = ?1 AND starts_era = TRUE",
+            "SELECT COUNT(*) FROM deck_reset WHERE origin_group_id = ?1",
             [deck],
             |r| r.get(0),
         )
         .unwrap()
     }
 
-    fn flag(conn: &Connection, deck: i64) -> bool {
-        conn.query_row(r#"SELECT was_reset FROM "group" WHERE id = ?1"#, [deck], |r| r.get(0))
-            .unwrap()
+    // Distinct places the deck's resets mark. The page draws one boundary per place, so
+    // this is the number of dividers a run of resets is worth.
+    fn boundaries(conn: &Connection, deck: i64) -> i64 {
+        conn.query_row(
+            "SELECT COUNT(DISTINCT after_stat_id) FROM deck_reset WHERE origin_group_id = ?1",
+            [deck],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
+    // Lines of the deck that fall on the older side of every reset it has
+    fn lines_before_resets(conn: &Connection, deck: i64) -> i64 {
+        conn.query_row(
+            "SELECT COUNT(*) FROM group_stats gs
+             WHERE gs.origin_group_id = ?1
+               AND EXISTS (SELECT 1 FROM deck_reset dr
+                           WHERE dr.origin_group_id = ?1 AND dr.after_stat_id >= gs.id)",
+            [deck],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
+    fn newest_line(conn: &Connection, deck: i64) -> i64 {
+        conn.query_row(
+            "SELECT MAX(id) FROM group_stats WHERE origin_group_id = ?1",
+            [deck],
+            |r| r.get(0),
+        )
+        .unwrap()
     }
 
     fn new_in(conn: &Connection, origin: i64, plan: i64) -> i64 {
@@ -1159,8 +1213,9 @@ mod stat_row_tests {
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
         reset_deck(1, &conn).unwrap();
-        assert_eq!(rows(&conn, 1), 1, "the flag is the whole record until a session");
-        assert!(flag(&conn, 1));
+        assert_eq!(rows(&conn, 1), 1, "the reset is its own record, not a line");
+        assert_eq!(resets(&conn, 1), 1);
+        assert_eq!(lines_before_resets(&conn, 1), 1, "the line it ended is under it");
     }
 
     #[test]
@@ -1171,9 +1226,29 @@ mod stat_row_tests {
         reset_deck(1, &conn).unwrap();
         study(&conn, 1, 8);
         assert_eq!(rows(&conn, 1), 2, "same day, but a new run");
-        assert_eq!(era_rows(&conn, 1), 1);
-        assert!(!flag(&conn, 1), "the flag clears once it has been spent");
+        assert_eq!(boundaries(&conn, 1), 1);
+        assert_eq!(lines_before_resets(&conn, 1), 1, "only the old line is under it");
         assert_eq!(new_in(&conn, 1, 1), 13, "the old line keeps its 5");
+    }
+
+    // Two lines dated the same day, one either side of the boundary. The date alone
+    // can't tell them apart, which is what the mark is for.
+    #[test]
+    fn t11b_a_reset_splits_a_single_day() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+        let dates: i64 = conn
+            .query_row(
+                "SELECT COUNT(DISTINCT date) FROM group_stats WHERE group_id = 1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(dates, 1, "both lines are today");
+        assert_eq!(lines_before_resets(&conn, 1), 1, "and the mark still splits them");
     }
 
     #[test]
@@ -1187,8 +1262,10 @@ mod stat_row_tests {
         assert_eq!(rows(&conn, 1), 2, "no third line");
     }
 
+    // Every reset is kept, since each one happened, but with no session between them
+    // they all mark the same place and the page has one boundary to draw.
     #[test]
-    fn t13_repeat_resets_collapse_into_one_line() {
+    fn t13_repeat_resets_collapse_into_one_boundary() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
@@ -1196,8 +1273,23 @@ mod stat_row_tests {
             reset_deck(1, &conn).unwrap();
         }
         study(&conn, 1, 8);
-        assert_eq!(rows(&conn, 1), 2, "ten resets, one boundary");
-        assert_eq!(era_rows(&conn, 1), 1);
+        assert_eq!(rows(&conn, 1), 2, "ten resets, one new line");
+        assert_eq!(resets(&conn, 1), 10, "and ten of them on the record");
+        assert_eq!(boundaries(&conn, 1), 1);
+    }
+
+    // Study between two resets gives the second one a place of its own, so both draw
+    #[test]
+    fn t13b_resets_with_a_session_between_them_stay_apart() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 8);
+        reset_deck(1, &conn).unwrap();
+        study(&conn, 1, 2);
+        assert_eq!(rows(&conn, 1), 3);
+        assert_eq!(boundaries(&conn, 1), 2);
     }
 
     #[test]
@@ -1206,10 +1298,11 @@ mod stat_row_tests {
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
         remove_group_from_plan(1, true, &mut conn).unwrap();
-        assert!(flag(&conn, 1));
+        assert_eq!(resets(&conn, 1), 1);
         add(&mut conn, 1, 1);
         study(&conn, 1, 8);
-        assert_eq!(era_rows(&conn, 1), 1, "the reset lands on the first session back");
+        assert_eq!(rows(&conn, 1), 2, "the session back is a run of its own");
+        assert_eq!(lines_before_resets(&conn, 1), 1);
     }
 
     #[test]
@@ -1220,7 +1313,8 @@ mod stat_row_tests {
         reset_deck(1, &conn).unwrap();
         roll_day(&conn);
         study(&conn, 1, 8);
-        assert_eq!(era_rows(&conn, 1), 1, "a new day does not absorb the reset");
+        assert_eq!(resets(&conn, 1), 1, "a new day does not absorb the reset");
+        assert_eq!(lines_before_resets(&conn, 1), 1, "and the new day is above it");
     }
 
     #[test]
@@ -1233,9 +1327,24 @@ mod stat_row_tests {
             reset_deck(1, &conn).unwrap();
         }
         assert_eq!(rows(&conn, 1), 1, "nowhere to write while out of a plan");
+        assert_eq!(resets(&conn, 1), 5, "the deck's own history takes them anyway");
         add(&mut conn, 1, 1);
         study(&conn, 1, 8);
-        assert_eq!(era_rows(&conn, 1), 1);
+        assert_eq!(rows(&conn, 1), 2);
+        assert_eq!(boundaries(&conn, 1), 1);
+    }
+
+    // A deck with no history has no run to end, so there is nothing to record and
+    // nothing for the page to draw
+    #[test]
+    fn t16b_resetting_a_deck_that_was_never_studied_records_nothing() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        reset_deck(1, &conn).unwrap();
+        assert_eq!(resets(&conn, 1), 0);
+        study(&conn, 1, 5);
+        assert_eq!(rows(&conn, 1), 1, "and the first session is just the first line");
+        assert_eq!(resets(&conn, 1), 0);
     }
 
     // Archiving
@@ -1456,10 +1565,10 @@ mod stat_row_tests {
         assert_eq!(new_in(&conn, 1, 1), 0);
     }
 
-    // Deleting the line a run opened on must not quietly merge that run into the one
-    // before it, so the marker moves to whatever line the run has left.
+    // The mark is a place, not a pointer. Deleting the very line it was taken from
+    // leaves every other line on the side of it that it was already on.
     #[test]
-    fn t31_deleting_a_runs_first_line_hands_the_marker_on() {
+    fn t31_deleting_the_line_a_reset_marks_keeps_the_boundary() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
@@ -1468,67 +1577,101 @@ mod stat_row_tests {
         roll_day(&conn);
         study(&conn, 1, 3);
 
-        let era_line: i64 = conn
-            .query_row(
-                "SELECT id FROM group_stats WHERE group_id = 1 AND starts_era = TRUE",
-                [],
-                |r| r.get(0),
-            )
+        let marked: i64 = conn
+            .query_row("SELECT after_stat_id FROM deck_reset WHERE origin_group_id = 1", [], |r| {
+                r.get(0)
+            })
             .unwrap();
-        delete_group_stats(&[era_line], &conn).unwrap();
+        delete_group_stats(&[marked], &conn).unwrap();
 
-        assert_eq!(era_rows(&conn, 1), 1, "the run still starts somewhere");
-        let carried: i64 = conn
-            .query_row(
-                "SELECT num_new FROM group_stats WHERE group_id = 1 AND starts_era = TRUE",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert_eq!(carried, 3, "the next line of the run took it over");
+        assert_eq!(resets(&conn, 1), 1, "the deck still has lines, so it stays");
+        assert_eq!(lines_before_resets(&conn, 1), 0, "and nothing is left under it");
+        // The two lines above it are still above it, so study carries on in that run
+        study(&conn, 1, 2);
+        assert_eq!(rows(&conn, 1), 2, "no new line, the day's line is not closed");
     }
 
-    // With nothing left to carry it, the flag comes back so the next session opens the
-    // boundary instead of the run vanishing entirely
+    // Ids are never reissued, so a line opened after a reset can never land under the
+    // mark, however many lines have been deleted in between
     #[test]
-    fn t32_deleting_a_runs_only_line_rearms_the_reset() {
+    fn t32_a_line_opened_after_a_reset_stays_above_it() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
-        reset_deck(1, &conn).unwrap();
-        study(&conn, 1, 8);
-
-        let era_line: i64 = conn
-            .query_row(
-                "SELECT id FROM group_stats WHERE group_id = 1 AND starts_era = TRUE",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap();
-        delete_group_stats(&[era_line], &conn).unwrap();
-        assert!(flag(&conn, 1), "the reset is pending again");
-
         roll_day(&conn);
         study(&conn, 1, 4);
-        assert_eq!(era_rows(&conn, 1), 1, "and lands on the next session");
+        reset_deck(1, &conn).unwrap();
+
+        // Clear the newest line, which is the one the mark was taken from
+        let newest = newest_line(&conn, 1);
+        delete_group_stats(&[newest], &conn).unwrap();
+        roll_day(&conn);
+        study(&conn, 1, 7);
+
+        assert!(newest_line(&conn, 1) > newest, "the freed id was not handed out again");
+        assert_eq!(lines_before_resets(&conn, 1), 1, "only the first line is under it");
+        assert_eq!(rows(&conn, 1), 2);
     }
 
-    // Clearing a deck cascades the marker down its own lines and ends up re-armed,
-    // rather than stamping a divider onto a plan that was left alone
+    // A reset is deck-wide, so every plan the deck was studied in has to see it. This is
+    // what the old per-plan marker got wrong.
     #[test]
-    fn t33_clearing_a_deck_leaves_other_plans_unmarked() {
+    fn t33_a_reset_divides_every_plan_the_deck_has_lines_in() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
         remove_group_from_plan(1, false, &mut conn).unwrap();
         add(&mut conn, 1, 2);
+        study(&conn, 1, 3);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+
+        reset_deck(1, &conn).unwrap();
+        assert_eq!(lines_before_resets(&conn, 1), 2, "both plans' lines are under it");
+
+        // and the next session in either plan opens above it
+        let mark = newest_line(&conn, 1);
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 8);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 1, 2);
+        study(&conn, 1, 2);
+        assert_eq!(rows(&conn, 1), 4, "a new line in each, not a continuation");
+        assert_eq!(lines_before_resets(&conn, 1), 2, "the two new ones are above the mark");
+        assert!(newest_line(&conn, 1) > mark);
+    }
+
+    // The record outlives the deck and any one plan, and goes when the last line that
+    // could show it does
+    #[test]
+    fn t33b_a_reset_is_kept_until_the_decks_last_line_goes() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
+        remove_group_from_plan(1, false, &mut conn).unwrap();
+        add(&mut conn, 1, 2);
+        study(&conn, 1, 3);
+        reset_deck(1, &conn).unwrap();
+
+        delete_group_stats(&card_rows(&conn, 1, 2, false), &conn).unwrap();
+        assert_eq!(resets(&conn, 1), 1, "plan one still has a line to show it against");
+
+        delete_group_stats(&card_rows(&conn, 1, 1, false), &conn).unwrap();
+        assert_eq!(rows(&conn, 1), 0);
+        assert_eq!(resets(&conn, 1), 0, "the deck's history is gone and so is the reset");
+    }
+
+    // Deleting the deck leaves its lines behind, so the reset has to stay with them
+    #[test]
+    fn t33c_a_reset_survives_the_deck_itself() {
+        let mut conn = setup();
+        add(&mut conn, 1, 1);
+        study(&conn, 1, 5);
         reset_deck(1, &conn).unwrap();
         study(&conn, 1, 8);
 
-        delete_group_stats(&card_rows(&conn, 1, 2, false), &conn).unwrap();
-        assert_eq!(new_in(&conn, 1, 1), 5, "plan one is untouched");
-        assert_eq!(era_rows(&conn, 1), 0, "and keeps no divider it never had");
-        assert!(flag(&conn, 1));
+        conn.execute(r#"DELETE FROM "group" WHERE id = 1"#, []).unwrap();
+        assert_eq!(resets(&conn, 1), 1, "origin_group_id is what holds it");
+        assert_eq!(lines_before_resets(&conn, 1), 1, "and it still divides the history");
     }
 
     #[test]

@@ -425,55 +425,52 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
 /// Opens today's line for a deck in its plan and returns it. Nothing happens for a
 /// deck outside a plan.
 ///
-/// A pending reset forces a brand new line even when the day already has one, so a
-/// run always begins on its own row. That line is marked as the start of the run and
-/// the flag clears, which means repeat resets before the next session collapse into
-/// one boundary. Otherwise the day's newest line is reused, since a reset earlier the
-/// same day can leave more than one. An archived newest line is never reused, or
-/// study logged after archiving the deck would land somewhere it doesn't count.
+/// A line that a reset closed is never written into again, so the first session after a
+/// reset opens its own row even when the day already has one and the boundary between
+/// the two runs is the reset itself. Repeat resets with no session between them all
+/// close the same line, so they leave one boundary however many there are. Otherwise
+/// the day's newest line is reused, since a reset earlier the same day can leave more
+/// than one. An archived newest line is never reused either, or study logged after
+/// archiving the deck would land somewhere it doesn't count.
 pub fn open_stat_line(group_id: i64, conn: &Connection) -> Result<Option<i64>> {
-    let (plan_id, was_reset): (Option<i64>, bool) = conn.query_row(
-        r#"SELECT plan_id, was_reset FROM "group" WHERE id = ?1"#,
+    let plan_id: Option<i64> = conn.query_row(
+        r#"SELECT plan_id FROM "group" WHERE id = ?1"#,
         [group_id],
-        |r| Ok((r.get(0)?, r.get(1)?)),
+        |r| r.get(0),
     )?;
     let Some(plan_id) = plan_id else {
         return Ok(None);
     };
     let today = get_date(conn)?;
 
-    let existing: Option<(i64, bool)> = conn
+    let existing: Option<(i64, bool, bool)> = conn
         .query_row(
-            "SELECT id, is_archived FROM group_stats
+            "SELECT id, is_archived,
+                    EXISTS(SELECT 1 FROM deck_reset
+                           WHERE origin_group_id = ?1 AND after_stat_id >= group_stats.id)
+             FROM group_stats
              WHERE group_id = ?1 AND plan_id = ?2 AND date = ?3
              ORDER BY id DESC LIMIT 1",
             rusqlite::params![group_id, plan_id, &today],
-            |r| Ok((r.get(0)?, r.get(1)?)),
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )
         .optional()?;
 
-    if let Some((id, archived)) = existing {
-        if !was_reset && !archived {
+    if let Some((id, archived, closed_by_reset)) = existing {
+        if !archived && !closed_by_reset {
             return Ok(Some(id));
         }
     }
 
     conn.execute(
         r#"
-        INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date, starts_era)
-        SELECT g.id, g.id, p.id, p.name, g.name, ?3, ?4
+        INSERT INTO group_stats (group_id, origin_group_id, plan_id, plan_name, group_name, date)
+        SELECT g.id, g.id, p.id, p.name, g.name, ?3
         FROM "group" g, plan p
         WHERE g.id = ?1 AND p.id = ?2
         "#,
-        rusqlite::params![group_id, plan_id, &today, was_reset],
+        rusqlite::params![group_id, plan_id, &today],
     )?;
-
-    if was_reset {
-        conn.execute(
-            r#"UPDATE "group" SET was_reset = FALSE WHERE id = ?1"#,
-            [group_id],
-        )?;
-    }
 
     Ok(Some(conn.last_insert_rowid()))
 }
@@ -514,12 +511,17 @@ pub fn add_group_time(group_id: i64, minutes: f64, conn: &Connection) -> Result<
     Ok(())
 }
 
-// Wipes card progress and starts a blank group_stats row for today, splitting
-/// Wipes card progress and marks the deck so the next session opened starts its own
-/// stat row. Nothing is written here: a deck outside a plan has nowhere to write, and
-/// flagging instead of writing means it makes no difference where the reset happened.
-/// Resetting repeatedly just leaves the flag set. Also called from
-/// remove_group_from_plan. Archiving what came before is a separate, optional step.
+/// Wipes card progress and records the reset against the deck, marked with the highest
+/// stat line id there is so every plan the deck has lines in knows which of them fall
+/// either side of it. No stat line is written: the next session in any plan opens its
+/// own, because the line it would otherwise have continued now sits below a reset.
+///
+/// A deck with no lines anywhere has no run to end, so nothing is recorded. Nothing is
+/// lost by that: there is no history on either side of the boundary to keep apart, and a
+/// record for a deck with no stats is one this table would sweep anyway. Also called
+/// from remove_group_from_plan, which nulls the plan first, and that makes no difference
+/// here because a reset belongs to the deck rather than to whichever plan it was in.
+/// Archiving what came before is a separate, optional step.
 pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE, is_cram = FALSE WHERE group_id = ?1",
@@ -529,9 +531,12 @@ pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
         "DELETE FROM card_grade_log WHERE card_id IN (SELECT id FROM card WHERE group_id = ?1)",
         [group_id],
     )?;
+    let today = get_date(conn)?;
     conn.execute(
-        r#"UPDATE "group" SET was_reset = TRUE WHERE id = ?1"#,
-        [group_id],
+        "INSERT INTO deck_reset (origin_group_id, date, after_stat_id)
+         SELECT ?1, ?2, COALESCE((SELECT MAX(id) FROM group_stats), 0)
+         WHERE EXISTS (SELECT 1 FROM group_stats WHERE origin_group_id = ?1)",
+        rusqlite::params![group_id, &today],
     )?;
     conn.execute(
         "UPDATE scheduler SET studied_new = 0, studied_review = 0 WHERE group_id = ?1",

@@ -28,6 +28,15 @@ pub fn get_group_stats(
 }
 
 #[tauri::command]
+pub fn get_plan_resets(
+    plan_id: i64,
+    state: tauri::State<AppState>,
+) -> Result<Vec<DeckReset>, String> {
+    let conn = state.conn.lock().unwrap();
+    read::get_plan_resets(plan_id, &conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn get_todo_stats(
     plan_id: i64,
     state: tauri::State<AppState>,
@@ -77,6 +86,7 @@ pub fn delete_todo_stat(id: i64, state: tauri::State<AppState>) -> Result<(), St
 #[tauri::command]
 pub fn update_todo_stat(
     id: i64,
+    date: String,
     text: String,
     category: i64,
     details: Option<String>,
@@ -91,6 +101,7 @@ pub fn update_todo_stat(
     let conn = state.conn.lock().unwrap();
     update::update_todo_stat(
         id,
+        date,
         text,
         category,
         details,

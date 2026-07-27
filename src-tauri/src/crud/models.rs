@@ -180,9 +180,17 @@ pub struct GroupStat {
     pub num_new: i64,
     pub time_spent_minutes: f64,
     pub retention_rate: f64,
-    pub starts_era: bool,
     pub is_merged: bool,
     pub is_archived: bool,
+}
+
+/// A reset the stats page draws as a boundary. after_stat_id is the highest line id
+/// there was when it happened, so lines at or below it belong to the run it ended.
+#[derive(Serialize, Deserialize)]
+pub struct DeckReset {
+    pub origin_group_id: i64,
+    pub date: String,
+    pub after_stat_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

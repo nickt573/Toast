@@ -469,7 +469,7 @@ pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>
         SELECT gs.id, gs.group_id, gs.origin_group_id, gs.plan_id, gs.plan_name,
                COALESCE(g.name, gs.group_name), gs.date,
                gs.num_promote, gs.num_demote, gs.num_new, gs.time_spent_minutes, gs.retention_rate,
-               gs.starts_era, gs.is_merged, gs.is_archived
+               gs.is_merged, gs.is_archived
         FROM group_stats gs
         LEFT JOIN "group" g ON g.id = gs.group_id
         WHERE gs.plan_id = ?1
@@ -490,9 +490,32 @@ pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>
             num_new: row.get(9)?,
             time_spent_minutes: row.get(10)?,
             retention_rate: row.get(11)?,
-            starts_era: row.get(12)?,
-            is_merged: row.get(13)?,
-            is_archived: row.get(14)?,
+            is_merged: row.get(12)?,
+            is_archived: row.get(13)?,
+        })
+    })?
+    .collect()
+}
+
+/// Every reset belonging to a deck this plan has lines for. A reset is deck-wide, so the
+/// same one is handed to every plan the deck was studied in and each draws its own
+/// boundary from it, wherever its own lines fall either side of the mark.
+pub fn get_plan_resets(plan_id: i64, conn: &Connection) -> Result<Vec<DeckReset>> {
+    conn.prepare(
+        r#"
+        SELECT origin_group_id, date, after_stat_id
+        FROM deck_reset
+        WHERE origin_group_id IN
+            (SELECT origin_group_id FROM group_stats
+             WHERE plan_id = ?1 AND origin_group_id IS NOT NULL)
+        ORDER BY after_stat_id ASC
+        "#,
+    )?
+    .query_map([plan_id], |row| {
+        Ok(DeckReset {
+            origin_group_id: row.get(0)?,
+            date: row.get(1)?,
+            after_stat_id: row.get(2)?,
         })
     })?
     .collect()

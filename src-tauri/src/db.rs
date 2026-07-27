@@ -4,8 +4,9 @@ use std::path::Path;
 
 /// Stamped into Toast to Go packages. A pull rejects a mismatch. Bump on any schema change.
 /// 4: stat runs replaced numbered versions, so group_stats.version and
-/// group.stat_version are gone. An older Toast pulling one of these packages would
-/// find its queries referring to columns that no longer exist.
+/// group.stat_version are gone, and resets record themselves in deck_reset. An older
+/// Toast pulling one of these packages would find its queries referring to columns that
+/// no longer exist.
 pub const SCHEMA_VERSION: u32 = 4;
 
 /// Adds a column to an existing table if it doesn't already have it.
@@ -252,21 +253,6 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
         "UPDATE group_stats SET origin_group_id = group_id
          WHERE origin_group_id IS NULL AND group_id IS NOT NULL;",
     )?;
-    // v1.6.0: a reset flags the deck instead of numbering its stats, and the first row
-    // of the run it opens carries the marker so the table can show where it began.
-    // Quoted, group is a reserved word and PRAGMA table_info won't parse it bare
-    add_column_if_missing(
-        conn,
-        "\"group\"",
-        "was_reset",
-        "BOOLEAN NOT NULL DEFAULT FALSE",
-    )?;
-    add_column_if_missing(
-        conn,
-        "group_stats",
-        "starts_era",
-        "BOOLEAN NOT NULL DEFAULT FALSE",
-    )?;
     add_column_if_missing(conn, "card", "is_cram", "BOOLEAN NOT NULL DEFAULT FALSE")?;
     // v1.6.0: stats outlive the deck and plan they belong to, so a rowid handed out
     // twice hands one thing's history to the next thing created. Runs last, since the
@@ -294,18 +280,50 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
             name TEXT NOT NULL,
             group_type TEXT NOT NULL
                 CHECK(group_type IN ('deck', 'notebook')),
-            was_reset BOOLEAN NOT NULL DEFAULT FALSE,
             FOREIGN KEY(plan_id)
                 REFERENCES plan(id)
                 ON DELETE SET NULL
         );"#,
-        "id, plan_id, name, group_type, was_reset",
+        "id, plan_id, name, group_type",
         r#"SELECT MAX(v) FROM (
             SELECT COALESCE(MAX(id), 0) AS v FROM "group"
             UNION ALL SELECT COALESCE(MAX(origin_group_id), 0) FROM group_stats
             UNION ALL SELECT COALESCE(MAX(group_id), 0) FROM group_stats
             UNION ALL SELECT COALESCE(MAX(group_id), 0) FROM todo_stat_group
          )"#,
+    )?;
+    // A stat line's id is what deck_reset compares against to tell which side of a reset
+    // the line falls on, so an id handed out twice would put post-reset study before the
+    // boundary. The counter also clears any watermark left by a line already deleted.
+    rebuild_with_autoincrement(
+        conn,
+        "group_stats",
+        r#"CREATE TABLE "group_stats_rebuild" (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER,
+            origin_group_id INTEGER,
+            plan_id INTEGER NOT NULL,
+            plan_name TEXT NOT NULL DEFAULT '',
+            group_name TEXT NOT NULL,
+            date DATE NOT NULL,
+            num_promote INTEGER NOT NULL DEFAULT 0,
+            num_demote INTEGER NOT NULL DEFAULT 0,
+            num_new INTEGER NOT NULL DEFAULT 0,
+            time_spent_minutes FLOAT NOT NULL DEFAULT 0,
+            retention_rate REAL NOT NULL DEFAULT 0,
+            is_merged BOOLEAN NOT NULL DEFAULT FALSE,
+            is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+            FOREIGN KEY(group_id)
+                REFERENCES "group"(id)
+                ON DELETE SET NULL
+        );"#,
+        "id, group_id, origin_group_id, plan_id, plan_name, group_name, date,
+         num_promote, num_demote, num_new, time_spent_minutes, retention_rate,
+         is_merged, is_archived",
+        "SELECT MAX(v) FROM (
+            SELECT COALESCE(MAX(id), 0) AS v FROM group_stats
+            UNION ALL SELECT COALESCE(MAX(after_stat_id), 0) FROM deck_reset
+         )",
     )?;
     Ok(())
 }
@@ -352,8 +370,6 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
 
                 group_type TEXT NOT NULL
                     CHECK(group_type IN ('deck', 'notebook')),
-
-                was_reset BOOLEAN NOT NULL DEFAULT FALSE, -- a reset sets this; the next session opened starts its own row instead of adding to the day's
 
                 FOREIGN KEY(plan_id)
                     REFERENCES plan(id)
@@ -475,8 +491,11 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
             );
 
             -- Stat table for a DECK ONLY (SRS), deprecated from Notebooks
+            -- AUTOINCREMENT: deck_reset marks where a reset fell by the highest line id
+            -- at the time, so a reissued id would put a line logged after a reset on the
+            -- older side of it.
             CREATE TABLE IF NOT EXISTS group_stats(
-                id INTEGER PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
                 group_id INTEGER, -- goes NULL when the deck is deleted, which is how the stats page spots a dead deck
                 origin_group_id INTEGER, -- survives deletion, so same named decks never merge into one card
                 plan_id INTEGER NOT NULL, -- no FK: value persists after plan deletion so stats remain browsable
@@ -491,13 +510,32 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 time_spent_minutes FLOAT NOT NULL DEFAULT 0,
                 retention_rate REAL NOT NULL DEFAULT 0,
 
-                starts_era BOOLEAN NOT NULL DEFAULT FALSE, -- first row after a reset, so the table can mark where a run began
                 is_merged BOOLEAN NOT NULL DEFAULT FALSE, -- this deck was merged into another one
                 is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- copied into a merge, or archived by the reset that ended its run; either way it doesn't count
 
                 FOREIGN KEY(group_id)
                     REFERENCES "group"(id)
                     ON DELETE SET NULL
+            );
+
+            -- One row per deck reset. A reset wipes the whole deck, so it belongs to the
+            -- deck and not to any one plan's history: every plan the deck has lines in
+            -- draws the same boundary. Keyed by origin_group_id, the deck id that
+            -- outlives the deck itself, so the record survives deleting the deck and is
+            -- swept only once every stat line of that deck is gone (see
+            -- sweep_orphan_resets). No foreign key: nothing here points at a row that
+            -- has to still exist.
+            CREATE TABLE IF NOT EXISTS deck_reset (
+                id INTEGER PRIMARY KEY,
+                origin_group_id INTEGER NOT NULL,
+                date DATE NOT NULL,
+
+                -- The highest group_stats id at the moment of the reset. Lines at or
+                -- below it were logged before, lines above it after, which is what
+                -- places the boundary when a reset splits a single day into two lines
+                -- that share a date. An ordering mark only: it is never looked up, so
+                -- deleting whichever line it happens to name costs nothing.
+                after_stat_id INTEGER NOT NULL
             );
 
             -- Stat table for a todo
@@ -734,7 +772,6 @@ mod tests {
         let rows = crate::crud::read::get_group_stats(1, &conn).unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].num_new, 4, "the study survives the upgrade");
-        assert!(!rows[0].starts_era, "an old line never began a run");
         assert!(!rows[0].is_archived);
         assert_eq!(
             rows[0].origin_group_id,
@@ -742,12 +779,23 @@ mod tests {
             "backfilled so the deck keeps its identity"
         );
 
-        let flag: bool = conn
-            .query_row(r#"SELECT was_reset FROM "group" WHERE id = 1"#, [], |r| {
-                r.get(0)
-            })
+        let resets: i64 = conn
+            .query_row("SELECT COUNT(*) FROM deck_reset", [], |r| r.get(0))
             .unwrap();
-        assert!(!flag, "an upgraded deck has no reset pending");
+        assert_eq!(resets, 0, "an upgraded deck has never been reset");
+
+        // The rebuilt table has to keep handing out ids above the ones already in use,
+        // since a reset marks its place with the highest id there was at the time
+        conn.execute(
+            "INSERT INTO group_stats (group_id, origin_group_id, plan_id, group_name, date)
+             VALUES (1, 1, 1, 'deck a', '2026-07-02')",
+            [],
+        )
+        .unwrap();
+        assert!(
+            conn.last_insert_rowid() > 1,
+            "a new line reused the id of an existing one"
+        );
     }
 
     fn setup() -> Connection {

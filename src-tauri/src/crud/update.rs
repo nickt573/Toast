@@ -549,6 +549,7 @@ pub fn uncomplete_todo(todo_id: i64, conn: &Connection) -> Result<()> {
 
 pub fn update_todo_stat(
     id: i64,
+    date: String,
     text: String,
     category: i64,
     details: Option<String>,
@@ -570,6 +571,47 @@ pub fn update_todo_stat(
             "time_spent must be >= 0".into(),
         ));
     }
+    if date.is_empty() {
+        return Err(rusqlite::Error::InvalidParameterName("date required".into()));
+    }
+    // Nothing may be logged past the day the app is on: the streak walks back from
+    // today and the charts end there, so a future entry is history nobody can see.
+    if date > get_date(conn)? {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "date can't be in the future".into(),
+        ));
+    }
+    let old_date: String = conn.query_row("SELECT date FROM todo_stats WHERE id=?1", [id], |r| {
+        r.get(0)
+    })?;
+    // Entries within a day are ordered by id, so a re-dated one would keep the place it
+    // had when it was logged and land mid-day. Handing it the next id past every other
+    // row drops it at the bottom of the day it moved to, where the newest entry belongs.
+    let id = if old_date == date {
+        id
+    } else {
+        let tx = conn.unchecked_transaction()?;
+        // Both join tables point at this id, and their foreign keys are checked
+        // statement by statement, so the children can only follow the parent in here.
+        tx.execute_batch("PRAGMA defer_foreign_keys = ON")?;
+        let new_id: i64 = tx.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM todo_stats", [], |r| {
+            r.get(0)
+        })?;
+        tx.execute(
+            "UPDATE todo_stats SET id=?1, date=?2 WHERE id=?3",
+            rusqlite::params![new_id, date, id],
+        )?;
+        tx.execute(
+            "UPDATE todo_stat_group SET stat_id=?1 WHERE stat_id=?2",
+            rusqlite::params![new_id, id],
+        )?;
+        tx.execute(
+            "UPDATE todo_stat_resource SET stat_id=?1 WHERE stat_id=?2",
+            rusqlite::params![new_id, id],
+        )?;
+        tx.commit()?;
+        new_id
+    };
     // Todo time is stored as whole minutes (the column stays FLOAT)
     let time_spent_minutes = time_spent_minutes.round();
     let category_str = category_mask_to_string(category);
