@@ -1298,7 +1298,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                                 {card.is_cram && <span className="dk-cram-mark">↻</span>}
                               </span>
                             )}
-                            <span className="dk-due-label">
+                            <span>
                               {card.sequence > 0
                                 ? `${card.sequence}d`
                                 : card.is_due

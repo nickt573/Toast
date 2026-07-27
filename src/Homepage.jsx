@@ -228,7 +228,7 @@ function GradeButtons({ onGrade, onCramGrade, isCram, card }) {
 function SimilarFace({ item, side }) {
     const imported = item[`imported_${side}`];
     return (
-        <div className={`hp-similar-face hp-similar-face-${side}`}>
+        <div className={`hp-similar-face-${side}`}>
             {imported && (
                 <div dangerouslySetInnerHTML={{ __html: renderAnkiHtml(stripAudioTags(imported)) }} />
             )}
@@ -660,9 +660,9 @@ function StudySession({ group, onBack, setToast }) {
         if (!cardId || grading.current) return;
         grading.current = true;
         try {
-            await loggedInvoke("set_card_paused", { cardId, paused: true });
+            const replaced = await loggedInvoke("swap_card", { cardId });
             await fetchNext();
-            setToast("Card swapped.");
+            setToast(replaced ? "Card swapped, replacement found." : "Card swapped, no eligible replacement.");
         } catch (e) { logError("catch", e); setToast("Failed to swap card.", "error"); }
         finally { grading.current = false; }
     }

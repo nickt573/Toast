@@ -273,6 +273,30 @@ pub fn set_card_paused(card_id: i64, paused: bool, conn: &Connection) -> Result<
     on_pause_changed(card_id, group_id, paused, was_due, conn)
 }
 
+/// Pauses a card mid-session and says whether the freed slot pulled a replacement in.
+/// Counts the rest of the deck either side of the pause rather than the slot itself,
+/// since fill_group is what decides where a replacement comes from. The swapped card is
+/// left out of both counts, so the answer holds even for a card that was not due and
+/// therefore freed no slot at all.
+pub fn swap_card(card_id: i64, conn: &Connection) -> Result<bool> {
+    let group_id: i64 = conn.query_row(
+        "SELECT group_id FROM card WHERE id = ?1",
+        [card_id],
+        |r| r.get(0),
+    )?;
+    let others = |conn: &Connection| -> Result<i64> {
+        conn.query_row(
+            "SELECT COUNT(*) FROM card
+             WHERE group_id = ?1 AND id != ?2 AND is_due = TRUE AND is_paused = FALSE",
+            rusqlite::params![group_id, card_id],
+            |r| r.get(0),
+        )
+    };
+    let before = others(conn)?;
+    set_card_paused(card_id, true, conn)?;
+    Ok(others(conn)? > before)
+}
+
 pub fn set_all_searchable(group_id: i64, searchable: bool, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE card SET is_searchable = ?1 WHERE group_id = ?2",
@@ -581,6 +605,12 @@ pub fn update_todo_stat(
             "date can't be in the future".into(),
         ));
     }
+    // One transaction for the whole edit. Re-dating moves the row to a new id, so a
+    // failure partway through would otherwise leave the entry sitting at that new id
+    // with the old text and time still on it.
+    let tx = conn.unchecked_transaction()?;
+    let conn = &tx;
+
     let old_date: String = conn.query_row("SELECT date FROM todo_stats WHERE id=?1", [id], |r| {
         r.get(0)
     })?;
@@ -590,26 +620,25 @@ pub fn update_todo_stat(
     let id = if old_date == date {
         id
     } else {
-        let tx = conn.unchecked_transaction()?;
         // Both join tables point at this id, and their foreign keys are checked
         // statement by statement, so the children can only follow the parent in here.
-        tx.execute_batch("PRAGMA defer_foreign_keys = ON")?;
-        let new_id: i64 = tx.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM todo_stats", [], |r| {
-            r.get(0)
-        })?;
-        tx.execute(
+        conn.execute_batch("PRAGMA defer_foreign_keys = ON")?;
+        let new_id: i64 =
+            conn.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM todo_stats", [], |r| {
+                r.get(0)
+            })?;
+        conn.execute(
             "UPDATE todo_stats SET id=?1, date=?2 WHERE id=?3",
             rusqlite::params![new_id, date, id],
         )?;
-        tx.execute(
+        conn.execute(
             "UPDATE todo_stat_group SET stat_id=?1 WHERE stat_id=?2",
             rusqlite::params![new_id, id],
         )?;
-        tx.execute(
+        conn.execute(
             "UPDATE todo_stat_resource SET stat_id=?1 WHERE stat_id=?2",
             rusqlite::params![new_id, id],
         )?;
-        tx.commit()?;
         new_id
     };
     // Todo time is stored as whole minutes (the column stays FLOAT)
@@ -658,7 +687,7 @@ pub fn update_todo_stat(
             rusqlite::params![id, resource_id],
         )?;
     }
-    Ok(())
+    tx.commit()
 }
 
 fn category_mask_to_string(mask: i64) -> String {
