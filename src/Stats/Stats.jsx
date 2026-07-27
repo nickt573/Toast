@@ -1544,8 +1544,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           {totals?.earliest && (
             <span className="hdr-context">
               {[
-                `${fmtTime(totals.deckMins)} Total Deck Time`,
-                `${fmtTime(totals.todoMins)} Total Todo Time`,
+                `${fmtTime(totals.deckMins + totals.todoMins)} total study time`,
                 recordDays !== null ? plural(recordDays, "total day") : null,
               ].filter(Boolean).join(" · ")}
             </span>
