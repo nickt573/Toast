@@ -125,9 +125,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   border-radius: var(--t-r);
   cursor: pointer;
   background: var(--t-surface);
-  /* A plan card is several times the height of a row, so it takes the standard gap and a
-     little over, or the stack reads as one block. */
-  margin-bottom: calc(var(--t-list-gap) + 6px);
+  margin-bottom: var(--t-list-gap);
   box-shadow: var(--t-shadow-card);
   transition: background var(--t-ease-hover);
 }
