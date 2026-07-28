@@ -629,7 +629,7 @@ textarea { overflow-y: scroll; }
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 /* Gold rather than the accent's peach, which read pink next to the other bands. Its own
    colour, so the caramel the rest of the plan family wears stays where it is. */
-.landing-hdr--plan     { --hdr-band: color-mix(in srgb, #D8A430 56%, var(--t-surface)); --hdr-btn: color-mix(in srgb, #D8A430 88%, #000); background: var(--hdr-band); }
+.landing-hdr--plan     { --hdr-band: color-mix(in srgb, #D0900E 56%, var(--t-surface)); --hdr-btn: color-mix(in srgb, #D0900E 88%, #000); background: var(--hdr-band); }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); background: var(--hdr-band); }
 .landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); background: var(--hdr-band); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
