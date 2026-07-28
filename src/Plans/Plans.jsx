@@ -21,8 +21,8 @@ const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 
 function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData, srsGroups, setToast, onNavigateToGroup }) {
     const [removing, setRemoving] = useState(false);
     const [editing, setEditing] = useState(false);
-    const [maxNew, setMaxNew] = useState(scheduler.max_new);
-    const [maxReview, setMaxReview] = useState(scheduler.max_review);
+    const [maxNew, setMaxNew] = useState(String(scheduler.max_new));
+    const [maxReview, setMaxReview] = useState(String(scheduler.max_review));
     const [canOverflow, setCanOverflow] = useState(scheduler.can_overflow);
     const [dueCount, setDueCount] = useState([]);
 
@@ -33,8 +33,8 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                     group_id: group.id,
                     studied_new: scheduler.studied_new,
                     studied_review: scheduler.studied_review,
-                    max_new: maxNew,
-                    max_review: maxReview,
+                    max_new: Number(maxNew || 0),
+                    max_review: Number(maxReview || 0),
                     can_overflow: canOverflow,
                 }
             });
@@ -76,16 +76,16 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                         <label className="plan-srs-settings-label">
                             Max New
                             <Tip text="Maximum new (unseen) cards introduced per study session, excluding overdue cards" />
-                            <input type="number" min={0} value={maxNew}
-                                onChange={(e) => setMaxNew(Number(e.target.value))}
+                            <input type="number" min={0} step={1} value={maxNew} placeholder="0"
+                                onChange={(e) => setMaxNew(e.target.value.replace(/[^0-9]/g, "").replace(/^0+(?=\d)/, ""))}
                                 onKeyDown={(e) => { if (e.key === "Enter") saveSettings(); }}
                                 className="plan-srs-settings-input" />
                         </label>
                         <label className="plan-srs-settings-label">
                             Max Review
                             <Tip text="Maximum review cards shown per study session, excluding overdue cards" />
-                            <input type="number" min={0} value={maxReview}
-                                onChange={(e) => setMaxReview(Number(e.target.value))}
+                            <input type="number" min={0} step={1} value={maxReview} placeholder="0"
+                                onChange={(e) => setMaxReview(e.target.value.replace(/[^0-9]/g, "").replace(/^0+(?=\d)/, ""))}
                                 onKeyDown={(e) => { if (e.key === "Enter") saveSettings(); }}
                                 className="plan-srs-settings-input" />
                         </label>
@@ -132,8 +132,8 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
     const [srsGroups, setSrsGroups] = useState([]);
     const [unassigned, setUnassigned] = useState([]);
     const [selectedGroupId, setSelectedGroupId] = useState(null);
-    const [maxNew, setMaxNew] = useState(20);
-    const [maxReview, setMaxReview] = useState(50);
+    const [maxNew, setMaxNew] = useState("20");
+    const [maxReview, setMaxReview] = useState("50");
     const [canOverflow, setCanOverflow] = useState(false);
     const [adding, setAdding] = useState(false);
 
@@ -157,11 +157,11 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
             await loggedInvoke("add_group_to_plan", {
                 groupId: selectedGroupId,
                 planId,
-                scheduler: { group_id: selectedGroupId, max_new: maxNew, max_review: maxReview, can_overflow: canOverflow },
+                scheduler: { group_id: selectedGroupId, max_new: Number(maxNew || 0), max_review: Number(maxReview || 0), can_overflow: canOverflow },
             });
             setToast("Deck added to plan.");
             setAdding(false);
-            setMaxNew(20); setMaxReview(50); setCanOverflow(false);
+            setMaxNew("20"); setMaxReview("50"); setCanOverflow(false);
             await loadData();
         } catch (e) { logError("catch", e); setToast("Failed to add group.", "error"); }
     }
@@ -221,15 +221,15 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
                         <label className="plan-srs-settings-label">
                             Max New
                             <Tip text="Maximum new (unseen) cards introduced per study session." />
-                            <input type="number" min={0} value={maxNew}
-                                onChange={(e) => setMaxNew(Number(e.target.value))}
+                            <input type="number" min={0} step={1} value={maxNew} placeholder="0"
+                                onChange={(e) => setMaxNew(e.target.value.replace(/[^0-9]/g, "").replace(/^0+(?=\d)/, ""))}
                                 className="plan-srs-settings-input" />
                         </label>
                         <label className="plan-srs-settings-label">
                             Max Review
                             <Tip text="Maximum review cards shown per study session." />
-                            <input type="number" min={0} value={maxReview}
-                                onChange={(e) => setMaxReview(Number(e.target.value))}
+                            <input type="number" min={0} step={1} value={maxReview} placeholder="0"
+                                onChange={(e) => setMaxReview(e.target.value.replace(/[^0-9]/g, "").replace(/^0+(?=\d)/, ""))}
                                 className="plan-srs-settings-input" />
                         </label>
                         <label className="plan-srs-settings-label">
@@ -788,7 +788,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                         {weekDay !== null && (
                                             <div className="todo-filter-seg">
                                                 <button className={dayMode === "only" ? "active" : ""} onClick={() => setDayMode("only")}>Active only</button>
-                                                <button className={dayMode === "all" ? "active" : ""} onClick={() => setDayMode("all")}>Show all</button>
+                                                <button className={dayMode === "all" ? "active" : ""} onClick={() => setDayMode("all")}>Show All</button>
                                             </div>
                                         )}
                                     </div>
