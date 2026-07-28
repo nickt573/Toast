@@ -2,6 +2,8 @@ import { useState, useEffect, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { ResourceCard, GroupTypeBadge, ArchivedBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
+import UnitPicker from "../UnitPicker";
+import { resolveUnitPair } from "../unitPair";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -47,6 +49,13 @@ function fmtTime(minutes) {
 
 function plural(n, word) {
   return `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
+}
+
+// "5 pages" for a logged amount and its unit; empty string unless both are present.
+function fmtUnit(value, name) {
+  if (value === null || value === undefined || !name) return "";
+  const n = Number.isInteger(value) ? value : Math.round(value * 100) / 100;
+  return `${n.toLocaleString()} ${name}`;
 }
 
 function retentionColor(rate) {
@@ -310,6 +319,47 @@ function buildByCategoryData(todoStats) {
   };
 }
 
+// One unit's story per bucket over the window. Every spelling of the unit counts as one
+// (grouped by unit_group_id). "total" sums the amount done; "time" divides the time spent
+// by the amount to show how long one of them took on average, so seven videos in
+// forty-five minutes reads as about six-minute videos rather than just a big count.
+function buildByUnitData(todoStats, groupId, mode, unit = "day", win = null) {
+  const byDate = {};
+  todoStats.forEach(r => {
+    if (r.unit_group_id !== groupId || r.num_value == null) return;
+    const key = bucketKey(r.date, unit);
+    if (!byDate[key]) byDate[key] = { amount: 0, minutes: 0 };
+    byDate[key].amount += r.num_value;
+    byDate[key].minutes += r.time_spent_minutes;
+  });
+  const dates = windowBuckets(byDate, unit, win);
+  const at = d => byDate[d] ?? { amount: 0, minutes: 0 };
+  const data = dates.map(d => {
+    const b = at(d);
+    if (mode === "time") return b.amount > 0 ? Math.round((b.minutes / b.amount) * 10) / 10 : 0;
+    return Math.round(b.amount * 100) / 100;
+  });
+  return { labels: dates, datasets: [{ label: mode === "time" ? "Minutes each" : "Amount", data, backgroundColor: YELLOW_BG }] };
+}
+
+// The distinct units that actually appear in a plan's logged todos, keyed by their group and
+// labelled with the group's main spelling, name-sorted for a stable dropdown. Units created
+// but never logged don't clutter the chooser.
+function unitOptionsFrom(todoStats) {
+  const seen = new Map();
+  todoStats.forEach(r => {
+    if (r.unit_group_id != null && r.unit_name && !seen.has(r.unit_group_id)) seen.set(r.unit_group_id, r.unit_name);
+  });
+  return [...seen.entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+}
+
+const UNIT_MODES = [
+  { key: "total", label: "Total" },
+  { key: "time",  label: "Time" },
+];
+
 // Shared chart options:
 
 // Caps how many date labels render as history grows, the bars themselves are unaffected.
@@ -443,6 +493,8 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const [range,  setRange]  = useState(30);
   const [offset, setOffset] = useState(0);
   const [retMode, setRetMode] = useState("daily");
+  const [unitSel, setUnitSel] = useState(null);
+  const [unitMode, setUnitMode] = useState("total");
 
   const groupStats = counted(allGroupStats);
 
@@ -492,6 +544,18 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const byDeckData    = buildByDeckData(groupStats);
   const byCatData     = buildByCategoryData(todoStats);
 
+  const unitOptions = unitOptionsFrom(todoStats);
+  // A picked unit that no longer exists (plan switch, deletion) falls back to the first.
+  const activeUnit = unitOptions.find(u => u.id === unitSel) ?? unitOptions[0] ?? null;
+  const unitWin = computeWindow(
+    [...new Set(todoStats
+      .filter(r => activeUnit && r.unit_group_id === activeUnit.id && r.num_value != null)
+      .map(r => r.date))].sort(),
+  );
+  const byUnitData = activeUnit
+    ? buildByUnitData(todoStats.filter(inWindow(unitWin)), activeUnit.id, unitMode, unitWin.unit, unitWin)
+    : { labels: [], datasets: [] };
+
   const canGoNewer = offset > 0;
 
   const tabs = [
@@ -499,6 +563,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
     { key: "bycards", label: "By Cards" },
     { key: "bydeck",  label: "By Deck" },
     { key: "bycat",   label: "By Category" },
+    { key: "byunit",  label: "By Unit" },
   ];
 
   const legend = (
@@ -550,7 +615,18 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
 
   // Hours are fractional, drop the whole-number tick step
   const timeOpts = (() => {
-    const o = barOpts(true, "Hours", DATE_TICKS);
+    const o = barOpts(true, "hours", DATE_TICKS);
+    delete o.scales.y.ticks.stepSize;
+    return o;
+  })();
+
+  // Units can be fractional too. The y axis names the picked unit, or the minutes each of
+  // them took when the toggle is on "Time each".
+  const unitYLabel = activeUnit
+    ? (unitMode === "time" ? `minutes / ${activeUnit.name.toLowerCase()}` : activeUnit.name.toLowerCase())
+    : "";
+  const unitOpts = (() => {
+    const o = barOpts(false, unitYLabel, DATE_TICKS);
     delete o.scales.y.ticks.stepSize;
     return o;
   })();
@@ -592,7 +668,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
                 ? <div className="empty-bubble">No study recorded in this period.</div>
                 : <>
                     <div style={{ height: 200 }}>
-                      <Bar data={barData} options={barOpts(true, "Cards", DATE_TICKS, true)} />
+                      <Bar data={barData} options={barOpts(true, "cards", DATE_TICKS, true)} />
                     </div>
                     {hasRetention && (
                       <div style={{ marginTop: 14 }}>
@@ -621,7 +697,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
         byDeckData.labels.length === 0
           ? <div className="empty-bubble">No deck study data yet.</div>
           : <div style={{ height: 220 }}>
-              <Bar data={byDeckData} options={barOpts(false, "Cards", DECK_TICKS)} />
+              <Bar data={byDeckData} options={barOpts(false, "cards", DECK_TICKS)} />
             </div>
       )}
 
@@ -629,7 +705,37 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
         byCatData.labels.length === 0
           ? <div className="empty-bubble">No todo data yet.</div>
           : <div style={{ height: 220 }}>
-              <Bar data={byCatData} options={barOpts(false, "Hours")} />
+              <Bar data={byCatData} options={barOpts(false, "hours")} />
+            </div>
+      )}
+
+      {tab === "byunit" && (
+        unitOptions.length === 0
+          ? <div className="empty-bubble">No units logged yet.</div>
+          : <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: 11, color: "var(--t-text-3)" }}>Unit</span>
+                <select
+                  value={activeUnit?.id ?? ""}
+                  onChange={e => setUnitSel(Number(e.target.value))}
+                  style={{ fontSize: 12, padding: "3px 8px", border: "1px solid var(--t-border)" }}>
+                  {unitOptions.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                </select>
+                <div className="st-pills" style={{ marginLeft: "auto" }}>
+                  {UNIT_MODES.map(m => (
+                    <button key={m.key} className={`st-pill${unitMode === m.key ? " active" : ""}`} onClick={() => setUnitMode(m.key)}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {rangeControls(unitWin)}
+              {byUnitData.labels.length === 0
+                ? <div className="empty-bubble">No amounts recorded in this period.</div>
+                : <div style={{ height: 200 }}>
+                    <Bar data={byUnitData} options={unitOpts} />
+                  </div>
+              }
             </div>
       )}
     </div>
@@ -941,9 +1047,9 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
                   </>
                 ) : (
                   <>
-                    <ArchiveButton rows={deckRows} label="Archive all"
+                    <ArchiveButton rows={deckRows} label="Archive All"
                       onArchive={a => archiveStats(deckRows, a)} />
-                    <ConfirmDelete label="Delete all" small onConfirm={() => deleteStats(deckRows)} />
+                    <ConfirmDelete label="Delete All" small onConfirm={() => deleteStats(deckRows)} />
                   </>
                 )}
                 <span className="st-window-pager">
@@ -977,6 +1083,7 @@ const SEARCH_SCOPES = [
   { key: "all",       label: "All" },
   { key: "description", label: "Description" },
   { key: "details",   label: "Details" },
+  { key: "unit",      label: "Unit" },
   { key: "resources", label: "Resources" },
   { key: "groups",    label: "Decks / Notebooks" },
 ];
@@ -1025,7 +1132,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     const inScope = key => scopes.has("all") || scopes.has(key);
     visible = visible.filter(r =>
       (inScope("description") && has(r.text)) ||
-      (scopes.has("all") && has(r.num_unit)) ||
+      (inScope("unit") && (has(r.unit_label) || has(r.unit_name))) ||
       (inScope("details") && has(r.details)) ||
       // Resources match on name and description only, never the type or link
       (inScope("resources") && r.resources.some(res => has(res.name) || has(res.notes))) ||
@@ -1051,7 +1158,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
       categoryMap: categoryStringToMap(r.category),
       details: r.details || "",
       timeSpent: r.time_spent_minutes,
-      numUnit: r.num_unit || "",
+      numValue: r.num_value ?? "",
+      variantId: r.variant_id ?? null,
       // Kept lines are tracked by row id, never by name: the snapshot keeps whatever
       // a deck or resource was called when it was logged, so names repeat and drift.
       groups: r.groups.map(x => x.row_id),
@@ -1073,6 +1181,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
     if (!editForm.date) { setToast("Please pick a date.", "warn"); return; }
     if (today && editForm.date > today) { setToast("An entry can't be dated in the future.", "warn"); return; }
+    const unit = resolveUnitPair(editForm.numValue, editForm.variantId);
+    if (unit.error) { setToast(unit.error, "warn"); return; }
     const removeGroupRowIds    = r.groups.map(x => x.row_id).filter(id => !editForm.groups.includes(id));
     const removeResourceRowIds = r.resources.map(x => x.row_id).filter(id => !editForm.resources.includes(id));
     try {
@@ -1083,7 +1193,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
         category,
         details: editForm.details.trim() || null,
         timeSpentMinutes: timeSpent,
-        numUnit: editForm.numUnit.trim() || null,
+        numValue: unit.numValue,
+        variantId: unit.variantId,
         removeGroupRowIds,
         removeResourceRowIds,
         addGroupIds: editForm.addGroupIds,
@@ -1178,7 +1289,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
                   ))}
                   <span className="st-todo-meta-right">
-                    {r.num_unit && <span className="st-meta-pill st-meta-pill--count st-todo-unit" title={r.num_unit}>{r.num_unit}</span>}
+                    {r.unit_label && (
+                      <span className="st-meta-pill st-meta-pill--count st-todo-unit" title={fmtUnit(r.num_value, r.unit_label)}>
+                        {fmtUnit(r.num_value, r.unit_label)}
+                      </span>
+                    )}
                     <span className="st-meta-pill st-meta-pill--time">{fmtTime(r.time_spent_minutes)}</span>
                   </span>
                 </div>
@@ -1303,12 +1418,12 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Units completed (optional)</div>
-                      <input
-                        value={editForm.numUnit}
-                        onKeyDown={editKey(r)}
-                        onChange={e => setEditForm(f => ({ ...f, numUnit: e.target.value }))}
-                        placeholder="e.g. 5 pages, 2 articles, 4 chapters"
-                        style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 }}
+                      <UnitPicker
+                        value={editForm.numValue}
+                        variantId={editForm.variantId}
+                        setToast={setToast}
+                        onUnitsChanged={onDeleted}
+                        onChange={({ value, variantId }) => setEditForm(f => ({ ...f, numValue: value, variantId }))}
                       />
                     </div>
                   </div>
@@ -1544,8 +1659,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           {totals?.earliest && (
             <span className="hdr-context">
               {[
-                `${fmtTime(totals.deckMins + totals.todoMins)} total study time`,
-                recordDays !== null ? plural(recordDays, "total day") : null,
+                `${fmtTime(totals.deckMins + totals.todoMins)} study time`,
+                recordDays !== null ? plural(recordDays, "day") : null,
               ].filter(Boolean).join(" · ")}
             </span>
           )}

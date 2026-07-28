@@ -217,6 +217,101 @@ fn rebuild_with_autoincrement(
     result
 }
 
+/// Splits a retired free-text unit like "~5 pages" into (5.0, "pages"). Leading symbols
+/// and words are skipped to reach the first number; everything after it, trimmed, becomes
+/// the unit name. Returns None when there is no number, or nothing is left for the name,
+/// so the entry keeps no units at all rather than half of a pair.
+fn parse_legacy_unit(raw: &str) -> Option<(f64, String)> {
+    let bytes = raw.as_bytes();
+    let start = bytes.iter().position(|b| b.is_ascii_digit())?;
+    let mut end = start;
+    let mut seen_dot = false;
+    while end < bytes.len() {
+        let c = bytes[end];
+        if c.is_ascii_digit() {
+            end += 1;
+        } else if c == b'.' && !seen_dot {
+            seen_dot = true;
+            end += 1;
+        } else {
+            break;
+        }
+    }
+    // A trailing dot ("5.") isn't part of the number, but it is consumed here so the name
+    // starts cleanly after it rather than keeping the dot.
+    let value: f64 = raw[start..end].trim_end_matches('.').parse().ok()?;
+    let name = raw[end..].trim().to_string();
+    // A zero (or less) amount isn't a record the app allows, so it stays unmigrated and blank.
+    if name.is_empty() || value <= 0.0 {
+        return None;
+    }
+    Some((value, name))
+}
+
+/// The form two unit names share when only case or a plural 's' sets them apart, so "Pages",
+/// "pages" and "page" all collapse onto one unit on migration rather than splitting the
+/// count three ways. Only the key is folded; the name stored keeps its original spelling.
+/// One-time pass turning retired free-text units into unit variants. Only touches entries
+/// that still carry their old text and have no variant yet, so re-running is safe: a
+/// converted entry is skipped next time, and one whose text holds no number is left with no
+/// units rather than a half-filled pair. Names are matched exactly, no folding of case or
+/// plurals, so nothing is assumed about what two spellings mean; identical strings share a
+/// variant, anything else becomes its own unit the user can later gather with alternates.
+fn migrate_legacy_units(conn: &Connection) -> rusqlite::Result<()> {
+    // Existing variants by their exact name, so a partial earlier run is reused, not doubled.
+    let mut by_name: std::collections::HashMap<String, i64> = conn
+        .prepare("SELECT id, name FROM unit_variant")?
+        .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?
+        .filter_map(|r| r.ok())
+        .map(|(id, name)| (name, id))
+        .collect();
+
+    let rows: Vec<(i64, String)> = conn
+        .prepare(
+            "SELECT id, num_unit FROM todo_stats
+             WHERE num_unit IS NOT NULL AND variant_id IS NULL",
+        )?
+        .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    for (id, raw) in rows {
+        let Some((value, name)) = parse_legacy_unit(&raw) else {
+            continue;
+        };
+        let variant_id = match by_name.get(&name) {
+            Some(&existing) => existing,
+            None => {
+                let vid = new_unit_group(conn, &name)?;
+                by_name.insert(name, vid);
+                vid
+            }
+        };
+        conn.execute(
+            "UPDATE todo_stats SET num_value = ?1, variant_id = ?2 WHERE id = ?3",
+            params![value, variant_id, id],
+        )?;
+    }
+    Ok(())
+}
+
+/// Starts a new unit as a single variant that anchors its own group, returning that
+/// variant's id. A group is just the shared group_id its variants carry; the anchor's id
+/// names the group, and it keeps naming it even after that first variant is renamed or
+/// removed, so the grouping never shifts under the entries pointing at it.
+fn new_unit_group(conn: &Connection, name: &str) -> rusqlite::Result<i64> {
+    conn.execute(
+        "INSERT INTO unit_variant (group_id, name, position) VALUES (0, ?1, 0)",
+        params![name],
+    )?;
+    let vid = conn.last_insert_rowid();
+    conn.execute(
+        "UPDATE unit_variant SET group_id = ?1 WHERE id = ?1",
+        params![vid],
+    )?;
+    Ok(vid)
+}
+
 /// Migrations for databases created by older releases. Each call is idempotent.
 fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     // v1.1.0: read-only support content mapped from Anki fields on import,
@@ -264,6 +359,10 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
          WHERE origin_group_id IS NULL AND group_id IS NOT NULL;",
     )?;
     add_column_if_missing(conn, "card", "is_cram", "BOOLEAN NOT NULL DEFAULT FALSE")?;
+    // A logged todo's units split into a number and a pointer at a unit variant.
+    add_column_if_missing(conn, "todo_stats", "num_value", "FLOAT")?;
+    add_column_if_missing(conn, "todo_stats", "variant_id", "INTEGER")?;
+    migrate_legacy_units(conn)?;
     // v1.6.0: stats outlive the deck and plan they belong to, so a rowid handed out
     // twice hands one thing's history to the next thing created. Runs last, since the
     // rebuilt tables have to include every column added above.
@@ -548,7 +647,18 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 after_stat_id INTEGER NOT NULL
             );
 
-            -- Stat table for a todo
+            -- A custom unit a logged todo counts in (lessons, posts, pages, ...), stored as
+            -- its accepted spellings. Variants that share a group_id are one unit: the graph
+            -- and totals treat them as one, while each logged entry keeps the exact spelling
+            -- it chose. position orders them; the lowest is the "main" the group shows by.
+            -- Global, shared across every plan, and names are free to repeat across groups.
+            CREATE TABLE IF NOT EXISTS unit_variant (
+                id INTEGER PRIMARY KEY,
+                group_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                position INTEGER NOT NULL DEFAULT 0
+            );
+
             CREATE TABLE IF NOT EXISTS todo_stats (
                 id INTEGER PRIMARY KEY,
                 todo_id INTEGER , -- for the purpose of collecting data and sorting (null if free)
@@ -563,7 +673,13 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 details TEXT,
 
                 time_spent_minutes FLOAT NOT NULL DEFAULT 0,
-                num_unit TEXT -- pages, minutes, books, chapters, etc
+                -- How much got done and which unit variant it counts in: both filled or both
+                -- empty, never one alone. No FK on variant_id so the guard stays in one place
+                -- (delete blocks a variant any log points at) and the live name shows through
+                -- a join, the way this table already reads deck and resource names.
+                num_value FLOAT,
+                variant_id INTEGER,
+                num_unit TEXT -- retired free-text units, kept only so older databases can migrate
             );
 
             -- todo_stat + group join table
@@ -629,6 +745,76 @@ mod tests {
 
     fn app_dir() -> PathBuf {
         PathBuf::from("/home/alice/.local/share/com.toast.app")
+    }
+
+    #[test]
+    fn legacy_units_split_at_the_first_number() {
+        assert_eq!(parse_legacy_unit("~5 pages"), Some((5.0, "pages".into())));
+        assert_eq!(parse_legacy_unit("5.5 chapters"), Some((5.5, "chapters".into())));
+        // A word before the number is skipped along with the symbols.
+        assert_eq!(parse_legacy_unit("read 5 pages"), Some((5.0, "pages".into())));
+        // Everything past the number is the name, spaces and all.
+        assert_eq!(parse_legacy_unit("3 lessons done"), Some((3.0, "lessons done".into())));
+        // A trailing dot stays out of the number.
+        assert_eq!(parse_legacy_unit("2. articles"), Some((2.0, "articles".into())));
+    }
+
+    #[test]
+    fn legacy_units_with_no_pair_migrate_to_nothing() {
+        // No number at all.
+        assert_eq!(parse_legacy_unit("pages"), None);
+        // A number but no name left over, so neither field fills.
+        assert_eq!(parse_legacy_unit("5"), None);
+        assert_eq!(parse_legacy_unit("  12  "), None);
+        assert_eq!(parse_legacy_unit(""), None);
+    }
+
+    #[test]
+    fn identical_legacy_unit_names_share_one_variant_but_others_stay_apart() {
+        let conn = Connection::open_in_memory().unwrap();
+        init_schema(&conn, &app_dir()).unwrap();
+        conn.execute("INSERT INTO plan (name) VALUES ('p')", []).unwrap();
+        let plan_id = conn.last_insert_rowid();
+
+        // Same exact spelling twice, a case variant that stays its own unit (no folding), an
+        // unparseable string, and a bare number.
+        for raw in ["5 pages", "read 3 pages", "2 Pages", "grandma's address", "10"] {
+            conn.execute(
+                "INSERT INTO todo_stats (plan_id, date, text, category, num_unit)
+                 VALUES (?1, '2026-01-01', 't', 'Reading', ?2)",
+                params![plan_id, raw],
+            )
+            .unwrap();
+        }
+        migrate_legacy_units(&conn).unwrap();
+
+        // "pages" is one variant shared by both entries that spelled it that way.
+        let pages: i64 = conn
+            .query_row("SELECT COUNT(*) FROM unit_variant WHERE name = 'pages'", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(pages, 1, "identical spellings must not duplicate");
+        // "pages" and "Pages" are different strings, so two separate units, no assumptions.
+        let variants: i64 = conn.query_row("SELECT COUNT(*) FROM unit_variant", [], |r| r.get(0)).unwrap();
+        assert_eq!(variants, 2, "different spellings each get their own unit");
+        let filled: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM todo_stats WHERE num_value IS NOT NULL AND variant_id IS NOT NULL",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(filled, 3, "the three parseable entries carry units");
+
+        // Each migrated variant anchors its own group (group_id equals its own id).
+        let anchored: i64 = conn
+            .query_row("SELECT COUNT(*) FROM unit_variant WHERE group_id = id", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(anchored, 2, "a fresh variant names its own group");
+
+        // Re-running changes nothing: converted rows are skipped, failures stay blank.
+        migrate_legacy_units(&conn).unwrap();
+        let after: i64 = conn.query_row("SELECT COUNT(*) FROM unit_variant", [], |r| r.get(0)).unwrap();
+        assert_eq!(after, 2, "a second pass must not add units");
     }
 
     // group_stats holds onto origin_group_id and plan_id long after the deck or plan

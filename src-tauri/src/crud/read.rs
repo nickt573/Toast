@@ -563,13 +563,34 @@ pub fn get_deleted_plan_ids(conn: &Connection) -> Result<Vec<(i64, String)>> {
 }
 
 pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> {
-    let rows: Vec<(i64, Option<i64>, i64, String, String, String, String, Option<String>, f64, Option<String>)> = conn
+    type Row = (
+        i64,
+        Option<i64>,
+        i64,
+        String,
+        String,
+        String,
+        String,
+        Option<String>,
+        f64,
+        Option<f64>,
+        Option<i64>,
+        Option<i64>,
+        Option<String>,
+        Option<String>,
+    );
+    let rows: Vec<Row> = conn
         .prepare(
             r#"
-            SELECT id, todo_id, plan_id, plan_name, date, text, category, details, time_spent_minutes, num_unit
-            FROM todo_stats
-            WHERE plan_id = ?1
-            ORDER BY date DESC, id ASC
+            SELECT ts.id, ts.todo_id, ts.plan_id, ts.plan_name, ts.date, ts.text, ts.category,
+                   ts.details, ts.time_spent_minutes, ts.num_value, ts.variant_id, v.group_id,
+                   v.name,
+                   (SELECT m.name FROM unit_variant m WHERE m.group_id = v.group_id
+                    ORDER BY m.position, m.id LIMIT 1)
+            FROM todo_stats ts
+            LEFT JOIN unit_variant v ON v.id = ts.variant_id
+            WHERE ts.plan_id = ?1
+            ORDER BY ts.date DESC, ts.id ASC
             "#,
         )?
         .query_map([plan_id], |row| {
@@ -584,6 +605,10 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
                 row.get(7)?,
                 row.get(8)?,
                 row.get(9)?,
+                row.get(10)?,
+                row.get(11)?,
+                row.get(12)?,
+                row.get(13)?,
             ))
         })?
         .filter_map(|r| r.ok())
@@ -659,7 +684,11 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
                 category,
                 details,
                 time_spent_minutes,
-                num_unit,
+                num_value,
+                variant_id,
+                unit_group_id,
+                unit_label,
+                unit_name,
             )| {
                 TodoStat {
                     id,
@@ -671,7 +700,11 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
                     category,
                     details,
                     time_spent_minutes,
-                    num_unit,
+                    num_value,
+                    variant_id,
+                    unit_group_id,
+                    unit_label,
+                    unit_name,
                     groups: stat_groups.remove(&id).unwrap_or_default(),
                     resources: stat_resources.remove(&id).unwrap_or_default(),
                 }
@@ -680,6 +713,41 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
         .collect();
 
     Ok(result)
+}
+
+pub fn get_units(conn: &Connection) -> Result<Vec<Unit>> {
+    // One pass over the variants, grouped in Rust. Ordered so a group's rows arrive together
+    // with the main first, and the groups themselves sort by that main name. Each carries a
+    // count of the entries that chose it, for the delete warning.
+    let rows: Vec<(i64, i64, String, i64)> = conn
+        .prepare(
+            "SELECT v.group_id, v.id, v.name,
+                    (SELECT COUNT(*) FROM todo_stats t WHERE t.variant_id = v.id)
+             FROM unit_variant v
+             ORDER BY v.group_id, v.position, v.id",
+        )?
+        .query_map([], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?, row.get::<_, String>(2)?, row.get::<_, i64>(3)?))
+        })?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    let mut units: Vec<Unit> = Vec::new();
+    for (group_id, id, name, uses) in rows {
+        match units.last_mut() {
+            Some(u) if u.id == group_id => u.variants.push(UnitVariant { id, name, uses }),
+            _ => units.push(Unit {
+                id: group_id,
+                variants: vec![UnitVariant { id, name, uses }],
+            }),
+        }
+    }
+    units.sort_by(|a, b| {
+        let an = a.variants.first().map(|v| v.name.to_lowercase()).unwrap_or_default();
+        let bn = b.variants.first().map(|v| v.name.to_lowercase()).unwrap_or_default();
+        an.cmp(&bn)
+    });
+    Ok(units)
 }
 
 pub fn get_card_grade_log(card_id: i64, conn: &Connection) -> Result<Vec<CardGradeLog>> {

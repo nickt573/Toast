@@ -6,6 +6,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { CardFace, renderAnkiHtml, stripAudioTags } from "./Decks/CardFace";
 import { ResourceCard, GroupTypeBadge, Tip } from "./UIUtils";
 import { computeCategory, maskToCategories, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
+import UnitPicker from "./UnitPicker";
+import { resolveUnitPair } from "./unitPair";
 import "./Homepage.css";
 
 // Shared pill helpers
@@ -280,10 +282,11 @@ function SimilarNavigator({ items, frontCount = 0, groupType }) {
 
 // Todo Complete Popup
 
-function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, allGroups, onConfirm, onCancel, onNavigateToGroup, initialTime = 0 }) {
+function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, allGroups, onConfirm, onCancel, onNavigateToGroup, setToast, initialTime = 0 }) {
     const [text, setText] = useState(todo.text);
     const [timeSpent, setTimeSpent] = useState(initialTime);
-    const [numUnit, setNumUnit] = useState("");
+    const [numValue, setNumValue] = useState("");
+    const [variantId, setVariantId] = useState(null);
     const [details, setDetails] = useState("");
     const [categoryMap, setCategoryMap] = useState(() => maskToCategories(todo.category ?? 64));
     const [selectedResourceIds, setSelectedResourceIds] = useState(() => todoResources.map(r => r.id));
@@ -356,9 +359,8 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
 
                 <div>
                     <div className="hp-popup-label">Units completed (optional)</div>
-                    <input value={numUnit} onChange={(e) => setNumUnit(e.target.value)}
-                        placeholder="e.g. 5 pages, 2 articles, 4 chapters"
-                        style={{ width: "100%" }} />
+                    <UnitPicker value={numValue} variantId={variantId} setToast={setToast}
+                        onChange={({ value, variantId }) => { setNumValue(value); setVariantId(variantId); }} />
                 </div>
 
                 <div>
@@ -374,7 +376,8 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                         className="primary"
                         onClick={() => onConfirm(
                             Math.round(parseFloat(timeSpent) || 0),
-                            numUnit !== "" ? numUnit : null,
+                            numValue,
+                            variantId,
                             details !== "" ? details : null,
                             selectedResourceIds,
                             selectedGroupIds,
@@ -395,7 +398,8 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
     const [mode, setMode] = useState(todos.length > 0 ? "choose" : "form");
     const [text, setText] = useState("");
     const [timeSpent, setTimeSpent] = useState(initialTime);
-    const [numUnit, setNumUnit] = useState("");
+    const [numValue, setNumValue] = useState("");
+    const [variantId, setVariantId] = useState(null);
     const [details, setDetails] = useState("");
     const [selectedGroupIds, setSelectedGroupIds] = useState([]);
     const [selectedResourceIds, setSelectedResourceIds] = useState([]);
@@ -450,7 +454,8 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
             category,
             details: details || null,
             timeSpent: Math.round(parseFloat(timeSpent) || 0),
-            numUnit: numUnit || null,
+            numValue,
+            variantId,
             groupIds: selectedGroupIds,
             resourceIds: selectedResourceIds,
             date: date && date !== today ? date : null,
@@ -547,9 +552,8 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
 
                 <div>
                     <div className="hp-popup-label">Units completed (optional)</div>
-                    <input value={numUnit} onChange={(e) => setNumUnit(e.target.value)}
-                        placeholder="e.g. 5 pages, 2 articles, 4 chapters"
-                        style={{ width: "100%" }} />
+                    <UnitPicker value={numValue} variantId={variantId} setToast={setToast}
+                        onChange={({ value, variantId }) => { setNumValue(value); setVariantId(variantId); }} />
                 </div>
 
                 <div>
@@ -906,16 +910,19 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         }
     }
 
-    async function confirmComplete(timeSpent, numUnit, details, resourceIds, groupIds, category, text) {
+    async function confirmComplete(timeSpent, numValue, variantId, details, resourceIds, groupIds, category, text) {
         if (!completingTodo) return;
         if (!text?.trim()) { setToast("Please enter a todo name.", "warn"); return; }
         if (!category || category === 0) { setToast("Select at least one category.", "warn"); return; }
         if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
+        const unit = resolveUnitPair(numValue, variantId);
+        if (unit.error) { setToast(unit.error, "warn"); return; }
         try {
             await loggedInvoke("complete_todo", {
                 todoId: completingTodo.id,
                 timeSpentMinutes: timeSpent,
-                numUnit,
+                numValue: unit.numValue,
+                variantId: unit.variantId,
                 details,
                 resourceIds,
                 groupIds,
@@ -930,13 +937,15 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         } catch (e) { logError("catch", e); setToast("Failed to complete todo.", "error"); }
     }
 
-    async function confirmFreeTodo({ text, category, details, timeSpent, numUnit, groupIds, resourceIds, date }) {
+    async function confirmFreeTodo({ text, category, details, timeSpent, numValue, variantId, groupIds, resourceIds, date }) {
         if (!category || category === 0) { setToast("Select at least one category.", "warn"); return; }
         if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
+        const unit = resolveUnitPair(numValue, variantId);
+        if (unit.error) { setToast(unit.error, "warn"); return; }
         try {
             await loggedInvoke("log_free_todo", {
                 planId: plan.id, text, category, details,
-                timeSpentMinutes: timeSpent, numUnit, groupIds, resourceIds, date,
+                timeSpentMinutes: timeSpent, numValue: unit.numValue, variantId: unit.variantId, groupIds, resourceIds, date,
             });
             setShowFreeTodo(false);
             resetStudyTimer(plan.id);
@@ -1064,6 +1073,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         onConfirm={confirmComplete}
                         onCancel={() => { setCompletingTodo(null); setCompletingTodoLinks({ groups: [], resources: [] }); }}
                         onNavigateToGroup={navigateFromPlan}
+                        setToast={setToast}
                         initialTime={timerMinutesRounded(plan.id)}
                     />
                 )}

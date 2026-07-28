@@ -234,7 +234,31 @@ pub struct TodoStat {
     pub category: String,
     pub details: Option<String>,
     pub time_spent_minutes: f64,
-    pub num_unit: Option<String>,
+    // How much got done and which unit variant it counts in: both set or both None. The two
+    // names are looked up live from the variant, so a rename shows through: unit_label is the
+    // exact variant this entry chose, unit_name is its group's main label for the graph.
+    pub num_value: Option<f64>,
+    pub variant_id: Option<i64>,
+    pub unit_group_id: Option<i64>,
+    pub unit_label: Option<String>,
+    pub unit_name: Option<String>,
     pub groups: Vec<TodoStatGroup>,
     pub resources: Vec<StatResource>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnitVariant {
+    pub id: i64,
+    pub name: String,
+    // How many logged entries chose this name, so the picker can warn before a delete clears
+    // it from them.
+    pub uses: i64,
+}
+
+// A unit is a group of accepted spellings. id is the group; variants are ordered, with the
+// first as the "main" the group shows by. The graph and totals treat every variant as one.
+#[derive(Serialize, Deserialize)]
+pub struct Unit {
+    pub id: i64,
+    pub variants: Vec<UnitVariant>,
 }

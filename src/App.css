@@ -667,9 +667,114 @@ textarea { overflow-y: scroll; }
 }
 .t-add-menu-title { font-size: 13px; font-weight: 600; color: var(--t-title); }
 .t-add-menu input:focus { border-color: var(--hdr-btn, var(--t-accent)); }
-.t-add-menu-actions { display: flex; gap: 8px; }
+.t-add-menu-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .t-add-menu button.primary { background: var(--hdr-btn, var(--t-accent)); border-color: var(--hdr-btn, var(--t-accent)); }
 .t-add-menu button.primary:hover { filter: brightness(0.92); }
+
+/* Amount + unit chooser, shared by the todo loggers and the stat editor. The amount sits
+   left; the unit control names the chosen name, with ‹ › to step through a unit's other
+   names. The chip and fields borrow the app's own input and button rules so nothing here
+   reads as a stray control, and the bare buttons reset the default mauve fill. */
+.unit-picker { position: relative; display: flex; gap: 6px; align-items: stretch; }
+.unit-picker-value { flex: 1; min-width: 0; }
+.unit-picker-control { display: flex; align-items: stretch; gap: 1px; }
+.unit-picker-arrow {
+  flex-shrink: 0; width: 18px; padding: 0; border: none; background: transparent; box-shadow: none;
+  color: var(--t-text-3); font-size: 15px; line-height: 1;
+}
+.unit-picker-arrow:hover { background: transparent; border: none; color: var(--t-accent-h); }
+.unit-picker-arrow:active { background: transparent; transform: none; box-shadow: none; }
+
+/* The chip is shaped like one of the app's input fields, not a filled button. */
+.unit-picker-select {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: var(--t-surface); border: 1px solid var(--t-border-2); color: var(--t-text-3);
+  padding: 4px 9px; border-radius: var(--t-r-input); font-size: 13px; font-weight: 400;
+}
+.unit-picker-select:hover { background: var(--t-surface); border-color: var(--t-accent-bdr); color: var(--t-text-3); }
+.unit-picker-select:active { background: var(--t-surface); transform: none; box-shadow: none; }
+.unit-picker-select.has-unit { color: var(--t-text); }
+.unit-picker-select.has-unit:hover { color: var(--t-text); }
+.unit-picker-select-label { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.unit-picker-caret { color: var(--t-text-3); font-size: 10px; }
+.unit-picker-clear {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; font-size: 14px; line-height: 1; color: var(--t-text-3);
+}
+.unit-picker-clear:hover { color: var(--t-red); }
+
+/* A padded surface popup, like the app's create menu. No coloured bars: the list scrolls
+   and the Add button simply sits under it, so it stays reachable without a divided footer. */
+.unit-picker-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  /* Fixed width so appearing content (like the delete warning) grows the panel down, never
+     out. The text wraps within this width instead of stretching it. */
+  width: 264px;
+  display: flex; flex-direction: column; gap: 8px; padding: 10px;
+  background: var(--t-surface); border-radius: var(--t-r); box-shadow: 0 4px 16px rgba(0,0,0,0.16);
+  /* When this opens inside the logger popup it grows that popup's scroll region to fit; the
+     margin keeps a little breathing room below it rather than butting the popup's edge. */
+  margin-bottom: 14px;
+}
+.unit-picker-list { display: flex; flex-direction: column; gap: 2px; max-height: 210px; overflow-y: auto; }
+.unit-picker-hint { font-size: 12px; color: var(--t-text-3); font-style: italic; padding: 6px 8px; }
+/* Rows never compress: the "No unit" line kept collapsing when the list filled up. Only the
+   name highlights on hover/selection, so the Edit button beside it stays its own colour. */
+.unit-picker-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; border-radius: var(--t-r-input); }
+/* A flex row so only the name ellipsizes; the "+N" alternates count and the merge tag never
+   get clipped by a long name, they hold their place at the ends. */
+.unit-picker-opt {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 5px; text-align: left;
+  background: transparent; border: none; box-shadow: none;
+  color: var(--t-text); padding: 7px 9px; border-radius: var(--t-r-input); font-size: 13px; font-weight: 500;
+}
+.unit-picker-optname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unit-picker-opt:hover { background: var(--t-accent-bg); border: none; color: var(--t-text); }
+.unit-picker-opt:active { background: var(--t-accent-bg); transform: none; box-shadow: none; }
+.unit-picker-opt.active,
+.unit-picker-row.active > .unit-picker-opt { background: var(--t-accent-bg); }
+.unit-picker-count { flex-shrink: 0; color: var(--t-text-3); font-size: 11px; font-weight: 400; }
+/* Order marker while merging: the first pick is the main, the rest number after it. */
+.unit-picker-tag {
+  flex-shrink: 0; padding: 1px 6px; border-radius: 999px;
+  background: var(--t-accent); color: var(--t-accent-fg); font-size: 10px; font-weight: 700;
+}
+
+/* Create / edit a unit's names. Fields inherit the global input rule; the × resets the
+   default fill and turns the app's delete red on hover. */
+.unit-picker-form { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+.unit-picker-form-title { font-size: 13px; font-weight: 700; color: var(--t-title); }
+.unit-picker-field { width: 100%; }
+/* Every field row carries the same inset so the inputs line up and stay one size; the main
+   just fills its inset with a peach wash, telling the story without resizing its field. */
+.unit-picker-fieldrow { display: flex; align-items: center; gap: 6px; padding: 4px; border-radius: var(--t-r-input); }
+.unit-picker-fieldrow .unit-picker-field { flex: 1; min-width: 0; }
+.unit-picker-fieldrow.is-main { background: var(--t-accent-bg); }
+.unit-picker-del {
+  flex-shrink: 0; background: transparent; border: none; box-shadow: none;
+  color: var(--t-text-3); font-size: 15px; line-height: 1; padding: 2px 6px;
+}
+.unit-picker-del:hover { background: transparent; border: none; color: var(--t-red); }
+.unit-picker-del:active { background: transparent; transform: none; box-shadow: none; }
+.unit-picker-addalt { align-self: flex-start; }
+/* Small swap glyph that promotes a name to the main, quieter than a labelled button. */
+.unit-picker-swap { flex-shrink: 0; background: transparent; border: none; box-shadow: none; color: var(--t-text-3); font-size: 14px; line-height: 1; padding: 2px 5px; }
+.unit-picker-swap:hover { background: transparent; border: none; color: var(--t-accent-h); }
+.unit-picker-swap:active { background: transparent; transform: none; box-shadow: none; }
+/* The action row is the panel's peach foot: it bleeds past the 10px padding to the panel's
+   own edges (negative margins cancel the padding) and rounds its bottom to match. */
+.unit-picker-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+  margin: 0 -10px -10px; padding: 10px;
+  background: var(--t-accent-bg); border-radius: 0 0 var(--t-r) var(--t-r);
+}
+/* When the foot also carries a message (merge hint, delete warning) it stacks: the message
+   on top, the buttons on their own right-aligned row under it. */
+.unit-picker-actions.col { flex-direction: column; align-items: stretch; gap: 6px; }
+.unit-picker-actionrow { display: flex; gap: 8px; justify-content: flex-end; }
+.unit-picker-actions .unit-picker-hint { padding: 0; }
+.unit-picker-confirm-msg { font-size: 12px; font-style: italic; color: var(--t-red); }
+.unit-picker-err { font-size: 11px; color: var(--t-red); }
 
 /* Empty-section placeholder bubble */
 .empty-bubble {
