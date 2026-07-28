@@ -270,7 +270,7 @@ export default function ToGo({ setToast }) {
               </button>
             </div>
             <p className="togo-note togo-warn">
-              Pulling replaces everything in this copy of Toast, so is highly suggested that you push before pulling.
+              Pulling replaces everything in this copy of Toast, so it is highly recommended that you push before pulling.
             </p>
           </section>
 
