@@ -409,7 +409,8 @@ pub fn set_todo_groups(todo_id: i64, group_ids: Vec<i64>, conn: &mut Connection)
 pub fn complete_todo(
     todo_id: i64,
     time_spent_minutes: f64,
-    num_unit: Option<String>,
+    num_value: Option<f64>,
+    variant_id: Option<i64>,
     details: Option<String>,
     resource_ids: Vec<i64>,
     group_ids: Vec<i64>,
@@ -441,6 +442,7 @@ pub fn complete_todo(
             "time_spent must be >= 0".into(),
         ));
     }
+    require_unit_pairing(num_value, variant_id)?;
     // Todo time is stored as whole minutes (the column stays FLOAT)
     let time_spent_minutes = time_spent_minutes.round();
 
@@ -453,10 +455,10 @@ pub fn complete_todo(
 
     conn.execute(
         r#"
-        INSERT INTO todo_stats (todo_id, plan_id, plan_name, date, text, category, details, time_spent_minutes, num_unit)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        INSERT INTO todo_stats (todo_id, plan_id, plan_name, date, text, category, details, time_spent_minutes, num_value, variant_id)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
         "#,
-        rusqlite::params![todo_id, plan_id, plan_name, &today, text, category_str, details, time_spent_minutes, num_unit],
+        rusqlite::params![todo_id, plan_id, plan_name, &today, text, category_str, details, time_spent_minutes, num_value, variant_id],
     )?;
 
     let stat_id = conn.last_insert_rowid();
@@ -490,7 +492,8 @@ pub fn log_free_todo(
     category: i64,
     details: Option<String>,
     time_spent_minutes: f64,
-    num_unit: Option<String>,
+    num_value: Option<f64>,
+    variant_id: Option<i64>,
     group_ids: Vec<i64>,
     resource_ids: Vec<i64>,
     date: Option<String>,
@@ -506,6 +509,7 @@ pub fn log_free_todo(
             "time_spent must be >= 0".into(),
         ));
     }
+    require_unit_pairing(num_value, variant_id)?;
     // Todo time is stored as whole minutes (the column stays FLOAT)
     let time_spent_minutes = time_spent_minutes.round();
 
@@ -532,10 +536,10 @@ pub fn log_free_todo(
 
     conn.execute(
         r#"
-        INSERT INTO todo_stats (todo_id, plan_id, plan_name, date, text, category, details, time_spent_minutes, num_unit)
-        VALUES (NULL, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+        INSERT INTO todo_stats (todo_id, plan_id, plan_name, date, text, category, details, time_spent_minutes, num_value, variant_id)
+        VALUES (NULL, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
         "#,
-        rusqlite::params![plan_id, plan_name, &today, text, category_str, details, time_spent_minutes, num_unit],
+        rusqlite::params![plan_id, plan_name, &today, text, category_str, details, time_spent_minutes, num_value, variant_id],
     )?;
 
     let stat_id = conn.last_insert_rowid();
@@ -578,7 +582,8 @@ pub fn update_todo_stat(
     category: i64,
     details: Option<String>,
     time_spent_minutes: f64,
-    num_unit: Option<String>,
+    num_value: Option<f64>,
+    variant_id: Option<i64>,
     remove_group_row_ids: Vec<i64>,
     remove_resource_row_ids: Vec<i64>,
     add_group_ids: Vec<i64>,
@@ -605,6 +610,7 @@ pub fn update_todo_stat(
             "date can't be in the future".into(),
         ));
     }
+    require_unit_pairing(num_value, variant_id)?;
     // One transaction for the whole edit. Re-dating moves the row to a new id, so a
     // failure partway through would otherwise leave the entry sitting at that new id
     // with the old text and time still on it.
@@ -645,8 +651,8 @@ pub fn update_todo_stat(
     let time_spent_minutes = time_spent_minutes.round();
     let category_str = category_mask_to_string(category);
     conn.execute(
-        "UPDATE todo_stats SET text=?1, category=?2, details=?3, time_spent_minutes=?4, num_unit=?5 WHERE id=?6",
-        rusqlite::params![text, category_str, details, time_spent_minutes, num_unit, id],
+        "UPDATE todo_stats SET text=?1, category=?2, details=?3, time_spent_minutes=?4, num_value=?5, variant_id=?6 WHERE id=?7",
+        rusqlite::params![text, category_str, details, time_spent_minutes, num_value, variant_id, id],
     )?;
     // By rowid, never by name: the snapshot keeps whatever the group or resource was
     // called when it was logged, so two rows can share a name and a rename splits them.
@@ -688,6 +694,126 @@ pub fn update_todo_stat(
         )?;
     }
     tx.commit()
+}
+
+// A logged amount and its unit travel together: both filled or both empty. One without the
+// other is a number with no meaning or a unit counting nothing, so it never reaches storage.
+fn require_unit_pairing(num_value: Option<f64>, variant_id: Option<i64>) -> Result<()> {
+    if num_value.is_some() != variant_id.is_some() {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "a unit and its amount must both be set or both be empty".into(),
+        ));
+    }
+    // Counting zero of something isn't a record worth keeping, so a zero amount is refused.
+    if matches!(num_value, Some(v) if v <= 0.0) {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "a unit amount must be more than 0".into(),
+        ));
+    }
+    Ok(())
+}
+
+// Starts a new unit from its spellings, the first as the main. The main variant's id names
+// the group, and every variant carries it, so the grouping holds even after that first
+// spelling is later renamed or removed. Returns the group id.
+pub fn create_unit(names: Vec<String>, conn: &Connection) -> Result<i64> {
+    let cleaned: Vec<String> = names
+        .into_iter()
+        .map(|n| n.trim().to_string())
+        .filter(|n| !n.is_empty())
+        .collect();
+    let (main, alts) = cleaned.split_first().ok_or_else(|| {
+        rusqlite::Error::InvalidParameterName("unit name required".into())
+    })?;
+    conn.execute(
+        "INSERT INTO unit_variant (group_id, name, position) VALUES (0, ?1, 0)",
+        rusqlite::params![main],
+    )?;
+    let group_id = conn.last_insert_rowid();
+    conn.execute(
+        "UPDATE unit_variant SET group_id = ?1 WHERE id = ?1",
+        rusqlite::params![group_id],
+    )?;
+    for (i, alt) in alts.iter().enumerate() {
+        conn.execute(
+            "INSERT INTO unit_variant (group_id, name, position) VALUES (?1, ?2, ?3)",
+            rusqlite::params![group_id, alt, (i as i64) + 1],
+        )?;
+    }
+    Ok(group_id)
+}
+
+pub fn add_variant(group_id: i64, name: &str, conn: &Connection) -> Result<i64> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "unit name required".into(),
+        ));
+    }
+    let next: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(position), -1) + 1 FROM unit_variant WHERE group_id = ?1",
+        [group_id],
+        |r| r.get(0),
+    )?;
+    conn.execute(
+        "INSERT INTO unit_variant (group_id, name, position) VALUES (?1, ?2, ?3)",
+        rusqlite::params![group_id, name, next],
+    )?;
+    Ok(conn.last_insert_rowid())
+}
+
+// Folds one unit into another: its names become alternates of the target, kept in order
+// after the target's own. Logged entries need no touching, since each still points at its
+// own name, which now belongs to the target's group and so counts under it.
+pub fn merge_units(from_group: i64, into_group: i64, conn: &Connection) -> Result<()> {
+    if from_group == into_group {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "cannot merge a unit into itself".into(),
+        ));
+    }
+    let offset: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(position), -1) + 1 FROM unit_variant WHERE group_id = ?1",
+        [into_group],
+        |r| r.get(0),
+    )?;
+    conn.execute(
+        "UPDATE unit_variant SET group_id = ?1, position = position + ?2 WHERE group_id = ?3",
+        rusqlite::params![into_group, offset, from_group],
+    )?;
+    Ok(())
+}
+
+// Makes a name the main by dropping its position below the rest of the group. The group
+// reads its main as the lowest-positioned name, so this is all it takes; positions are only
+// an ordering and may go negative.
+pub fn set_main_variant(id: i64, conn: &Connection) -> Result<()> {
+    let min: i64 = conn.query_row(
+        "SELECT COALESCE(MIN(position), 0) FROM unit_variant
+         WHERE group_id = (SELECT group_id FROM unit_variant WHERE id = ?1)",
+        [id],
+        |r| r.get(0),
+    )?;
+    conn.execute(
+        "UPDATE unit_variant SET position = ?1 WHERE id = ?2",
+        rusqlite::params![min - 1, id],
+    )?;
+    Ok(())
+}
+
+// Renames one name. Entries showing it read the name through a live join, so the change
+// reaches all of them, the way renaming a deck reaches its logged sessions.
+pub fn rename_variant(id: i64, name: &str, conn: &Connection) -> Result<()> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "unit name required".into(),
+        ));
+    }
+    conn.execute(
+        "UPDATE unit_variant SET name = ?1 WHERE id = ?2",
+        rusqlite::params![name, id],
+    )?;
+    Ok(())
 }
 
 fn category_mask_to_string(mask: i64) -> String {

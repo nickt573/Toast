@@ -448,6 +448,42 @@ pub fn delete_todo_stat(id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+// Deletes a whole unit, clearing it off every entry that counted in any of its names first.
+// Because an amount can't sit without a unit, both fields go together, so those entries keep
+// their time but lose the count. The caller confirms this before asking for it.
+pub fn delete_unit(group_id: i64, conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE todo_stats SET variant_id = NULL, num_value = NULL
+         WHERE variant_id IN (SELECT id FROM unit_variant WHERE group_id = ?1)",
+        [group_id],
+    )?;
+    conn.execute("DELETE FROM unit_variant WHERE group_id = ?1", [group_id])?;
+    Ok(())
+}
+
+// Deletes one name, clearing it off the entries that chose it (unit and amount together, as
+// above). The last name can't leave on its own, or the unit would vanish without a delete;
+// removing the main (lowest position) simply promotes the next, since the group reads its
+// main as the lowest-positioned name left.
+pub fn delete_variant(id: i64, conn: &Connection) -> Result<()> {
+    let siblings: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM unit_variant WHERE group_id = (SELECT group_id FROM unit_variant WHERE id = ?1)",
+        [id],
+        |r| r.get(0),
+    )?;
+    if siblings <= 1 {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "a unit needs at least one name".into(),
+        ));
+    }
+    conn.execute(
+        "UPDATE todo_stats SET variant_id = NULL, num_value = NULL WHERE variant_id = ?1",
+        [id],
+    )?;
+    conn.execute("DELETE FROM unit_variant WHERE id = ?1", [id])?;
+    Ok(())
+}
+
 pub fn delete_deleted_plan_stats(plan_id: i64, conn: &Connection) -> Result<()> {
     conn.execute("DELETE FROM group_stats WHERE plan_id = ?1", [plan_id])?;
     conn.execute("DELETE FROM todo_stats WHERE plan_id = ?1", [plan_id])?;
@@ -472,6 +508,51 @@ mod tests {
     fn touch(dir: &Path, name: &str) {
         std::fs::create_dir_all(dir).unwrap();
         std::fs::write(dir.join(name), b"x").unwrap();
+    }
+
+    // Units are global, so deleting one clears it off entries in every plan, not just the one
+    // the delete came from, and the amount goes with it since a count can't sit unit-less.
+    #[test]
+    fn deleting_a_unit_clears_it_from_entries_in_every_plan() {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_schema(&conn, tmp.path()).unwrap();
+
+        conn.execute("INSERT INTO plan (name) VALUES ('plan A')", []).unwrap();
+        let plan_a = conn.last_insert_rowid();
+        conn.execute("INSERT INTO plan (name) VALUES ('plan B')", []).unwrap();
+        let plan_b = conn.last_insert_rowid();
+
+        let group = crate::crud::update::create_unit(vec!["page".into(), "pages".into()], &conn).unwrap();
+        let main_variant: i64 = conn
+            .query_row("SELECT id FROM unit_variant WHERE group_id = ?1 ORDER BY position LIMIT 1", [group], |r| r.get(0))
+            .unwrap();
+        let alt: i64 = conn
+            .query_row("SELECT id FROM unit_variant WHERE group_id = ?1 AND id != ?2", [group, main_variant], |r| r.get(0))
+            .unwrap();
+        // Logged under both plans, one against each name.
+        for (plan, variant) in [(plan_a, main_variant), (plan_b, alt)] {
+            conn.execute(
+                "INSERT INTO todo_stats (plan_id, date, text, category, time_spent_minutes, num_value, variant_id)
+                 VALUES (?1, '2026-01-01', 't', 'Reading', 30, 5, ?2)",
+                [plan, variant],
+            )
+            .unwrap();
+        }
+
+        // Deleting one name clears only the entries that chose it, keeping their time.
+        delete_variant(alt, &conn).unwrap();
+        let cleared: i64 = conn
+            .query_row("SELECT COUNT(*) FROM todo_stats WHERE variant_id IS NULL AND num_value IS NULL AND time_spent_minutes = 30", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(cleared, 1, "the alt's entry is cleared but keeps its time");
+
+        // Deleting the whole unit clears the rest and removes the group entirely.
+        delete_unit(group, &conn).unwrap();
+        let variants: i64 = conn.query_row("SELECT COUNT(*) FROM unit_variant WHERE group_id = ?1", [group], |r| r.get(0)).unwrap();
+        assert_eq!(variants, 0, "the unit is gone");
+        let still_linked: i64 = conn.query_row("SELECT COUNT(*) FROM todo_stats WHERE variant_id IS NOT NULL", [], |r| r.get(0)).unwrap();
+        assert_eq!(still_linked, 0, "no entry still points at a deleted unit");
     }
 
     #[test]
