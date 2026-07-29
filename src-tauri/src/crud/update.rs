@@ -42,6 +42,14 @@ pub fn set_group_stats_archived(ids: &[i64], archived: bool, conn: &Connection) 
     Ok(())
 }
 
+pub fn set_plan_disabled(id: i64, disabled: bool, conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE plan SET is_disabled = ?1 WHERE id = ?2",
+        rusqlite::params![disabled, id],
+    )?;
+    Ok(())
+}
+
 pub fn update_plan(id: i64, name: String, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE plan SET name = ?1 WHERE id = ?2",

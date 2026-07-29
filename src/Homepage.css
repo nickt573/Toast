@@ -326,12 +326,26 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 /* Matches the shared hover rule, which .hp-todo-row.done would otherwise outrank */
 .hp-todo-row.done:hover { --t-stripe: var(--t-stripe-hi); }
+/* Dim the skipped row's content but leave the Skip/Unskip button lit so it stays usable */
+/* Skipped rows lighten their stripe and border so the whole row reads as set aside */
 .hp-todo-row.skipped {
+  --sk-stripe: color-mix(in srgb, var(--t-yellow-stripe) 50%, #fff);
+  --t-stripe: var(--sk-stripe);
+  --t-stripe-hi: var(--t-yellow-bdr);
+}
+.hp-todo-row.skipped .hp-todo-text,
+.hp-todo-row.skipped .todo-section,
+.hp-todo-row.skipped input[type="checkbox"] {
   opacity: 0.5;
 }
+/* A skipped row stays put, no hover lift, so it keeps reading as set aside */
+.hp-todo-row.skipped:hover { --t-stripe: var(--sk-stripe); }
 
-/* Deeper than --t-accent so it stands off the yellow todo row instead of sinking into it */
+/* Deeper than --t-accent so it stands off the yellow todo row instead of sinking into it.
+   Lifted above the dimmed text, which is its own stacking context and would eat the click. */
 .hp-todo-skip {
+  position: relative;
+  z-index: 1;
   float: right;
   font-size: 11px;
   padding: 2px 10px;

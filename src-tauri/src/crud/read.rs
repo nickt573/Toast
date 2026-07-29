@@ -2,11 +2,12 @@ use crate::crud::models::*;
 use rusqlite::{Connection, Result};
 
 pub fn get_plans(conn: &Connection) -> Result<Vec<Plan>> {
-    conn.prepare("SELECT id, name FROM plan ORDER BY name COLLATE NOCASE ASC")?
+    conn.prepare("SELECT id, name, is_disabled FROM plan ORDER BY name COLLATE NOCASE ASC")?
         .query_map([], |row| {
             Ok(Plan {
                 id: row.get(0)?,
                 name: row.get(1)?,
+                is_disabled: row.get(2)?,
             })
         })?
         .collect()

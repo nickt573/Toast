@@ -626,7 +626,7 @@ textarea { overflow-y: scroll; }
    pages take the shade their content boxes rest their bars in. */
 /* The bar sits above the page and casts onto it, which is the only edge it needs. It has
    to stay in front for that, since the body paints after it. */
-.landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
+.landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 5; box-shadow: var(--t-shadow-hdr); }
 .landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 64%, #fff); --hdr-btn: var(--t-accent-h); background: var(--hdr-band); }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); background: var(--hdr-band); }
 .landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); background: var(--hdr-band); }

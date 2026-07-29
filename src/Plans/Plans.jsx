@@ -732,6 +732,21 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
         } catch (err) { logError("catch", err); setToast(`Failed to delete ${plan.name}.`, "error"); }
     }
 
+    // A plan with decks still owes SRS reviews, so it can only be disabled once its decks are
+    // unlinked. Re-enabling is always allowed.
+    async function toggleDisabled(plan) {
+        const next = !plan.is_disabled;
+        if (next && (summaries[plan.id]?.decks ?? 0) > 0) {
+            setToast("Unlink this plan's decks before disabling it.", "warn");
+            return;
+        }
+        try {
+            await loggedInvoke("set_plan_disabled", { id: plan.id, disabled: next });
+            setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, is_disabled: next } : p));
+            setToast(next ? `${plan.name} disabled.` : `${plan.name} enabled.`);
+        } catch (e) { logError("catch", e); setToast("Failed to update plan.", "error"); }
+    }
+
     async function createPlan() {
         if (!name.trim()) { setToast("Please enter a valid name.", "warn"); return; }
         try {
@@ -852,10 +867,22 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                     title="New Plan" placeholder="New plan name..." />
             </div>
             <div className="landing-body">
-                {!loading && plans.length === 0 && <div className="landing-empty">No plans yet. Create one below.</div>}
+                {!loading && plans.length === 0 && <div className="landing-empty">No plans yet. Create one above.</div>}
                 {plans.map(plan => (
-                    <div key={plan.id} className="landing-card landing-card--plan"
+                    <div key={plan.id} className={`landing-card landing-card--plan${plan.is_disabled ? " landing-card--disabled" : ""}`}
                         onClick={() => editingId !== plan.id && loadPlanData(plan)}>
+                        {editingId !== plan.id && (
+                            <button
+                                className={`plan-disable-toggle${plan.is_disabled ? " off" : ""}`}
+                                onClick={(e) => { e.stopPropagation(); toggleDisabled(plan); }}
+                                title={plan.is_disabled
+                                    ? "Enable this plan"
+                                    : (summaries[plan.id]?.decks ?? 0) > 0
+                                        ? "Unlink this plan's decks before disabling it"
+                                        : "Disable this plan, hiding it from the homepage"}>
+                                {plan.is_disabled ? "Disabled" : "Enabled"}
+                            </button>
+                        )}
                         <div className="landing-card-body">
                             {editingId === plan.id ? (
                                 <input value={editingName} autoFocus

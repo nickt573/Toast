@@ -85,6 +85,7 @@ pub fn run() {
             commands::plans::get_plans,
             commands::plans::get_plan_summaries,
             commands::plans::update_plan,
+            commands::plans::set_plan_disabled,
             commands::plans::delete_plan,
             commands::todos::create_todo,
             commands::todos::get_todos,

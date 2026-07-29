@@ -32,3 +32,13 @@ pub fn delete_plan(id: i64, state: tauri::State<AppState>) -> Result<(), String>
     let mut conn = state.conn.lock().unwrap();
     delete::delete_plan(id, &mut conn).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn set_plan_disabled(
+    id: i64,
+    disabled: bool,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    update::set_plan_disabled(id, disabled, &conn).map_err(|e| e.to_string())
+}

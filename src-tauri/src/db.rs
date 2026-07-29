@@ -2,16 +2,11 @@ use crate::app_utils::paths::{relativize_html_media, relativize_image_nodes, to_
 use rusqlite::{params, Connection};
 use std::path::Path;
 
-/// Stamped into Toast to Go packages. A pull rejects a mismatch. Bump on any schema change.
-/// 4: stat runs replaced numbered versions, so group_stats.version and
-/// group.stat_version are gone, and resets record themselves in deck_reset. An older
-/// Toast pulling one of these packages would find its queries referring to columns that
-/// no longer exist.
+/// Written into Toast to Go packages, pull rejects a mismatch, bump on schema change
+/// v4, stat runs replaced numbered versions, old Toast would query dropped columns
 pub const SCHEMA_VERSION: u32 = 4;
 
-/// Adds a column to an existing table if it doesn't already have it.
-/// CREATE TABLE IF NOT EXISTS won't alter tables that predate a new column,
-/// so databases from released versions are migrated here.
+/// CREATE TABLE IF NOT EXISTS won't touch existing tables, old databases migrate here
 fn add_column_if_missing(
     conn: &Connection,
     table: &str,
@@ -31,12 +26,8 @@ fn add_column_if_missing(
     Ok(())
 }
 
-/// v1.3.0: media references used to be stored as absolute paths rooted in the
-/// user's home directory, which broke when the app dir moved (new machine,
-/// renamed username). Rewrites every stored reference to be relative to the
-/// app data dir ("cards/images/<uuid>.png"). Idempotent: relative paths pass
-/// through to_relative unchanged, so re-running on every startup is free and
-/// also converts databases restored from old backups.
+/// v1.3.0 rewrite absolute media paths to app-dir-relative so they still resolve after the app dir moves
+/// Idempotent, relative paths pass through to_relative unchanged
 fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     let tx = conn.unchecked_transaction()?;
     let mut changed_cards = 0usize;
@@ -87,8 +78,7 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
             let rel = |v: &Option<String>| v.as_ref().map(|p| to_relative(p, app_dir));
             let (nfi, nbi, nfa, nba) = (rel(&fi), rel(&bi), rel(&fa), rel(&ba));
 
-            // Embedded media only lives in imported HTML. front/back/support are
-            // user prose that could contain literal paths, never rewrite those.
+            // Media only in imported HTML, front/back/support are user text, never rewrite those
             let rel_html =
                 |v: &Option<String>| v.as_ref().and_then(|s| relativize_html_media(s, app_dir));
             let (nfront, nback, nsupport) = if is_uploaded {
@@ -127,7 +117,7 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
         for (id, content, audio_file) in rows {
             let new_audio = audio_file.as_ref().map(|p| to_relative(p, app_dir));
 
-            // Unparseable content is left untouched rather than clobbered
+            // Leave unparseable content untouched
             let new_content = serde_json::from_str::<serde_json::Value>(&content)
                 .ok()
                 .and_then(|mut json| {
@@ -156,7 +146,7 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
 }
 
 fn has_autoincrement(conn: &Connection, table: &str) -> rusqlite::Result<bool> {
-    // MAX over no rows still returns one row, so this never hits QueryReturnedNoRows
+    // MAX over no rows still returns a row, never hits QueryReturnedNoRows
     let sql: String = conn.query_row(
         "SELECT COALESCE(MAX(sql), '') FROM sqlite_master WHERE type = 'table' AND name = ?1",
         [table],
@@ -165,19 +155,8 @@ fn has_autoincrement(conn: &Connection, table: &str) -> rusqlite::Result<bool> {
     Ok(sql.contains("AUTOINCREMENT"))
 }
 
-/// Rebuilds a table so its key is AUTOINCREMENT, which SQLite can only apply when the
-/// table is created. Ids are carried over unchanged, then the counter is pushed past
-/// the highest id the stats tables still point at, because the whole danger is a gap
-/// left behind by an old delete: those ids are free again but their history isn't.
-///
-/// Follows SQLite's documented rebuild procedure. legacy_alter_table keeps the rename
-/// from rewriting other tables' foreign keys, which already name the real table.
-///
-/// The two pragmas have to be set outside the transaction, since foreign_keys is a no-op
-/// inside one, so they are turned back on whichever way the rebuild goes. Everything that
-/// touches data sits inside a real transaction rather than a literal BEGIN in the batch:
-/// a statement failing halfway through a batch leaves the transaction open, and the
-/// half-rebuilt table and the connection's borrowed pragmas would both outlive the error.
+/// Rebuild a table with an AUTOINCREMENT key (SQLite only sets it at create), counter bumped past
+/// the highest id the stats tables still reference. Pragmas set outside the transaction, rebuild runs in a real one
 fn rebuild_with_autoincrement(
     conn: &Connection,
     table: &str,
@@ -202,8 +181,7 @@ fn rebuild_with_autoincrement(
             ALTER TABLE "{table}_rebuild" RENAME TO "{table}";
             "#
         ))?;
-        // The counter lives in a table SQLite creates the moment the rebuilt table is
-        // declared AUTOINCREMENT, so it only exists from inside this transaction.
+        // sqlite_sequence exists only after the rebuilt table is declared AUTOINCREMENT, so only here
         tx.execute("DELETE FROM sqlite_sequence WHERE name = ?1", [table])?;
         tx.execute(
             "INSERT INTO sqlite_sequence (name, seq) VALUES (?1, ?2)",
@@ -217,10 +195,8 @@ fn rebuild_with_autoincrement(
     result
 }
 
-/// Splits a retired free-text unit like "~5 pages" into (5.0, "pages"). Leading symbols
-/// and words are skipped to reach the first number; everything after it, trimmed, becomes
-/// the unit name. Returns None when there is no number, or nothing is left for the name,
-/// so the entry keeps no units at all rather than half of a pair.
+/// Split "~5 pages" into (5.0, "pages"), skip leading junk to the first number, trimmed rest is the name
+/// None if either half is missing
 fn parse_legacy_unit(raw: &str) -> Option<(f64, String)> {
     let bytes = raw.as_bytes();
     let start = bytes.iter().position(|b| b.is_ascii_digit())?;
@@ -237,28 +213,20 @@ fn parse_legacy_unit(raw: &str) -> Option<(f64, String)> {
             break;
         }
     }
-    // A trailing dot ("5.") isn't part of the number, but it is consumed here so the name
-    // starts cleanly after it rather than keeping the dot.
+    // Eat a trailing dot ("5.") so the name starts clean after it
     let value: f64 = raw[start..end].trim_end_matches('.').parse().ok()?;
     let name = raw[end..].trim().to_string();
-    // A zero (or less) amount isn't a record the app allows, so it stays unmigrated and blank.
+    // Zero or less isn't an allowed record, leave it unmigrated and blank
     if name.is_empty() || value <= 0.0 {
         return None;
     }
     Some((value, name))
 }
 
-/// The form two unit names share when only case or a plural 's' sets them apart, so "Pages",
-/// "pages" and "page" all collapse onto one unit on migration rather than splitting the
-/// count three ways. Only the key is folded; the name stored keeps its original spelling.
-/// One-time pass turning retired free-text units into unit variants. Only touches entries
-/// that still carry their old text and have no variant yet, so re-running is safe: a
-/// converted entry is skipped next time, and one whose text holds no number is left with no
-/// units rather than a half-filled pair. Names are matched exactly, no folding of case or
-/// plurals, so nothing is assumed about what two spellings mean; identical strings share a
-/// variant, anything else becomes its own unit the user can later gather with alternates.
+/// Turn retired free-text units into unit variants, once, skipping already-migrated entries
+/// Names match exactly, no case or plural folding
 fn migrate_legacy_units(conn: &Connection) -> rusqlite::Result<()> {
-    // Existing variants by their exact name, so a partial earlier run is reused, not doubled.
+    // Existing variants by exact name, so a partial earlier run is reused not doubled
     let mut by_name: std::collections::HashMap<String, i64> = conn
         .prepare("SELECT id, name FROM unit_variant")?
         .query_map([], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?
@@ -295,10 +263,8 @@ fn migrate_legacy_units(conn: &Connection) -> rusqlite::Result<()> {
     Ok(())
 }
 
-/// Starts a new unit as a single variant that anchors its own group, returning that
-/// variant's id. A group is just the shared group_id its variants carry; the anchor's id
-/// names the group, and it keeps naming it even after that first variant is renamed or
-/// removed, so the grouping never shifts under the entries pointing at it.
+/// Start a new unit as one variant anchoring its own group, return its id
+/// The group is the shared group_id, named by the anchor's id so it never shifts on rename or removal
 fn new_unit_group(conn: &Connection, name: &str) -> rusqlite::Result<i64> {
     conn.execute(
         "INSERT INTO unit_variant (group_id, name, position) VALUES (0, ?1, 0)",
@@ -312,30 +278,25 @@ fn new_unit_group(conn: &Connection, name: &str) -> rusqlite::Result<i64> {
     Ok(vid)
 }
 
-/// Migrations for databases created by older releases. Each call is idempotent.
+/// Migrations for older databases, each call idempotent
 fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
-    // v1.1.0: read-only support content mapped from Anki fields on import,
-    // kept separate from front/back so it stays out of similar-card matching.
+    // v1.1.0 read-only Anki support, kept out of front/back and similar-card matching
     add_column_if_missing(conn, "card", "imported_support", "TEXT")?;
-    // v1.2.0: optional manual order for todos. Numbered todos sort ahead of
-    // unnumbered ones and stay contiguous 1..N per plan (see set_todo_position).
+    // v1.2.0 manual todo order, numbered sort first, contiguous 1..N per plan (set_todo_position)
     add_column_if_missing(conn, "todo", "position", "INTEGER DEFAULT NULL")?;
-    // v1.2.0: todo time is whole minutes now; round decimals logged by older
-    // releases (idempotent, the column itself stays FLOAT).
+    // v1.2.0 todo time is whole minutes now, round decimals from older releases
     conn.execute_batch("UPDATE todo_stats SET time_spent_minutes = ROUND(time_spent_minutes);")?;
-    // v1.5.0: uploaded cards' Anki HTML moves to imported_front/back so front/back
-    // become user fields. Only unmigrated rows are both-NULL (the importer always
-    // writes these columns), and this must run before the media-path pass.
+    // v1.5.0 move uploaded Anki HTML to imported_front/back so front/back are user fields
+    // Unmigrated rows are both-NULL, must run before the media-path pass
     add_column_if_missing(conn, "card", "imported_front", "TEXT")?;
     add_column_if_missing(conn, "card", "imported_back", "TEXT")?;
     conn.execute_batch(
         "UPDATE card SET imported_front = front, imported_back = back, front = '', back = ''
          WHERE is_uploaded = TRUE AND imported_front IS NULL AND imported_back IS NULL;",
     )?;
-    // v1.3.0: media paths stored relative to the app data dir.
+    // v1.3.0 media paths relative to the app data dir
     migrate_media_paths(conn, app_dir)?;
-    // v1.5.0: skip a todo for today only. Cleared on day rollover and when the
-    // todo's frequency changes.
+    // v1.5.0 skip a todo for today only, cleared on rollover and frequency change
     add_column_if_missing(conn, "todo", "is_skipped", "BOOLEAN NOT NULL DEFAULT FALSE")?;
     add_column_if_missing(
         conn,
@@ -343,29 +304,26 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
         "is_merged",
         "BOOLEAN NOT NULL DEFAULT FALSE",
     )?;
-    // Set when a merge copies a row onto the new deck, and when a reset archives the
-    // run it ended. Either way the row stays for history but stops counting.
+    // Set on merge copy or reset archive, row stays for history but stops counting
     add_column_if_missing(
         conn,
         "group_stats",
         "is_archived",
         "BOOLEAN NOT NULL DEFAULT FALSE",
     )?;
-    // Deck identity that outlives deletion, so two decks sharing a name never
-    // collapse into one card. Rows whose deck is already gone stay NULL.
+    // Deck identity kept after deletion, so same-named decks never merge into one card
     add_column_if_missing(conn, "group_stats", "origin_group_id", "INTEGER")?;
     conn.execute_batch(
         "UPDATE group_stats SET origin_group_id = group_id
          WHERE origin_group_id IS NULL AND group_id IS NOT NULL;",
     )?;
     add_column_if_missing(conn, "card", "is_cram", "BOOLEAN NOT NULL DEFAULT FALSE")?;
-    // A logged todo's units split into a number and a pointer at a unit variant.
+    // A logged todo's units split into a number and a unit variant
     add_column_if_missing(conn, "todo_stats", "num_value", "FLOAT")?;
     add_column_if_missing(conn, "todo_stats", "variant_id", "INTEGER")?;
     migrate_legacy_units(conn)?;
-    // v1.6.0: stats outlive the deck and plan they belong to, so a rowid handed out
-    // twice hands one thing's history to the next thing created. Runs last, since the
-    // rebuilt tables have to include every column added above.
+    // v1.6.0 stat rows are kept after their deck and plan are deleted, so a reused rowid would mix their history into a new one
+    // Runs last so the rebuilt tables include every column added above
     rebuild_with_autoincrement(
         conn,
         "plan",
@@ -401,9 +359,8 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
             UNION ALL SELECT COALESCE(MAX(group_id), 0) FROM todo_stat_group
          )"#,
     )?;
-    // A stat line's id is what deck_reset compares against to tell which side of a reset
-    // the line falls on, so an id handed out twice would put post-reset study before the
-    // boundary. The counter also clears any watermark left by a line already deleted.
+    // deck_reset uses a stat line's id to place it either side of a reset, so a reused id
+    // would put post-reset study before the boundary. Also clears a watermark from a deleted line
     rebuild_with_autoincrement(
         conn,
         "group_stats",
@@ -434,20 +391,24 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
             UNION ALL SELECT COALESCE(MAX(after_stat_id), 0) FROM deck_reset
          )",
     )?;
+    // Added after the plan rebuild above, which only carries id and name across
+    add_column_if_missing(conn, "plan", "longest_streak", "INTEGER NOT NULL DEFAULT 0")?;
+    add_column_if_missing(conn, "plan", "is_disabled", "BOOLEAN NOT NULL DEFAULT FALSE")?;
     Ok(())
 }
 
-/// Creates all tables (idempotent) and enables foreign keys.
+/// Creates all tables (idempotent) and enables foreign keys
 pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     conn.execute_batch(r#"
             PRAGMA foreign_keys = ON;
 
-            -- AUTOINCREMENT, not a plain rowid: group_stats keeps plan_id after the
-            -- plan is gone so its history stays browsable, and a reissued id would
-            -- hand all of it to whatever plan is created next.
+            -- AUTOINCREMENT not plain rowid, group_stats still has plan_id after the plan is deleted,
+            -- so a reused id would attach that history to the next plan
             CREATE TABLE IF NOT EXISTS plan (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                longest_streak INTEGER NOT NULL DEFAULT 0, -- high-water mark, bumped as the live streak grows
+                is_disabled BOOLEAN NOT NULL DEFAULT FALSE -- hidden from the homepage, greyed on the plan list
             );
 
             CREATE TABLE IF NOT EXISTS todo (
@@ -462,15 +423,15 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 is_disabled BOOLEAN NOT NULL DEFAULT FALSE, -- disabled by frequency or skip
                 is_skipped BOOLEAN NOT NULL DEFAULT FALSE, -- skipped for today, resets on rollover
 
-                position INTEGER DEFAULT NULL, -- manual order; contiguous 1..N per plan, NULL sorts last
+                position INTEGER DEFAULT NULL, -- manual order, contiguous 1..N per plan, NULL sorts last
 
                 FOREIGN KEY(plan_id)
                     REFERENCES plan(id)
                     ON DELETE CASCADE
             );
 
-            -- AUTOINCREMENT for the same reason as plan: group_stats.origin_group_id
-            -- outlives the deck, so an id must never be handed to a second deck.
+            -- AUTOINCREMENT like plan, group_stats.origin_group_id is still set after the deck is deleted,
+            -- so an id must never go to a second deck
             CREATE TABLE IF NOT EXISTS "group" (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 plan_id INTEGER,
@@ -510,7 +471,7 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 back TEXT NOT NULL,
 
                 support TEXT,
-                -- imported_x: read-only Anki HTML from import; x is the user's own text
+                -- imported_x is read-only Anki HTML from import, x is the user's own text
                 imported_front TEXT,
                 imported_back TEXT,
                 imported_support TEXT,
@@ -519,20 +480,19 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 front_audio TEXT,
                 back_audio TEXT,
 
-                tier INTEGER NOT NULL DEFAULT 0, -- the number of its tier,
+                tier INTEGER NOT NULL DEFAULT 0,
                 ease FLOAT NOT NULL DEFAULT 0, -- (-.12 -.05 +.02 +.06)
                 sequence INTEGER NOT NULL DEFAULT 0, -- set to tier's value, decrements 1 per day, and due when <= 0
 
                 is_searchable BOOLEAN NOT NULL DEFAULT FALSE,
                 is_uploaded BOOLEAN NOT NULL DEFAULT FALSE, --custom Anki
 
-                -- SRS info
                 is_overdue BOOLEAN DEFAULT NULL, -- true if overdue, false if newly scheduled, null if is_due == false
                 is_due BOOLEAN NOT NULL DEFAULT FALSE, -- flagged to TRUE by scheduler
                 is_paused BOOLEAN NOT NULL DEFAULT FALSE, -- ignored by scheduler, does not progress sequence
                 is_cram BOOLEAN NOT NULL DEFAULT FALSE, -- set when a review card is demoted, cleared by day tick or Got It
 
-                position INTEGER DEFAULT NULL, -- zipper order set on deck merge; tiebreaker in fill_track
+                position INTEGER DEFAULT NULL, -- zipper order set on deck merge, tiebreaker in fill_track
 
                 FOREIGN KEY(group_id)
                     REFERENCES "group"(id)
@@ -600,15 +560,13 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
             );
 
             -- Stat table for a DECK ONLY (SRS), deprecated from Notebooks
-            -- AUTOINCREMENT: deck_reset marks where a reset fell by the highest line id
-            -- at the time, so a reissued id would put a line logged after a reset on the
-            -- older side of it.
+            -- AUTOINCREMENT, deck_reset marks a reset by the highest line id, a reused id would misplace a post-reset line
             CREATE TABLE IF NOT EXISTS group_stats(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                group_id INTEGER, -- goes NULL when the deck is deleted, which is how the stats page spots a dead deck
-                origin_group_id INTEGER, -- survives deletion, so same named decks never merge into one card
-                plan_id INTEGER NOT NULL, -- no FK: value persists after plan deletion so stats remain browsable
-                plan_name TEXT NOT NULL DEFAULT '', -- preserved for display after plan deletion; synced on rename
+                group_id INTEGER, -- NULL when the deck is deleted, how the stats page detects a dead deck
+                origin_group_id INTEGER, -- still set after deletion, so same-named decks never merge into one card
+                plan_id INTEGER NOT NULL, -- no FK, value persists after plan deletion so stats stay browsable
+                plan_name TEXT NOT NULL DEFAULT '', -- kept for display after plan deletion, synced on rename
 
                 group_name TEXT NOT NULL,
                 date DATE NOT NULL,
@@ -620,38 +578,27 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 retention_rate REAL NOT NULL DEFAULT 0,
 
                 is_merged BOOLEAN NOT NULL DEFAULT FALSE, -- this deck was merged into another one
-                is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- copied into a merge, or archived by the reset that ended its run; either way it doesn't count
+                is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- copied into a merge or archived by a reset, doesn't count
 
                 FOREIGN KEY(group_id)
                     REFERENCES "group"(id)
                     ON DELETE SET NULL
             );
 
-            -- One row per deck reset. A reset wipes the whole deck, so it belongs to the
-            -- deck and not to any one plan's history: every plan the deck has lines in
-            -- draws the same boundary. Keyed by origin_group_id, the deck id that
-            -- outlives the deck itself, so the record survives deleting the deck and is
-            -- swept only once every stat line of that deck is gone (see
-            -- sweep_orphan_resets). No foreign key: nothing here points at a row that
-            -- has to still exist.
+            -- One reset row per deck, keyed by origin_group_id (still set after the deck is deleted)
+            -- Cleaned up by sweep_orphan_resets once the deck's stat lines are gone
             CREATE TABLE IF NOT EXISTS deck_reset (
                 id INTEGER PRIMARY KEY,
                 origin_group_id INTEGER NOT NULL,
                 date DATE NOT NULL,
 
-                -- The highest group_stats id at the moment of the reset. Lines at or
-                -- below it were logged before, lines above it after, which is what
-                -- places the boundary when a reset splits a single day into two lines
-                -- that share a date. An ordering mark only: it is never looked up, so
-                -- deleting whichever line it happens to name costs nothing.
+                -- Highest group_stats id at the reset, splits a shared date into before and after
+                -- Ordering mark only, never read, so the row at that id can be deleted freely
                 after_stat_id INTEGER NOT NULL
             );
 
-            -- A custom unit a logged todo counts in (lessons, posts, pages, ...), stored as
-            -- its accepted spellings. Variants that share a group_id are one unit: the graph
-            -- and totals treat them as one, while each logged entry keeps the exact spelling
-            -- it chose. position orders them; the lowest is the "main" the group shows by.
-            -- Global, shared across every plan, and names are free to repeat across groups.
+            -- A custom unit a logged todo counts in (lessons, posts, pages), stored as its spellings
+            -- Variants sharing a group_id are one unit, position orders them (lowest is "main"), global across plans
             CREATE TABLE IF NOT EXISTS unit_variant (
                 id INTEGER PRIMARY KEY,
                 group_id INTEGER NOT NULL,
@@ -661,22 +608,20 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
 
             CREATE TABLE IF NOT EXISTS todo_stats (
                 id INTEGER PRIMARY KEY,
-                todo_id INTEGER , -- for the purpose of collecting data and sorting (null if free)
-                plan_id INTEGER NOT NULL, -- no FK: value persists after plan deletion
-                plan_name TEXT NOT NULL DEFAULT '', -- preserved for display after plan deletion; synced on rename
+                todo_id INTEGER , -- for data and sorting, null if free
+                plan_id INTEGER NOT NULL, -- no FK, value persists after plan deletion
+                plan_name TEXT NOT NULL DEFAULT '', -- kept for display after plan deletion, synced on rename
 
                 date DATE NOT NULL,
 
                 text TEXT NOT NULL, -- pulled from the todo's name, locked in
-                category TEXT NOT NULL, -- pulled from the todo's category,
+                category TEXT NOT NULL, -- pulled from the todo's category
 
                 details TEXT,
 
                 time_spent_minutes FLOAT NOT NULL DEFAULT 0,
-                -- How much got done and which unit variant it counts in: both filled or both
-                -- empty, never one alone. No FK on variant_id so the guard stays in one place
-                -- (delete blocks a variant any log points at) and the live name shows through
-                -- a join, the way this table already reads deck and resource names.
+                -- How much got done and its unit variant, both filled or both empty
+                -- No FK on variant_id so the delete guard stays in one place, live name comes via a join
                 num_value FLOAT,
                 variant_id INTEGER,
                 num_unit TEXT -- retired free-text units, kept only so older databases can migrate
@@ -687,7 +632,7 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 stat_id INTEGER NOT NULL,
                 group_id INTEGER,
                 group_name TEXT NOT NULL, -- flexible until id null
-                group_type TEXT,          -- snapshot; preserved after group deletion
+                group_type TEXT,          -- snapshot, kept after group deletion
 
                 FOREIGN KEY(stat_id)
                     REFERENCES todo_stats(id)
@@ -751,19 +696,19 @@ mod tests {
     fn legacy_units_split_at_the_first_number() {
         assert_eq!(parse_legacy_unit("~5 pages"), Some((5.0, "pages".into())));
         assert_eq!(parse_legacy_unit("5.5 chapters"), Some((5.5, "chapters".into())));
-        // A word before the number is skipped along with the symbols.
+        // Word before the number is skipped too
         assert_eq!(parse_legacy_unit("read 5 pages"), Some((5.0, "pages".into())));
-        // Everything past the number is the name, spaces and all.
+        // Everything past the number is the name, spaces and all
         assert_eq!(parse_legacy_unit("3 lessons done"), Some((3.0, "lessons done".into())));
-        // A trailing dot stays out of the number.
+        // Trailing dot stays out of the number
         assert_eq!(parse_legacy_unit("2. articles"), Some((2.0, "articles".into())));
     }
 
     #[test]
     fn legacy_units_with_no_pair_migrate_to_nothing() {
-        // No number at all.
+        // No number at all
         assert_eq!(parse_legacy_unit("pages"), None);
-        // A number but no name left over, so neither field fills.
+        // Number but no name, neither field fills
         assert_eq!(parse_legacy_unit("5"), None);
         assert_eq!(parse_legacy_unit("  12  "), None);
         assert_eq!(parse_legacy_unit(""), None);
@@ -776,8 +721,8 @@ mod tests {
         conn.execute("INSERT INTO plan (name) VALUES ('p')", []).unwrap();
         let plan_id = conn.last_insert_rowid();
 
-        // Same exact spelling twice, a case variant that stays its own unit (no folding), an
-        // unparseable string, and a bare number.
+        // Same spelling twice, a case variant (its own unit, no folding), an
+        // unparseable string, and a bare number
         for raw in ["5 pages", "read 3 pages", "2 Pages", "grandma's address", "10"] {
             conn.execute(
                 "INSERT INTO todo_stats (plan_id, date, text, category, num_unit)
@@ -788,12 +733,12 @@ mod tests {
         }
         migrate_legacy_units(&conn).unwrap();
 
-        // "pages" is one variant shared by both entries that spelled it that way.
+        // "pages" is one variant shared by both entries that spelled it that way
         let pages: i64 = conn
             .query_row("SELECT COUNT(*) FROM unit_variant WHERE name = 'pages'", [], |r| r.get(0))
             .unwrap();
         assert_eq!(pages, 1, "identical spellings must not duplicate");
-        // "pages" and "Pages" are different strings, so two separate units, no assumptions.
+        // "pages" and "Pages" differ, so two separate units
         let variants: i64 = conn.query_row("SELECT COUNT(*) FROM unit_variant", [], |r| r.get(0)).unwrap();
         assert_eq!(variants, 2, "different spellings each get their own unit");
         let filled: i64 = conn
@@ -805,21 +750,20 @@ mod tests {
             .unwrap();
         assert_eq!(filled, 3, "the three parseable entries carry units");
 
-        // Each migrated variant anchors its own group (group_id equals its own id).
+        // Each migrated variant anchors its own group (group_id equals its own id)
         let anchored: i64 = conn
             .query_row("SELECT COUNT(*) FROM unit_variant WHERE group_id = id", [], |r| r.get(0))
             .unwrap();
         assert_eq!(anchored, 2, "a fresh variant names its own group");
 
-        // Re-running changes nothing: converted rows are skipped, failures stay blank.
+        // Re-running changes nothing, converted rows skipped, failures stay blank
         migrate_legacy_units(&conn).unwrap();
         let after: i64 = conn.query_row("SELECT COUNT(*) FROM unit_variant", [], |r| r.get(0)).unwrap();
         assert_eq!(after, 2, "a second pass must not add units");
     }
 
-    // group_stats holds onto origin_group_id and plan_id long after the deck or plan
-    // is deleted, so a reissued rowid silently hands one thing's history to the next
-    // thing created. A plain INTEGER PRIMARY KEY does exactly that.
+    // group_stats still has origin_group_id and plan_id after the deck or plan is deleted, so a
+    // reused rowid would attach one thing's history to the next. A plain INTEGER PRIMARY KEY does that
     #[test]
     fn deleted_decks_and_plans_never_hand_their_id_to_the_next_one() {
         let conn = Connection::open_in_memory().unwrap();
@@ -858,9 +802,8 @@ mod tests {
         );
     }
 
-    // The migration has to cover ids that were already freed before it ran. Those are
-    // the dangerous ones: the row is gone, so MAX(id) forgets it, but group_stats
-    // still points at it and would hand that history to the next deck created.
+    // The migration must cover ids freed before it ran, the dangerous case. The row is gone so
+    // MAX(id) misses it, but group_stats still references it and would reuse it for the next deck
     #[test]
     fn upgrading_an_old_database_keeps_freed_ids_out_of_circulation() {
         let conn = Connection::open_in_memory().unwrap();
@@ -889,9 +832,8 @@ mod tests {
             );
             INSERT INTO plan (id, name) VALUES (7, 'old plan');
             INSERT INTO "group" (id, plan_id, name, group_type) VALUES (9, 7, 'old deck', 'deck');
-            -- study logged against both, then both deleted, exactly as before an
-            -- upgrade. group_id goes null with the deck, origin_group_id is what
-            -- keeps the history addressable, and so is what has to stay reserved.
+            -- study logged against both then both deleted, as before an upgrade. group_id goes null
+            -- with the deck, origin_group_id is what makes the history addressable so it stays reserved
             INSERT INTO group_stats (group_id, origin_group_id, plan_id, group_name, date, num_new)
             VALUES (NULL, 9, 7, 'old deck', '2026-07-01', 12);
             DELETE FROM "group" WHERE id = 9;
@@ -930,9 +872,8 @@ mod tests {
 
     #[test]
     fn upgrades_a_real_pre_stat_run_database() {
-        // group and group_stats as released, before a reset had anywhere to record
-        // itself. New columns land by migration, since CREATE TABLE IF NOT EXISTS
-        // leaves an existing table alone.
+        // group and group_stats as released, before resets had anywhere to record. New columns come
+        // from migration, since CREATE TABLE IF NOT EXISTS leaves an existing table alone
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
@@ -980,8 +921,8 @@ mod tests {
             .unwrap();
         assert_eq!(resets, 0, "an upgraded deck has never been reset");
 
-        // The rebuilt table has to keep handing out ids above the ones already in use,
-        // since a reset marks its place with the highest id there was at the time
+        // Rebuilt table must keep issuing ids above those in use, since a reset marks its place
+        // with the highest id at the time
         conn.execute(
             "INSERT INTO group_stats (group_id, origin_group_id, plan_id, group_name, date)
              VALUES (1, 1, 1, 'deck a', '2026-07-02')",
@@ -1073,7 +1014,7 @@ mod tests {
         assert!(content.contains("\"rawPath\":\"pages/images/g.png\""));
         assert_eq!(audio, "pages/audio/h.mp4");
 
-        // Idempotent: a second run must leave every row byte-identical
+        // Idempotent, a second run must leave every row byte-identical
         migrate_media_paths(&conn, &app_dir()).unwrap();
         let content2: String = conn
             .query_row("SELECT content FROM page WHERE id = 1", [], |r| r.get(0))
@@ -1121,7 +1062,7 @@ mod tests {
         assert_eq!(cfront, "custom front");
         assert!(cifront.is_none());
 
-        // a user front typed after migration must survive the next startup
+        // a user front typed after migration must still be there after the next startup
         conn.execute("UPDATE card SET front = 'my note' WHERE id = 1", [])
             .unwrap();
         migrate_schema(&conn, &app_dir()).unwrap();
@@ -1133,7 +1074,7 @@ mod tests {
 
     #[test]
     fn upgrades_a_real_pre_imported_columns_database() {
-        // The card table as released before imported_front/imported_back existed.
+        // The card table as released before imported_front/imported_back existed
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
@@ -1222,8 +1163,8 @@ mod tests {
         assert_eq!(front2, "my note");
     }
 
-    /// The column move must carry media references with it: cleanup only scans
-    /// imported_*, so anything still sitting in front/back would look orphaned.
+    /// The column move must carry media references, cleanup only scans imported_*, so
+    /// anything left in front/back would look orphaned
     #[test]
     fn migrated_html_media_survives_cleanup() {
         let tmp = tempfile::tempdir().unwrap();

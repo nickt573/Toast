@@ -25,6 +25,7 @@ pub fn create_plan(name: &str, conn: &mut Connection) -> Result<Plan> {
     Ok(Plan {
         id,
         name: name.to_string(),
+        is_disabled: false,
     })
 }
 
@@ -101,7 +102,7 @@ pub fn merge_decks(
 ) -> Result<Group> {
     let tx = conn.transaction()?;
 
-    // Fetch card IDs from each source deck BEFORE moving, sorted by id.
+    // Fetch card ids from each source deck before moving, sorted by id
     let fetch_ids = |gid: i64| -> Result<Vec<i64>> {
         tx.prepare("SELECT id FROM card WHERE group_id = ?1 ORDER BY id")?
             .query_map([gid], |r| r.get(0))?
@@ -132,23 +133,15 @@ pub fn merge_decks(
             [new_deck_id],
         )?;
     } else {
-        // The merged deck starts unlinked from any plan, so nothing can be due or crammed.
+        // Merged deck starts unlinked from any plan, so nothing can be due or crammed
         tx.execute(
             "UPDATE card SET is_due = FALSE, is_overdue = NULL, is_cram = FALSE WHERE group_id = ?1",
             [new_deck_id],
         )?;
     }
 
-    // Without a reset the new deck inherits both sources' still-counting study,
-    // combined per plan and date, and every source row is archived so the copy is the
-    // only thing counting. This is a one-time migration: unarchiving a source later
-    // brings that study back on its own terms and never re-syncs the copy.
-    //
-    // With a reset the new deck starts empty and nothing is copied, so the sources
-    // keep counting unless archive_sources asks otherwise. Archiving happens inside
-    // this transaction either way: a failed merge must not leave the sources archived
-    // with no copy to show for it. archive_sources only means anything with a reset,
-    // since without one the copy makes archiving mandatory.
+    // Without a reset, copy both sources' counting study (per plan and date) and archive every
+    // source row so only the copy counts, one-time. With a reset nothing is copied, sources keep counting unless archive_sources set
     if !reset {
         tx.execute(
             r#"
@@ -191,8 +184,8 @@ pub fn merge_decks(
         [deck_b_id],
     )?;
 
-    // Assign zipper positions so fill_track interleaves cards from both decks.
-    // A[0]→pos 0, B[0]→pos 1, A[1]→pos 2, B[1]→pos 3, …
+    // Assign zipper positions so fill_track interleaves cards from both decks
+    // A[0]->pos 0, B[0]->pos 1, A[1]->pos 2, B[1]->pos 3, ...
     let max_len = a_ids.len().max(b_ids.len());
     let mut interleaved: Vec<i64> = Vec::with_capacity(a_ids.len() + b_ids.len());
     for i in 0..max_len {
@@ -220,7 +213,7 @@ pub fn merge_decks(
     })
 }
 
-// One source card's copyable columns for duplicate_deck.
+// One source card's copyable columns for duplicate_deck
 struct DupCardRow {
     front: String,
     back: String,
@@ -241,10 +234,8 @@ struct DupCardRow {
     position: Option<i64>,
 }
 
-// Copies a deck and all its cards into a new, unassigned deck. Every referenced
-// media file is copied under a fresh name so the two decks never share files.
-// `reset` wipes SRS state on the copy; otherwise progress carries over but due
-// flags are cleared since the copy has no plan.
+// Copy a deck and its cards into a new unassigned deck, media copied under fresh names so the two never share files
+// reset wipes SRS state on the copy, otherwise progress carries over but due flags clear (no plan)
 pub fn duplicate_deck(
     deck_id: i64,
     new_name: String,
@@ -308,8 +299,7 @@ pub fn duplicate_deck(
         rows
     };
 
-    // If anything fails after files start landing, the copies made so far are
-    // deleted and the transaction rolls back, so no half-made deck survives.
+    // If anything fails mid-copy, the copies made so far are deleted and the transaction rolls back
     let mut cache: HashMap<String, String> = HashMap::new();
     let inserted = (|| -> Result<()> {
         let mut insert = tx.prepare(
@@ -332,7 +322,7 @@ pub fn duplicate_deck(
             let imported_back = copy_html_media(&c.imported_back, app_dir, &mut cache)?;
             let imported_support = copy_html_media(&c.imported_support, app_dir, &mut cache)?;
 
-            // The copy is unlinked from any plan, so nothing can be due.
+            // Copy is unlinked from any plan, so nothing can be due
             let (tier, ease, sequence, is_due, is_overdue, is_paused) = if reset {
                 (0i32, 0.0f32, 0i32, false, None::<bool>, false)
             } else {
@@ -416,7 +406,7 @@ pub fn create_card(card: NewCard, conn: &mut Connection, app_dir: &Path) -> Resu
 
     let id = conn.last_insert_rowid();
     let _ = on_item_added(card.group_id, conn);
-    // Re-read after on_item_added since fill_group may have made the card due.
+    // Re-read after on_item_added since fill_group may have made the card due
     get_card(id, conn)
 }
 
@@ -538,9 +528,8 @@ pub fn merge_notebooks(
     })
 }
 
-// Copies a notebook and all its pages into a new, unassigned notebook. Page
-// images and audio are copied under fresh names so the two notebooks never
-// share files. Created dates are preserved so page ordering matches the source.
+// Copy a notebook and its pages into a new unassigned notebook, images and audio copied
+// under fresh names so the two never share files. Created dates kept so ordering matches the source
 pub fn duplicate_notebook(
     notebook_id: i64,
     new_name: String,
@@ -582,8 +571,7 @@ pub fn duplicate_notebook(
         rows
     };
 
-    // Same unwind rule as duplicate_deck: a failed copy deletes the new files
-    // and rolls back, never a notebook that shares media with the source.
+    // Same unwind as duplicate_deck, a failed copy deletes the new files and rolls back
     let mut cache: HashMap<String, String> = HashMap::new();
     let inserted = (|| -> Result<()> {
         let mut insert = tx.prepare(
@@ -687,8 +675,7 @@ pub fn add_group_to_plan(
 
     tx.commit()?;
 
-    // Joining a plan writes nothing. The deck shows up on the stats page with an
-    // empty table, and its first row appears when a session is actually opened.
+    // No stat row from joining plan, only after first session
     let _ = fill_group(group_id, conn);
 
     Ok(Scheduler {
@@ -722,8 +709,7 @@ pub fn create_resource(resource: NewResource, conn: &Connection) -> Result<Resou
     })
 }
 
-// A handful of rules have to hold no matter what order things happen in, so
-// this checks all of them after every step of every sequence.
+// Rules that must hold in any order, checked after every step of every sequence
 #[cfg(test)]
 mod stat_row_invariant_tests {
     use super::*;
@@ -819,8 +805,7 @@ mod stat_row_invariant_tests {
             }
             Op::Reset => reset_deck(deck, conn).unwrap(),
             Op::Study => {
-                // Opening the session is what creates the line, out of a plan there
-                // is nowhere to write and the whole step is a no-op
+                // Opening the session creates the line, out of a plan there's nowhere to write, no-op
                 let line = open_stat_line(deck, conn).unwrap()?;
                 conn.execute(
                     "UPDATE group_stats SET num_new = num_new + 1 WHERE id = ?1",
@@ -856,9 +841,8 @@ mod stat_row_invariant_tests {
         Some(deck)
     }
 
-    // One line per deck, plan, and day, unless something closed the earlier one. Only
-    // two things can: a reset, or archiving it. So a line that is not the newest of its
-    // day has to be archived or have a reset standing at or above its id.
+    // One line per deck, plan, and day unless something closed the earlier one, only a reset
+    // or archiving can. So a non-newest line for its day is archived or has a reset at or above its id
     fn check_one_plain_line_per_day(conn: &Connection, trace: &str) {
         let dupes: i64 = conn
             .query_row(
@@ -878,8 +862,7 @@ mod stat_row_invariant_tests {
         assert_eq!(dupes, 0, "duplicate plain line for one day after {trace}");
     }
 
-    // Opening a session is the only thing that writes a line. Joining a plan,
-    // leaving one, resetting, and the day rolling over all leave the count alone.
+    // Only opening a session writes a line, join/leave/reset/day-roll leave the count alone
     fn check_only_sessions_write(before: i64, now: i64, op: Op, trace: &str) {
         if matches!(op, Op::Study) {
             return;
@@ -887,9 +870,7 @@ mod stat_row_invariant_tests {
         assert_eq!(now, before, "line count moved without a session after {trace}");
     }
 
-    // A reset always has a run on the older side of it, which is the run it ended, and
-    // it never belongs to a deck with no history at all. A mark with nothing under it
-    // would draw a boundary between one run and nothing.
+    // A reset always has a run under it (the one it ended), never on a deck with no history
     fn check_resets_have_a_run_behind_them(conn: &Connection, trace: &str) {
         let stranded: i64 = conn
             .query_row(
@@ -904,9 +885,7 @@ mod stat_row_invariant_tests {
         assert_eq!(stranded, 0, "a reset marks nothing after {trace}");
     }
 
-    // Study after a reset opens its own line, so no line that a reset closed is ever the
-    // one a session would write into next: the deck's newest line always sits above
-    // every reset it has.
+    // Study after a reset opens its own line, so the deck's newest line is always above every reset
     fn check_no_session_writes_below_a_reset(conn: &Connection, deck: i64, op: Op, trace: &str) {
         if !matches!(op, Op::Study) || !in_plan(conn, deck) {
             return;
@@ -973,8 +952,7 @@ mod stat_row_invariant_tests {
     }
 }
 
-// One test per documented behaviour. If a row of the behaviour table isn't
-// provable here, it isn't a behaviour, it's a hope.
+// One test per documented behaviour, if it isn't provable here it isn't a behaviour
 #[cfg(test)]
 mod stat_row_tests {
     use super::*;
@@ -1038,8 +1016,7 @@ mod stat_row_tests {
         .unwrap()
     }
 
-    // Distinct places the deck's resets mark. The page draws one boundary per place, so
-    // this is the number of dividers a run of resets is worth.
+    // Distinct places the deck's resets mark, one boundary drawn per place
     fn boundaries(conn: &Connection, deck: i64) -> i64 {
         conn.query_row(
             "SELECT COUNT(DISTINCT after_stat_id) FROM deck_reset WHERE origin_group_id = ?1",
@@ -1091,9 +1068,8 @@ mod stat_row_tests {
             .sum()
     }
 
-    // The rows behind one deck card on the stats page, which is what that page hands
-    // to the bulk delete and archive commands. Live and dead decks are separate cards
-    // even when they share an id, so group_id is part of the pick.
+    // Rows behind one deck card on the stats page, passed to bulk delete and archive
+    // Live and dead decks are separate cards even on the same id, so group_id is part of the pick
     fn card_rows(conn: &Connection, origin: i64, plan: i64, dead: bool) -> Vec<i64> {
         conn.prepare(
             "SELECT id FROM group_stats
@@ -1231,8 +1207,7 @@ mod stat_row_tests {
         assert_eq!(new_in(&conn, 1, 1), 13, "the old line keeps its 5");
     }
 
-    // Two lines dated the same day, one either side of the boundary. The date alone
-    // can't tell them apart, which is what the mark is for.
+    // Two lines dated the same day, one either side of the boundary, the mark tells them apart
     #[test]
     fn t11b_a_reset_splits_a_single_day() {
         let mut conn = setup();
@@ -1262,8 +1237,7 @@ mod stat_row_tests {
         assert_eq!(rows(&conn, 1), 2, "no third line");
     }
 
-    // Every reset is kept, since each one happened, but with no session between them
-    // they all mark the same place and the page has one boundary to draw.
+    // Every reset is kept, but with no session between them they all mark the same place, one boundary
     #[test]
     fn t13_repeat_resets_collapse_into_one_boundary() {
         let mut conn = setup();
@@ -1278,7 +1252,7 @@ mod stat_row_tests {
         assert_eq!(boundaries(&conn, 1), 1);
     }
 
-    // Study between two resets gives the second one a place of its own, so both draw
+    // A session between two resets puts the second at its own place, so both draw
     #[test]
     fn t13b_resets_with_a_session_between_them_stay_apart() {
         let mut conn = setup();
@@ -1334,8 +1308,7 @@ mod stat_row_tests {
         assert_eq!(boundaries(&conn, 1), 1);
     }
 
-    // A deck with no history has no run to end, so there is nothing to record and
-    // nothing for the page to draw
+    // A deck with no history has no run to end, so nothing to record or draw
     #[test]
     fn t16b_resetting_a_deck_that_was_never_studied_records_nothing() {
         let mut conn = setup();
@@ -1545,15 +1518,14 @@ mod stat_row_tests {
         assert_eq!(rows(&conn, 1), 0, "runs are lines, not a separate scope");
     }
 
-    // On a database old enough to have reused an id before the migration reserved it,
-    // a dead deck and a live one can share origin_group_id. The stats page draws them
-    // as separate cards, so clearing one must not reach into the other.
+    // On an old database that reused an id before the migration reserved it, a dead and live
+    // deck can share origin_group_id. The stats page draws them as separate cards, clearing one can't touch the other
     #[test]
     fn t30_clearing_a_dead_decks_stats_leaves_a_live_deck_on_the_same_id() {
         let mut conn = setup();
         add(&mut conn, 1, 1);
         study(&conn, 1, 5);
-        // deck 1 deleted, then its id handed to a new deck that also gets studied
+        // deck 1 deleted, then its id reused by a new deck that also gets studied
         conn.execute("UPDATE group_stats SET group_id = NULL WHERE group_id = 1", [])
             .unwrap();
         study(&conn, 1, 7);
@@ -1565,8 +1537,7 @@ mod stat_row_tests {
         assert_eq!(new_in(&conn, 1, 1), 0);
     }
 
-    // The mark is a place, not a pointer. Deleting the very line it was taken from
-    // leaves every other line on the side of it that it was already on.
+    // The mark is a place not a pointer, deleting the line it came from leaves the others where they were
     #[test]
     fn t31_deleting_the_line_a_reset_marks_keeps_the_boundary() {
         let mut conn = setup();
@@ -1591,8 +1562,7 @@ mod stat_row_tests {
         assert_eq!(rows(&conn, 1), 2, "no new line, the day's line is not closed");
     }
 
-    // Ids are never reissued, so a line opened after a reset can never land under the
-    // mark, however many lines have been deleted in between
+    // Ids are never reissued, so a line opened after a reset can't land under the mark
     #[test]
     fn t32_a_line_opened_after_a_reset_stays_above_it() {
         let mut conn = setup();
@@ -1613,8 +1583,7 @@ mod stat_row_tests {
         assert_eq!(rows(&conn, 1), 2);
     }
 
-    // A reset is deck-wide, so every plan the deck was studied in has to see it. This is
-    // what the old per-plan marker got wrong.
+    // A reset is deck-wide, every plan the deck was studied in sees it (the old per-plan marker didn't)
     #[test]
     fn t33_a_reset_divides_every_plan_the_deck_has_lines_in() {
         let mut conn = setup();
@@ -1640,8 +1609,7 @@ mod stat_row_tests {
         assert!(newest_line(&conn, 1) > mark);
     }
 
-    // The record outlives the deck and any one plan, and goes when the last line that
-    // could show it does
+    // The record is kept past the deck and any one plan, gone when its last line is
     #[test]
     fn t33b_a_reset_is_kept_until_the_decks_last_line_goes() {
         let mut conn = setup();
