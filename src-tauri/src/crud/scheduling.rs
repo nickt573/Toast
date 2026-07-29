@@ -53,7 +53,8 @@ pub fn update_date(conn: &Connection) -> Result<()> {
     let today = chrono::Local::now().date_naive();
     let today_bit = 1i64 << today.weekday().num_days_from_sunday();
 
-    // Recalc is_disabled from today's weekday, skips stay disabled so a relaunch can't revive a skipped todo
+    // Recalc is_disabled from today's weekday, skips stay disabled so a relaunch can't
+    // revive a skipped todo
     let recalc_disabled = |conn: &Connection| {
         conn.execute(
             "UPDATE todo SET is_disabled = ((frequency & ?1) = 0) OR is_skipped",
@@ -134,13 +135,14 @@ fn tick_all(conn: &Connection) -> Result<()> {
 
         // Step 2 roll over yesterday's due cards
         if *can_overflow {
-            // Overflow ON, every still-due card becomes overflow
+            // Overflow on, every still-due card becomes overflow
             conn.execute(
                 "UPDATE card SET is_overdue = TRUE WHERE group_id = ?1 AND is_due = TRUE",
                 [group_id],
             )?;
         } else {
-            // Overflow OFF, unschedule everything so 15/10 collapses to 0/10 then refills to 10/10, no carry-over
+            // Overflow off, unschedule everything so the queue collapses and refills to the
+            // max with no carry-over
             conn.execute(
                 "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1 AND is_due = TRUE",
                 [group_id],
@@ -183,8 +185,8 @@ pub fn count_due_items(group_id: &i64, conn: &Connection) -> Result<(i64, i64, i
     )
 }
 
-/// Top up a group's due queue to its daily quota. Studied today plus currently due counts
-/// against the maxes, overflow carry-overs (is_overdue = TRUE) are free, hence the is_overdue = FALSE filters
+/// Top up a group's due queue to its daily quota, where studied today plus currently due
+/// counts against the maxes and overflow carry-overs are free
 pub fn fill_group(group_id: i64, conn: &Connection) -> Result<()> {
     let (max_new, studied_new, max_review, studied_review): (i64, i64, i64, i64) = conn.query_row(
         "SELECT max_new, studied_new, max_review, studied_review FROM scheduler WHERE group_id = ?1",
@@ -301,7 +303,7 @@ pub fn on_pause_changed(
 }
 
 pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> {
-    // Grades 0-3 graduated-card ratings (Nope/Rough/Fine/Easy), 4-5 new-card ratings (One More Time/Got It)
+    // Grades 0 to 3 are graduated-card ratings, 4 and 5 are the new-card ratings
     let (tier_delta, ease_delta): (i32, f64) = match grade {
         0 => (-2, -0.12),
         1 => (-1, -0.08),
@@ -341,9 +343,9 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
 
     // Floor depends on graduation status, graduated cards clamp at tier 1, ungraduated at tier 0
     let floor = if old_tier > 0 { 1 } else { 0 };
-    // Cap at tier 10, roughly a 1.4 year interval, beyond that a card is effectively retired
+    // Cap at tier 10, roughly a year and a half, beyond which a card is effectively retired
     let new_tier = (old_tier + tier_delta).max(floor).min(10);
-    // Fine (grade 2) never pushes ease below 0 or deepens an already-negative ease
+    // A Fine rating never pushes ease below 0 or deepens an already-negative ease
     let ease_floor = if grade == 2 { old_ease.min(0.0) } else { -0.35 };
     let new_ease = (old_ease + ease_delta).max(ease_floor).min(0.35);
 
@@ -352,7 +354,8 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     } else {
         let raw = 2f64.powi(new_tier - 1) * (1.0 + new_ease);
         let base = raw.round() as i32;
-        // Scatter same-day gradings by +-15% so cards stop advancing in tandem but stay within the tier
+        // Scatter same-day gradings a little so cards stop advancing in tandem but stay
+        // within the tier
         let span = (raw * 0.15).round() as i32;
         let jitter = if span > 0 {
             let r: i64 = tx.query_row("SELECT random()", [], |row| row.get(0))?;
@@ -368,10 +371,11 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
 
     let is_new = old_tier == 0 && new_tier > 0;
     let is_promote = old_tier > 0 && new_tier > old_tier;
-    // A same-tier grade on a graduated card is a demotion, tier clamps at 1 so grading "again" on tier 1 is still a failed review
+    // A same-tier grade on a graduated card is a demotion, and tier clamps at 1 so grading
+    // again on tier 1 is still a failed review
     let is_demote = old_tier > 0 && new_tier <= old_tier;
 
-    // A demoted review card enters the cram pool, other grades leave the flag as-is
+    // A demoted review card enters the cram pool, other grades leave the flag alone
     tx.execute(
         r#"
         UPDATE card
@@ -392,13 +396,15 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     )?;
 
     let today = get_date(&tx)?;
-    // Rows predating the new-card renumbering store One More Time/Got It as grades 1/2 not 4/5, any per-grade read of new-card history must handle both
+    // Rows predating the new-card renumbering store One More Time and Got It as grades 1 and
+    // 2, so any per-grade read of new-card history must handle both
     tx.execute(
         "INSERT INTO card_grade_log (card_id, grade, graded_at, old_tier, new_tier) VALUES (?1, ?2, ?3, ?4, ?5)",
         rusqlite::params![item_id, grade, today, old_tier, new_tier],
     )?;
 
-    // Only non-overflow cards (is_overdue == FALSE) consume the daily quota, carry-overs (TRUE) and off-schedule grades (NULL) are free
+    // Only non-overflow cards consume the daily quota, carry-overs and off-schedule grades
+    // are free
     if old_overdue == Some(false) {
         if is_new {
             tx.execute(
@@ -417,8 +423,8 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
     tx.commit()
 }
 
-/// Open today's line for a deck in its plan, None outside a plan. A line closed by a reset or
-/// archive is never reused, so the next session opens its own row, repeat resets share one boundary
+/// Open today's line for a deck in its plan, None outside a plan, and a line closed by a
+/// reset or archive is never reused so the next session opens its own row
 pub fn open_stat_line(group_id: i64, conn: &Connection) -> Result<Option<i64>> {
     let plan_id: Option<i64> = conn.query_row(
         r#"SELECT plan_id FROM "group" WHERE id = ?1"#,
@@ -498,8 +504,8 @@ pub fn add_group_time(group_id: i64, minutes: f64, conn: &Connection) -> Result<
     Ok(())
 }
 
-/// Wipe card progress, record the reset against the deck at the highest stat line id so every
-/// plan can tell which lines fall either side. No line written, deck-wide not per-plan, empty deck records nothing
+/// Wipe card progress and record the reset against the deck at the highest stat line id so
+/// every plan can tell which lines fall either side, and an empty deck records nothing
 pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE, is_cram = FALSE WHERE group_id = ?1",
@@ -525,7 +531,8 @@ pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// Archive every stat row a deck has, across all plans. Offered with a reset so the ended run drops from totals but stays on the page
+/// Archive every stat row a deck has across all plans, offered with a reset so the ended run
+/// drops from totals but stays on the page
 pub fn archive_deck_stats(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE group_stats SET is_archived = TRUE WHERE group_id = ?1",
@@ -535,7 +542,8 @@ pub fn archive_deck_stats(group_id: i64, conn: &Connection) -> Result<()> {
 }
 
 pub fn clamp_group(group_id: i64, conn: &Connection) -> Result<()> {
-    // Relative clamp, clear all due non-paused cards then refill to (max - studied), so total work stays capped at max
+    // Relative clamp, clear all due non-paused cards then refill to what is left of the max,
+    // so total work stays capped
     conn.execute(
         "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1 AND is_paused = FALSE AND is_due = TRUE",
         [group_id],
@@ -556,18 +564,19 @@ pub fn max_clamp_group(group_id: i64, conn: &Connection) -> Result<()> {
         |r| Ok((r.get(0)?, r.get(1)?)),
     )?;
 
-    // After clearing, due_non_overflow = 0, so scheduled = 0 fills up to max regardless of today's study count
+    // After clearing there is nothing due, so it fills up to max regardless of today's study
     fill_track(conn, group_id, "tier = 0", max_new, 0)?;
     fill_track(conn, group_id, "tier > 0", max_review, 0)?;
     Ok(())
 }
 
-/// Below PRIORITY_CEIL the 1/day tick can't reach (~137 years)
-/// Empty range anchors at PRIORITY_ANCHOR, marks grow LIFO below it, priorities FIFO above
+/// Below PRIORITY_CEIL the daily tick can't reach, and an empty range anchors at
+/// PRIORITY_ANCHOR with marks growing downward and priorities upward
 const PRIORITY_CEIL: i64 = -50_000;
 const PRIORITY_ANCHOR: i64 = -1_000_000;
 
-/// MIN/MAX sequence among a group's priority-range cards, None if empty, per-group since order is only compared within a group
+/// The lowest and highest sequence among a group's priority-range cards, None if empty, and
+/// per-group since order is only compared within a group
 fn priority_bound(group_id: i64, agg: &str, conn: &Connection) -> Result<Option<i64>> {
     conn.query_row(
         &format!("SELECT {agg}(sequence) FROM card WHERE group_id = ?1 AND sequence < ?2"),
@@ -583,7 +592,7 @@ pub fn prioritize_card(card_id: i64, conn: &Connection) -> Result<()> {
         |row| Ok((row.get(0)?, row.get(1)?)),
     )?;
 
-    // Already queued, re-stamping at MAX + 1 would demote it to the back
+    // Already queued, re-stamping past the highest would demote it to the back
     if sequence >= PRIORITY_CEIL {
         let next = match priority_bound(group_id, "MAX", conn)? {
             Some(max) => max + 1,
@@ -602,8 +611,8 @@ pub fn prioritize_card(card_id: i64, conn: &Connection) -> Result<()> {
     fill_group(group_id, conn)
 }
 
-/// (streak, studied_today, longest) for a plan. A day counts with any todo_stats row or graded group_stats row
-/// Not studied today yet, streak carries from yesterday
+/// The streak, whether today was studied, and the longest run for a plan, where a day counts
+/// with any todo_stats row or graded group_stats row
 pub fn get_plan_streak(plan_id: i64, conn: &Connection) -> Result<(i64, bool, i64)> {
     use std::collections::HashSet;
 
@@ -678,14 +687,16 @@ pub fn mark_for_review(card_id: i64, conn: &Connection) -> Result<()> {
         |row| Ok((row.get(0)?, row.get(1)?)),
     )?;
 
-    // LIFO, newest mark lands ahead of everything queued. Re-stamped even when already due, so it isn't lost to an overflow-off tick's unscheduling
+    // The newest mark lands ahead of everything queued, re-stamped even when already due so
+    // it isn't lost to an overflow-off tick's unscheduling
     let next = match priority_bound(group_id, "MIN", conn)? {
         Some(min) => min - 1,
         None => PRIORITY_ANCHOR,
     };
 
     if is_due {
-        // Flags left alone, rewriting them would turn a quota-free overflow carry-over (is_overdue = TRUE) into one that consumes quota
+        // Flags left alone, rewriting them would turn a quota-free overflow carry-over into
+        // one that consumes quota
         conn.execute(
             "UPDATE card SET sequence = ?1 WHERE id = ?2",
             rusqlite::params![next, card_id],

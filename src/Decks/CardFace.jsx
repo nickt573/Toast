@@ -27,19 +27,19 @@ export function cleanAnkiHtml(html) {
         .replace(/\{\{[^}]*\}\}/g, "")
         .replace(/<div[^>]*>\s*<\/div>/gi, "")
         .replace(/<span>\s*<\/span>/gi, "")
-        // Anki wraps each line in a div. Every div boundary becomes a comma separator.
+        // Anki wraps each line in a div, so every div boundary becomes a comma separator
         .replace(/<div[^>]*>/gi, ", ")
         .replace(/<\/div>/gi, "")
         .replace(/(\s*<br\s*\/?>\s*){3,}/gi, "<br/><br/>")
         .replace(/(\s*,){2,}\s*/g, ", ")
         .replace(/(<(?:br|hr)[^>]*>\s*)(,\s*)+/gi, "$1")
         .replace(/^\s*(,\s*)+/, "")
-        // Empty fields joined during import leave stray dividers: collapse
-        // consecutive <hr>s and drop any at the very start or end
+        // Empty fields joined during import leave stray dividers, so collapse consecutive
+        // rules and drop any at the very start or end
         .replace(/(?:<hr[^>]*>\s*){2,}/gi, "<hr/>")
         .replace(/^(?:\s*<hr[^>]*>)+/i, "")
         .replace(/(?:<hr[^>]*>\s*)+$/i, "")
-        // Field separators show as a vertical gap, not a visible bar
+        // Field separators show as a vertical gap rather than a visible bar
         .replace(/<hr[^>]*>/gi, '<div style="height:10px"></div>')
         .trim();
 }
@@ -48,8 +48,8 @@ export function renderAnkiHtml(html) {
     return cleanAnkiHtml(rewriteAnkiSrcs(html));
 }
 
-// Normalize so search queries and card text always compare equal.
-// Strips invisible chars, straightens curly quotes, collapses all whitespace (including &nbsp;).
+// Normalize so search queries and card text always compare equal, stripping invisible
+// characters, straightening curly quotes and collapsing all whitespace
 export function normalizeSearchText(str) {
     if (!str) return "";
     return str
@@ -60,7 +60,7 @@ export function normalizeSearchText(str) {
         .trim();
 }
 
-// Cached because the textarea entity decode is slow and card HTML never changes in place.
+// Cached because the entity decode is slow and card HTML never changes in place
 const stripHtmlCache = new Map();
 
 export function stripHtml(str) {
@@ -140,15 +140,15 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
         }[ext] ?? "audio/mpeg";
         setLoading(true);
         setFailed(false);
-        // Played via a blob URL: data: URIs never reach webkit's media
-        // pipeline on Linux, and blob URLs work everywhere
+        // Played through a blob url, since data uris never reach webkit's media pipeline
+        // on Linux while blob urls work everywhere
         let objectUrl = null;
         let cancelled = false;
         loggedInvoke("read_audio_b64", { path })
             .then(b64 => {
                 if (cancelled) return;
                 if (b64.length === 0) {
-                    // e.g. recordings from builds whose recorder emitted no data
+                    // such as recordings from builds whose recorder emitted no data
                     setFailed(true);
                     setLoading(false);
                     return;
@@ -236,8 +236,7 @@ const answerBlockStyle = {
 };
 
 // Short and centred rather than a rule across the whole card, wearing the same edge the
-// audio buttons do. Only the front and the answer get one, support carries on separating
-// by spacing alone.
+// audio buttons do, and only the front and the answer get one
 const frontBackRuleStyle = {
     width: 400,
     height: 2,

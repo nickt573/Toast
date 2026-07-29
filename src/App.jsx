@@ -20,7 +20,7 @@ import HowTo, { HELP_PAGES } from "./HowTo";
 
 const TABS = [
   { key: "home",      label: "Home",      subtitle: "Today's Dashboard",   color: "var(--t-pink)"   },
-  { key: "plans",     label: "Plans",     subtitle: "Study Plans & Todos", color: "#E8935F" }, /* peachy orange, caramel reads gold on the dark nav */
+  { key: "plans",     label: "Plans",     subtitle: "Study Plans & Todos", color: "#E8935F" }, /* peachy orange, since caramel reads gold on the dark nav */
   { key: "decks",     label: "Decks",     subtitle: "SRS Flashcard Decks",     color: "var(--t-blue)"   },
   { key: "notebooks", label: "Notebooks", subtitle: "Notes & Journals",       color: "var(--t-plum)"   },
   { key: "stats",     label: "Stats",     subtitle: "Progress & Streaks",  color: "var(--t-stat)"   },
@@ -88,9 +88,8 @@ export default function App() {
     setReturnTo(null);
   }
 
-  // Clicking the tab you're already on backs out to that tab's own front page, rather
-  // than doing nothing. The counter is what the pages watch, since re-clicking doesn't
-  // change `menu` and so wouldn't re-render anything on its own.
+  // Clicking the tab you're already on backs out to that tab's own front page, and the
+  // counter is what the pages watch since re-clicking wouldn't re-render anything
   function navigate(key) {
     if (key === menu) setHomeSignal(c => c + 1);
     setMenu(key);
@@ -100,8 +99,8 @@ export default function App() {
     setStatsReturnContext(null);
   }
 
-  // Check GitHub Releases for a newer version on launch. If the user accepts,
-  // download, verify signature, install, and relaunch. Silently no-ops in dev.
+  // Check for a newer release on launch and, if the user accepts, download, verify,
+  // install and relaunch, doing nothing at all in dev
   useEffect(() => {
     (async () => {
       try {
@@ -122,16 +121,16 @@ export default function App() {
     })();
   }, []);
 
-  // Toast to Go: push on close, per the user's setting. A failed push must never
-  // trap the user in a window that won't shut, log it and close anyway.
+  // Toast to Go pushes on close when the setting asks for it, and a failed push must never
+  // trap you in a window that won't shut, so log it and close anyway
   useEffect(() => {
     let unlisten;
     let gone = false;
     (async () => {
       const win = getCurrentWindow();
       const fn = await win.onCloseRequested(async (event) => {
-        // A push or pull is already in flight (here or in the ToGo tab):
-        // swallow the repeat close so it can't stack dialogs or double-push.
+        // A push or pull is already in flight, so swallow the repeat close before it can
+        // stack dialogs or push twice
         if (togoLock.active) return event.preventDefault();
 
         let behavior = "ask";
@@ -161,7 +160,7 @@ export default function App() {
           } catch (e) {
             logError("push on close", e);
           }
-          await win.destroy(); // not close(): that re-fires this handler
+          await win.destroy(); // not close, which re-fires this handler
         } finally {
           togoLock.active = false;
           setClosePush(false);
@@ -174,8 +173,8 @@ export default function App() {
     return () => { gone = true; unlisten?.(); };
   }, []);
 
-  // Roll the day over before anything renders: child effects run before parent
-  // effects, so a page mounted alongside this one would read the pre-rollover date.
+  // Roll the day over before anything renders, since child effects run before parent ones
+  // and a page mounted alongside this would read the pre-rollover date
   useEffect(() => {
     loggedInvoke("cleanup_orphaned_media").catch(e => logError("cleanup_orphaned_media", e));
     if (dateChecked.current) return;

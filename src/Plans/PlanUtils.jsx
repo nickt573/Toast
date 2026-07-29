@@ -1,19 +1,18 @@
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// Rainbow categories (muted to fit the cozy theme, each works as a white-text fill
-// and as colored text on a light tint). Reading-red is kept brighter than the
-// deep-maroon resource color so the two reds don't collide.
+// Rainbow categories muted to fit the cozy theme, each working as a white-text fill and as
+// colored text on a light tint, with reading red kept off the deeper resource red
 export const CATEGORIES = [
     { label: "Reading",    bit: 1,  color: "#C0392B" },  // red
     { label: "Writing",    bit: 2,  color: "#C2702A" },  // orange
-    { label: "Speaking",   bit: 4,  color: "#B08A1F" },  // dark gold (not pale yellow: legibility)
+    { label: "Speaking",   bit: 4,  color: "#B08A1F" },  // dark gold, a pale yellow wasn't legible
     { label: "Listening",  bit: 8,  color: "#4A8C5E" },  // green
     { label: "Vocabulary", bit: 16, color: "#3E6E96" },  // blue
     { label: "Grammar",    bit: 32, color: "#7A5E8A" },  // purple
     { label: "Culture",    bit: 64, color: "#8A6E55" },  // brown
 ];
 
-// Single source of truth for category colors, themed to the cozy palette.
+// Single source of truth for category colors, themed to the cozy palette
 export const CATEGORY_COLOR_BY_LABEL = Object.fromEntries(CATEGORIES.map(c => [c.label, c.color]));
 
 // Frequency helpers
@@ -48,7 +47,7 @@ export function maskToCategories(mask) {
     return result;
 }
 
-// Shared components: both pickers render the shared .picker-pill control (App.css).
+// Shared components, where both pickers render the picker pill control from App.css
 
 export function FrequencyPicker({ frequency, onChange }) {
     return (
@@ -68,7 +67,7 @@ export function FrequencyPicker({ frequency, onChange }) {
     );
 }
 
-// Solid colored category pills, matching the todo stats table header.
+// Solid colored category pills, matching the todo stats table header
 export function CategoryPills({ mask, style, small = false }) {
     const cats = CATEGORIES.filter(({ bit }) => mask & bit);
     if (cats.length === 0) return null;

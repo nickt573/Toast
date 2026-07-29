@@ -33,7 +33,7 @@ pub fn delete_todo(id: i64, conn: &mut Connection) -> Result<()> {
 
     tx.execute("DELETE FROM todo WHERE id = ?1", [id])?;
 
-    // Close the gap so numbered todos stay contiguous 1..N
+    // Close the gap so numbered todos stay contiguous
     if let Some((plan_id, Some(pos))) = row {
         tx.execute(
             "UPDATE todo SET position = position - 1 WHERE plan_id = ?1 AND position > ?2",
@@ -44,7 +44,7 @@ pub fn delete_todo(id: i64, conn: &mut Connection) -> Result<()> {
     tx.commit()
 }
 
-/// Collects (image, audio) file paths embedded in an uploaded card's imported HTML.
+/// Collects the image and audio file paths embedded in an uploaded card's imported HTML
 fn html_media_paths(
     imported_front: Option<&str>,
     imported_back: Option<&str>,
@@ -242,10 +242,8 @@ pub fn remove_group_from_plan(group_id: i64, reset: bool, conn: &mut Connection)
     {
         let tx = conn.transaction()?;
 
-        // Nothing to sweep up: joining a plan no longer writes a placeholder row, so
-        // every row here came from a session that was actually opened and is real
-        // history. A deck that was never studied simply has none and drops off the
-        // stats page on its way out.
+        // Nothing to sweep up, since joining a plan no longer writes a placeholder row and
+        // every row here came from a session that was actually opened
         tx.execute("DELETE FROM scheduler WHERE group_id = ?1", [group_id])?;
         tx.execute(
             r#"UPDATE "group" SET plan_id = NULL WHERE id = ?1"#,
@@ -276,9 +274,8 @@ pub fn remove_group_from_plan(group_id: i64, reset: bool, conn: &mut Connection)
 
 use std::collections::HashSet;
 pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize> {
-    // All sets hold app-dir-relative keys ("cards/images/<file>"); stored
-    // paths are normalized through to_relative so legacy absolute rows still
-    // protect their files.
+    // All sets hold app-dir-relative keys, and stored paths are normalized through
+    // to_relative so legacy absolute rows still protect their files
     let mut referenced_images: HashSet<String> = HashSet::new();
     let mut referenced_audio: HashSet<String> = HashSet::new();
     let mut referenced_page_audio: HashSet<String> = HashSet::new();
@@ -349,8 +346,8 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
 
     let mut deleted = 0;
 
-    // Keys are "{subdir}/{filename}" so comparisons don't depend on absolute paths or OS separators.
-    // Liveness checks against the union of all sets because a file can be referenced under a different subdir than where it landed.
+    // Keys are the subdir and filename so comparisons don't depend on absolute paths or OS
+    // separators, and liveness checks the union since a file can land under another subdir
     let all_referenced: HashSet<&String> = referenced_images
         .iter()
         .chain(referenced_audio.iter())
@@ -383,9 +380,8 @@ pub fn cleanup_orphaned_media(conn: &Connection, app_dir: &Path) -> Result<usize
             })
             .collect();
 
-        // Safety valve: files exist AND references exist, yet not a single
-        // file matches a reference. That's a systematic key mismatch (a bug),
-        // not real orphans. Deleting here would wipe every media file.
+        // Files and references both exist yet none match, which is a systematic key
+        // mismatch rather than real orphans, and deleting here would wipe every file
         if !referenced.is_empty() && !files.is_empty() && orphans.len() == files.len() {
             log::error!(
                 "cleanup_orphaned_media: refusing to delete all {} files in {subdir}: \
@@ -410,14 +406,8 @@ pub fn delete_resource(id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// A reset is kept until the last stat line of the deck it belongs to is gone, which is
-/// what lets it outlive the deck, the plan, and any single line. SQLite has no foreign
-/// key for "the last row referencing this", so every path that deletes stat lines calls
-/// this afterwards.
-///
-/// Lines whose deck was deleted keep their origin_group_id, so they hold their resets
-/// here the same way a live deck's lines do. Rows old enough to have no origin at all
-/// can hold nothing, and no reset was ever recorded against one.
+/// A reset is kept until the last stat line of its deck is gone, and SQLite has no foreign
+/// key for that, so every path that deletes stat lines calls this afterwards
 fn sweep_orphan_resets(conn: &Connection) -> Result<()> {
     conn.execute(
         "DELETE FROM deck_reset
@@ -433,9 +423,8 @@ pub fn delete_group_stat(id: i64, conn: &Connection) -> Result<()> {
     sweep_orphan_resets(conn)
 }
 
-/// Clears the lines behind one deck card on the stats page. The page is what decides
-/// which rows belong to that card, so it sends their ids and this does exactly that
-/// and nothing more, instead of re-deriving the grouping from a description.
+/// Clears the lines behind one deck card on the stats page, which sends their ids since it
+/// is what decides the grouping, so nothing is re-derived from a description here
 pub fn delete_group_stats(ids: &[i64], conn: &Connection) -> Result<()> {
     for id in ids {
         conn.execute("DELETE FROM group_stats WHERE id = ?1", [id])?;
@@ -448,9 +437,8 @@ pub fn delete_todo_stat(id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-// Deletes a whole unit, clearing it off every entry that counted in any of its names first.
-// Because an amount can't sit without a unit, both fields go together, so those entries keep
-// their time but lose the count. The caller confirms this before asking for it.
+// Deletes a whole unit, clearing it off every entry that counted in any of its names, and
+// since an amount can't sit without a unit those entries keep their time but lose the count
 pub fn delete_unit(group_id: i64, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE todo_stats SET variant_id = NULL, num_value = NULL
@@ -461,10 +449,8 @@ pub fn delete_unit(group_id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-// Deletes one name, clearing it off the entries that chose it (unit and amount together, as
-// above). The last name can't leave on its own, or the unit would vanish without a delete;
-// removing the main (lowest position) simply promotes the next, since the group reads its
-// main as the lowest-positioned name left.
+// Deletes one name, clearing unit and amount off the entries that chose it, and the last
+// name can't leave alone, while removing the main promotes the next lowest-positioned one
 pub fn delete_variant(id: i64, conn: &Connection) -> Result<()> {
     let siblings: i64 = conn.query_row(
         "SELECT COUNT(*) FROM unit_variant WHERE group_id = (SELECT group_id FROM unit_variant WHERE id = ?1)",
@@ -510,8 +496,8 @@ mod tests {
         std::fs::write(dir.join(name), b"x").unwrap();
     }
 
-    // Units are global, so deleting one clears it off entries in every plan, not just the one
-    // the delete came from, and the amount goes with it since a count can't sit unit-less.
+    // Units are global, so deleting one clears it off entries in every plan, and the amount
+    // goes with it since a count can't sit unit-less
     #[test]
     fn deleting_a_unit_clears_it_from_entries_in_every_plan() {
         let tmp = tempfile::tempdir().unwrap();
@@ -530,7 +516,7 @@ mod tests {
         let alt: i64 = conn
             .query_row("SELECT id FROM unit_variant WHERE group_id = ?1 AND id != ?2", [group, main_variant], |r| r.get(0))
             .unwrap();
-        // Logged under both plans, one against each name.
+        // Logged under both plans, one against each name
         for (plan, variant) in [(plan_a, main_variant), (plan_b, alt)] {
             conn.execute(
                 "INSERT INTO todo_stats (plan_id, date, text, category, time_spent_minutes, num_value, variant_id)
@@ -540,14 +526,14 @@ mod tests {
             .unwrap();
         }
 
-        // Deleting one name clears only the entries that chose it, keeping their time.
+        // Deleting one name clears only the entries that chose it, keeping their time
         delete_variant(alt, &conn).unwrap();
         let cleared: i64 = conn
             .query_row("SELECT COUNT(*) FROM todo_stats WHERE variant_id IS NULL AND num_value IS NULL AND time_spent_minutes = 30", [], |r| r.get(0))
             .unwrap();
         assert_eq!(cleared, 1, "the alt's entry is cleared but keeps its time");
 
-        // Deleting the whole unit clears the rest and removes the group entirely.
+        // Deleting the whole unit clears the rest and removes the group entirely
         delete_unit(group, &conn).unwrap();
         let variants: i64 = conn.query_row("SELECT COUNT(*) FROM unit_variant WHERE group_id = ?1", [group], |r| r.get(0)).unwrap();
         assert_eq!(variants, 0, "the unit is gone");
@@ -585,8 +571,8 @@ mod tests {
 
     #[test]
     fn cleanup_keeps_media_referenced_as_another_kind() {
-        // An <audio> src can point into cards/images when the importer didn't
-        // classify the extension as audio; the images walk must not reap it
+        // An audio src can point into the images folder when the importer didn't classify
+        // the extension as audio, so the images walk must not reap it
         let tmp = tempfile::tempdir().unwrap();
         let app_dir = tmp.path();
         let conn = setup(app_dir);

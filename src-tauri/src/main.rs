@@ -1,4 +1,4 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// Prevents an additional console window on Windows in release, do not remove
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
@@ -8,9 +8,8 @@ fn main() {
     toast_lib::run()
 }
 
-/// Snap packages (VS Code is the common offender) rewrite GTK/GLib env vars and every child inherits
-/// them. WebKit's media subprocesses broke on this and audio silently stopped decoding.
-/// Pre-rewrite values live in <VAR>_VSCODE_SNAP_ORIG, restore before GTK initializes (unset if orig was empty).
+/// Snap packages rewrite the GTK and GLib env vars and every child inherits them, which
+/// stopped WebKit decoding audio, so restore the saved originals before GTK initializes
 #[cfg(target_os = "linux")]
 fn undo_snap_env_rewrites() {
     let vars: Vec<(String, String)> = std::env::vars().collect();

@@ -38,9 +38,8 @@ function ResourcePill({ resource }) {
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
 
-// Study Timer
-// Module-level so timers survive navigation.
-// Elapsed time goes to localStorage (not the DB) so closing the app pauses each timer and it restores on relaunch.
+// Study Timer, module-level so timers survive navigation, with elapsed time in localStorage
+// so closing the app pauses each timer and it restores on relaunch
 
 export const TIMER_STORE_KEY = "toast-study-timers";
 
@@ -74,7 +73,7 @@ function persistStudyTimers() {
         const ms = timerElapsedMs(planId);
         if (ms > 0) out[planId] = ms;
     });
-    try { localStorage.setItem(TIMER_STORE_KEY, JSON.stringify(out)); } catch { /* storage full/unavailable */ }
+    try { localStorage.setItem(TIMER_STORE_KEY, JSON.stringify(out)); } catch { /* storage full or unavailable */ }
 }
 
 // Persist on every action and on a heartbeat while running so a closed app loses at most a few seconds.
@@ -144,7 +143,7 @@ function StudyTimer({ planId }) {
         ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
         : `${m}:${String(s).padStart(2, "0")}`;
 
-    // A stopped timer with accumulated time is paused, not fresh. It shows Resume instead of Start.
+    // A stopped timer with accumulated time is paused rather than fresh, so it reads Resume
     const paused = !running && elapsedMs > 0;
     const toggleClass = running ? "hp-timer-btn--pause" : paused ? "hp-timer-btn--resume" : "hp-timer-btn--start";
 
@@ -166,7 +165,7 @@ function GradeButtons({ onGrade, onCramGrade, isCram, card }) {
     // Rendering without a card would throw and unmount the whole app
     if (!card) return null;
 
-    // Cram turn: two plain choices, no tier/ease/sequence change and no interval.
+    // A cram turn has two plain choices, no tier, ease or sequence change and no interval
     if (isCram) {
         return (
             <div className="hp-grade-bar">
@@ -193,12 +192,12 @@ function GradeButtons({ onGrade, onCramGrade, isCram, card }) {
     function calcNextSequence(tierDelta, easeDelta, easeFloorZero) {
         if (!card) return null;
         const newTier = Math.min(10, Math.max(card.tier === 0 ? 0 : 1, card.tier + tierDelta));
-        // Fine never pushes ease below 0 or deepens an already-negative ease.
+        // Fine never pushes ease below 0 or deepens an already-negative ease
         const easeFloor = easeFloorZero ? Math.min(0, card.ease) : -0.35;
         const newEase = Math.max(easeFloor, Math.min(0.35, card.ease + easeDelta));
         if (newTier === 0) return { base: 0, span: 0 };
         const raw = Math.pow(2, newTier - 1) * (1 + newEase);
-        // Mirror the backend +-15% fuzz so the preview shows the range, not a false exact day.
+        // Mirror the backend's fuzz so the preview shows a range, not a false exact day
         return { base: Math.round(raw), span: Math.round(raw * 0.15) };
     }
 
@@ -431,7 +430,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
         setMode("form");
     }
 
-    // Autofill only. The logged stat never stores the todo's id.
+    // Autofill only, the logged stat never stores the todo's id
     async function pickTodo(todo) {
         setText(todo.text);
         setCategoryMap(maskToCategories(todo.category ?? 64));
@@ -465,7 +464,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
     if (mode === "choose") {
         return (
             <div className="hp-overlay">
-                {/* Keyed per mode: reusing the scrolled DOM node skews the short prescreen */}
+                {/* Keyed per mode, reusing the scrolled node skews the short prescreen */}
                 <div className="hp-popup" key="choose">
                     <div className="hp-popup-title">Log Extra Activity</div>
                     <button className="primary" onClick={startBlank}>+ Create My Own</button>
@@ -592,8 +591,8 @@ function StudySession({ group, onBack, setToast }) {
     // Drops re-entrant grades so a double-press can't grade the same card twice
     const grading = useRef(false);
     const isCard = group.group_type === "deck";
-    // A card served from the cram pool always has is_due = false (the due pool would
-    // have caught any due card first), so the flag alone tells us it is a cram turn.
+    // A card served from the cram pool always has is_due false, since the due pool would
+    // have caught any due card first, so the flag alone marks a cram turn
     const isCramTurn = !!card && card.is_due === false;
     // The count pill for the current card keeps its colour, the rest grey out
     const currentType = isCramTurn ? "cram" : card && card.tier > 0 ? "review" : "new";
@@ -601,8 +600,8 @@ function StudySession({ group, onBack, setToast }) {
     async function fetchNext() {
         try {
             const counts = await loggedInvoke("count_due_items", { groupId: group.id });
-            // Always exclude the last card; the backend repeats it only when it is the
-            // sole card left, so this never ends the session early.
+            // Always exclude the last card, since the backend repeats it only when it is
+            // the sole card left, so this never ends the session early
             const next = await loggedInvoke("get_next_due_card", {
                 groupId: group.id,
                 excludeId: lastShownId.current,
@@ -642,7 +641,7 @@ function StudySession({ group, onBack, setToast }) {
         finally { grading.current = false; }
     }
 
-    // Cram turn: keep loops the card back in, otherwise it leaves the cram pool.
+    // On a cram turn keep loops the card back in, otherwise it leaves the cram pool
     async function handleCramGrade(keep) {
         if (!isCard) throw new Error("Attempted Notebook SRS");
         const cardId = card?.id;
@@ -655,9 +654,8 @@ function StudySession({ group, onBack, setToast }) {
         finally { grading.current = false; }
     }
 
-    // Steps the card out of rotation rather than grading it. Pausing frees its slot, so
-    // the backend refills from the same track and something eligible takes its place.
-    // Nothing eligible just means the card leaves and the session is one shorter.
+    // Steps the card out of rotation rather than grading it, and the freed slot refills
+    // from the same track, or the session is simply one card shorter
     async function handleSwap() {
         if (!isCard) throw new Error("Attempted Notebook SRS");
         const cardId = card?.id;
@@ -688,24 +686,21 @@ function StudySession({ group, onBack, setToast }) {
 
     useEffect(() => {
         fetchNext();
-        // Today's stat row is opened by the first thing that has something to record,
-        // which is whichever comes first: this timer flushing, or a grade. Time spent
-        // on a card before rating it still lands, so a long first card isn't lost, and
-        // opening the deck then leaving straight away writes nothing.
+        // Today's stat row is opened by whichever comes first, this timer flushing or a
+        // grade, so opening the deck and leaving straight away writes nothing
         const interval = setInterval(flushTime, 20000);
         const onVisibility = () => { if (document.hidden) flushTime(); };
         document.addEventListener("visibilitychange", onVisibility);
         return () => {
             clearInterval(interval);
             document.removeEventListener("visibilitychange", onVisibility);
-            // Leaving by the Back button already flushed, and a second call inside the
-            // same moment is a no-op. This is for the ways out that don't, like the
-            // Home tab dropping straight to the dashboard.
+            // Leaving by the Back button already flushed and a second call is a no-op, so
+            // this covers the ways out that don't, like Home dropping to the dashboard
             flushTime();
         };
     }, []);
 
-    // WKWebView sometimes drops the repaint after a full card swap. Force a flush.
+    // WKWebView sometimes drops the repaint after a full card swap, so force a flush
     useEffect(() => {
         if (!card) return;
         const el = document.querySelector(".hp-session");
@@ -1017,7 +1012,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                     })}
                 </div>
 
-                {/* Study (SRS Groups) */}
+                {/* Study */}
                 <div className="hp-section-panel">
                     <span className="hp-section-label hp-section-label--decks">Decks</span>
                     {srsGroups.length === 0 && (
@@ -1037,8 +1032,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 <span className="hp-deck-name">{group.name}</span>
                                 {!isEmpty &&
                                     <span className="hp-deck-counts">
-                                        {/* Stacked, dimmed at zero the way the session header does it,
-                                            so none ever slides into another's place. Cram only appears when present. */}
+                                        {/* Stacked and dimmed at zero the way the session header
+                                            does it, so none ever slides into another's place */}
                                         <span className="hp-deck-new" style={{ opacity: newDue > 0 ? 1 : 0.45 }}>New: {newDue}</span>
                                         <span className="hp-deck-review" style={{ opacity: reviewDue > 0 ? 1 : 0.45 }}>Review: {reviewDue}</span>
                                         {cramDue > 0 && <span className="hp-deck-cram">Cram: {cramDue}</span>}
@@ -1049,7 +1044,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                     })}
                 </div>
 
-                {/* Resources, collapsed by default. */}
+                {/* Resources, collapsed by default */}
                 {planResources.length > 0 && (
                     <div className="hp-resources">
                         <span className="hp-resources-toggle" onClick={() => setShowResources(s => !s)}>
@@ -1134,11 +1129,8 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
         }
     }, [view]);
 
-    // Re-clicking the Home tab drops all the way back to the dashboard, from a plan or
-    // from mid-session. StudySession flushes its elapsed time as it unmounts, so leaving
-    // this way costs nothing. Compared against the count this mount started on, since
-    // the effect runs on mount too and the count never returns to zero: coming back from
-    // a deck would land on the dashboard instead of the plan it left.
+    // Re-clicking the Home tab drops back to the dashboard from anywhere, compared against
+    // the count this mount started on since the effect runs on mount too
     const signalAtMount = useRef(homeSignal);
     useEffect(() => {
         if (homeSignal === signalAtMount.current) return;
@@ -1250,9 +1242,9 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                             const streakInfo = counts?.streakInfo;
                             const atRisk = streakInfo && streakInfo.streak > 0 && !streakInfo.studied_today;
                             const hasDue = counts && (counts.todos > 0 || counts.cards > 0);
-                            // Nothing due but nothing studied: streak is still at risk so this must not read as done.
+                            // Nothing due but nothing studied, so the streak is still at risk
                             const idle = !!counts && !hasDue && streakInfo && !streakInfo.studied_today;
-                            // Requires counts so a plan doesn't flash "done" while loading.
+                            // Requires counts so a plan doesn't flash done while loading
                             const isDone = !!counts && !hasDue && !idle;
                             return (
                                 <div

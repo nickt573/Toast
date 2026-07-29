@@ -104,14 +104,11 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   line-height: 1.5;
 }
 
-/* Plan card: white paper sheet with a state border, hover only darkens. Carries the
-   same color pair a striped box does, so the edge and the center bar can never drift
-   apart: --t-stripe-hi draws the border, --t-stripe rests a shade under it, and
-   hovering brings the bar up to the border color. Restyle a state by changing its
-   pair and both follow. */
+/* Plan card, a white paper sheet with a state border, carrying the same colour pair a
+   striped box does so the edge and the centre bar can never drift apart */
 .hp-plan-card {
-  /* The plan card wears a lighter caramel and forest than the rest of the app does.
-     Kept here so the shared colors those two lighten from stay where they are. */
+  /* The plan card wears a lighter caramel and forest than the rest of the app, kept here
+     so the shared colours those two lighten from stay where they are */
   --hp-plan-gold:  color-mix(in srgb, var(--t-accent) 66%, #fff);
   --hp-plan-green: color-mix(in srgb, var(--t-green-h) 66%, #fff);
   --t-stripe: var(--t-border-2);
@@ -132,17 +129,17 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-plan-card:hover {
   background: #FAF1E5;
 }
-/* Done plans highlight green on hover, not peach. Mixed with white, not the warm surface, so it stays a clean green. */
+/* Done plans highlight green on hover, mixed with white rather than the warm surface so it stays clean */
 .hp-plan-card.is-done:hover {
   background: color-mix(in srgb, var(--t-green) 14%, #fff);
 }
-/* A plan with nothing due but no study logged yet still counts as open work, so it
-   wears the same caramel as a plan with cards waiting. */
+/* A plan with nothing due but no study logged yet still counts as open work, so it wears
+   the same caramel as a plan with cards waiting */
 .hp-plan-card.has-due {
   --t-stripe: var(--t-accent-stripe);
   --t-stripe-hi: var(--hp-plan-gold);
 }
-/* Nothing left due today: green border + check matching .hp-deck-check */
+/* Nothing left due today, a green border and check matching the deck rows */
 .hp-plan-card.is-done {
   --t-stripe: var(--t-green-stripe);
   --t-stripe-hi: var(--hp-plan-green);
@@ -197,8 +194,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-stat-num--decks { color: var(--t-blue); }
 .hp-stat-num--zero  { color: var(--t-green); }
 .hp-stat-lbl { font-size: 15px; color: var(--t-text-2); font-weight: 600; }
-/* The divider never highlights, in any state. On a plain card it rests a shade darker
-   than the bar color, and on the two coloured states it takes the card's own edge. */
+/* The divider never highlights, resting a shade darker than the bar colour on a plain
+   card and taking the card's own edge on the two coloured states */
 .hp-plan-stat-divider { width: 2px; height: 44px; background: var(--t-stripe); margin: 0 20px; flex-shrink: 0; transition: background var(--t-ease-hover); }
 .hp-plan-card.has-due .hp-plan-stat-divider { background: var(--hp-plan-gold); }
 .hp-plan-card.is-done .hp-plan-stat-divider { background: var(--hp-plan-green); }
@@ -222,10 +219,10 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: 12px;
   margin-bottom: 24px;
 }
-/* Free-floating "← Back + title" headers (also .hp-session-header h2) name where you are, so they take the title ink and size */
+/* Free-floating back and title headers name where you are, so they take the title ink and size */
 .hp-plan-back h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 800; letter-spacing: -0.02em; color: var(--t-title); }
 
-/* Study timer: small paper chip */
+/* Study timer, a small paper chip */
 .hp-timer {
   margin-left: auto;
   display: flex;
@@ -245,7 +242,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-timer-display.running { color: var(--t-text); }
 .hp-timer-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--t-r-btn); }
-/* Family ink actions: green Start, blue Resume, amber Pause, red Clear */
+/* Family ink actions, green Start, blue Resume, amber Pause, red Clear */
 .hp-timer-btn--start { background: var(--t-green); border-color: var(--t-green); color: var(--t-accent-fg); }
 .hp-timer-btn--start:hover { background: var(--t-green); border-color: var(--t-green); color: var(--t-accent-fg); filter: brightness(0.92); }
 /* Resume is blue, distinct from a fresh green Start */
@@ -276,7 +273,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-section-label--todos { color: var(--t-yellow); }
 .hp-section-label--decks { color: var(--t-blue); }
 
-/* Todo rows: yellow striped bars */
+/* Todo rows, yellow striped bars */
 .hp-todo-row {
   display: flex;
   flex-direction: column;
@@ -312,7 +309,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   min-width: 0;
   overflow: hidden;
 }
-/* Global button styling is nowrap. Clamp long todo names so they don't overflow the popup. */
+/* Global button styling is nowrap, so clamp long todo names against overflowing the popup */
 .hp-free-todo-text {
   max-width: 100%;
   white-space: nowrap;
@@ -326,7 +323,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 /* Matches the shared hover rule, which .hp-todo-row.done would otherwise outrank */
 .hp-todo-row.done:hover { --t-stripe: var(--t-stripe-hi); }
-/* Dim the skipped row's content but leave the Skip/Unskip button lit so it stays usable */
+/* Dim the skipped row's content but leave its skip button lit so it stays usable */
 /* Skipped rows lighten their stripe and border so the whole row reads as set aside */
 .hp-todo-row.skipped {
   --sk-stripe: color-mix(in srgb, var(--t-yellow-stripe) 50%, #fff);
@@ -341,8 +338,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* A skipped row stays put, no hover lift, so it keeps reading as set aside */
 .hp-todo-row.skipped:hover { --t-stripe: var(--sk-stripe); }
 
-/* Deeper than --t-accent so it stands off the yellow todo row instead of sinking into it.
-   Lifted above the dimmed text, which is its own stacking context and would eat the click. */
+/* Deeper than --t-accent so it stands off the yellow todo row, and lifted above the dimmed
+   text, which is its own stacking context and would eat the click */
 .hp-todo-skip {
   position: relative;
   z-index: 1;
@@ -371,7 +368,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   color: var(--t-text-3);
 }
 
-/* Deck rows: blue striped bars, hover only deepens */
+/* Deck rows, blue striped bars, hover only deepens */
 .hp-deck-row {
   display: flex;
   align-items: center;
@@ -408,7 +405,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-session-header h2 { margin: 0; flex: 1; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
 
-/* Card status row: type pill on the left, session counts on the right */
+/* Card status row, type pill on the left and session counts on the right */
 .hp-session-status {
   display: flex;
   align-items: center;
@@ -420,7 +417,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* Sized to their own text, so a pill grows and shrinks with its number instead of holding a fixed slot */
 .hp-session-counts .pill { font-variant-numeric: tabular-nums; }
 
-/* Study card: plain paper sheet, crisp edge */
+/* Study card, plain paper sheet, crisp edge */
 .hp-card-box {
   border: none;
   border-radius: var(--t-r);
@@ -472,7 +469,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-flip-btn:hover { background: var(--t-accent-h); color: var(--t-accent-fg); }
 .hp-flip-btn:active { transform: translateY(1px); }
 
-/* Grade bar: solid family inks, white text (chocolate on light amber) */
+/* Grade bar, solid family inks with white text, chocolate on the light amber */
 .hp-grade-bar { display: flex; gap: 8px; }
 .hp-grade-btn {
   flex: 1;
@@ -499,7 +496,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-grade-omt    { background: var(--t-red);   color: var(--t-accent-fg); }
 .hp-grade-gotit  { background: var(--t-green); color: var(--t-accent-fg); }
 
-/* Hover darkens the ink (must out-specify base button:hover so it isn't erased) */
+/* Hover darkens the ink, and must out-specify the base button hover or it is erased */
 .hp-grade-bar .hp-grade-nope:hover,
 .hp-grade-bar .hp-grade-omt:hover    { background: var(--t-red);   color: var(--t-accent-fg); filter: brightness(0.92); }
 .hp-grade-bar .hp-grade-rough:hover  { background: var(--t-amber); color: var(--t-accent-fg); filter: brightness(0.92); }
@@ -507,11 +504,10 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-grade-bar .hp-grade-easy:hover,
 .hp-grade-bar .hp-grade-gotit:hover  { background: var(--t-green); color: var(--t-accent-fg); filter: brightness(0.92); }
 
-/* Swap gets a lighter plum, an ink no grade and no other session control uses, so it
-   never reads as one of the answers sitting above it. Lightened off the full plum so it
-   does not read as the notebook tab either. */
-/* Three columns so the button centers on the row itself, not on the button and its
-   tooltip together. The empty first column balances the tooltip's. */
+/* Swap gets a lighter plum no grade or other session control uses, so it never reads as
+   one of the answers above it, and lightened off the full plum of the notebook tab */
+/* Three columns so the button centres on the row itself rather than on the button and its
+   tooltip together, with the empty first column balancing the tooltip */
 .hp-swap-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin-top: 8px; }
 .hp-swap-tip { justify-self: start; display: inline-flex; align-items: center; margin-left: 6px; }
 .hp-swap-btn {
@@ -558,7 +554,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-similar-face-front { font-size: 14px; font-weight: 600; color: var(--t-text); }
 .hp-similar-face-back  { font-size: 13px; color: var(--t-text); }
 .hp-similar-divider { border-top: 1px solid var(--t-border); margin: 10px 0; }
-/* Notebook fallback (deprecated SRS notebooks) */
+/* Notebook fallback, for the deprecated SRS notebooks */
 .hp-similar-front { font-weight: 500; font-size: 13px; color: var(--t-text); margin-bottom: 4px; text-align: center; }
 .hp-similar-back  { font-size: 13px; color: var(--t-text-2); text-align: center; }
 .hp-similar-nav   { display: flex; gap: 8px; justify-content: center; }
@@ -573,12 +569,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   z-index: 100;
 }
 .hp-popup {
-  /* surface-2 tray (like the deck card creator) so surface-filled inputs and
-     unselected chips read as solid fields instead of blending in */
+  /* A muted tray like the deck card creator, so surface-filled inputs and unselected chips
+     read as solid fields instead of blending in */
   background: var(--t-surface-2);
   border-radius: var(--t-r);
-  /* The track is always reserved here, so the right padding gives up its 10px and the
-     gap reads the same on both sides, the way every other scroll body in the app does it. */
+  /* The track is always reserved here, so the right padding gives up its 10px and the gap
+     reads the same on both sides, the way every other scroll body does */
   padding: 24px 14px 24px 24px;
   width: 420px;
   display: flex;
@@ -611,11 +607,11 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: var(--t-list-gap);
   margin-top: 8px;
 }
-/* Match the todo/deck row treatment above. The right side still owes the stripes their
-   gutter, or a long description runs out across the bars. */
+/* Matches the todo and deck row treatment above, and the right side still owes the stripes
+   their gutter or a long description runs out across the bars */
 .hp-resources-list .st-resource-card {
   padding: 10px var(--t-stripe-gutter) 10px 14px;
 }
-/* Matches the todo and deck rows above it. Scoped here, since the same card also lists
-   resources over in stats, where the names stay as they are. */
+/* Matches the todo and deck rows above it, scoped here since the same card also lists
+   resources over in stats where the names stay as they are */
 .hp-resources-list .st-resource-card-name { font-weight: 700; }

@@ -19,7 +19,7 @@ const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 
 // Disabled plans sink to the bottom of the list, alphabetical among themselves
 const byLiveThenName = (a, b) => (a.is_disabled ? 1 : 0) - (b.is_disabled ? 1 : 0) || byName(a, b);
 
-// SRS Group Row
+// Deck row
 
 function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData, srsGroups, setToast, onNavigateToGroup }) {
     const [removing, setRemoving] = useState(false);
@@ -129,7 +129,7 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
     );
 }
 
-// SRS Section
+// Deck section
 
 function SrsSection({ planId, setToast, onNavigateToGroup }) {
     const [srsGroups, setSrsGroups] = useState([]);
@@ -258,8 +258,8 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
     const [resources, setResources] = useState([]);
     const [adding, setAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    // Resources on every other plan, offered as autofill templates in the add
-    // form so a resource can be copied into this plan from wherever it lives
+    // Resources on every other plan, offered as autofill templates in the add form so one
+    // can be copied into this plan from wherever it lives
     const [otherResources, setOtherResources] = useState([]);
     const [copyFrom, setCopyFrom] = useState("");
 
@@ -460,8 +460,8 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
     const [selectedResourceIds, setSelectedResourceIds] = useState([]);
     const [frequency, setFrequency] = useState([true, true, true, true, true, true, true]);
     const [categoryMap, setCategoryMap] = useState(DEFAULT_CATEGORY());
-    // Todos on every other plan, offered as autofill templates in the add
-    // form so a todo can be copied into this plan from wherever it lives
+    // Todos on every other plan, offered as autofill templates in the add form so one can
+    // be copied into this plan from wherever it lives
     const [otherTodos, setOtherTodos] = useState([]);
     const [copyFrom, setCopyFrom] = useState("");
 
@@ -651,17 +651,15 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     const [editingName, setEditingName] = useState("");
     const [collapsed, setCollapsed] = useState({});
     const [summaries, setSummaries] = useState({});
-    // null = full week; 0..6 previews only that day's active todos
+    // null is the full week, a weekday index previews only that day's active todos
     const [weekDay, setWeekDay] = useState(null);
-    // "only" hides todos off that day; "all" keeps them but dims them
+    // only hides todos off that day, all keeps them but dims them
     const [dayMode, setDayMode] = useState("only");
 
     const toggleSection = (key) => setCollapsed(c => ({ ...c, [key]: !c[key] }));
 
-    // Re-clicking the Plans tab comes back to the plan list. Compared against the count
-    // this mount started on, since the effect runs on mount too and the count stays above
-    // zero once anything has been re-clicked: a plan reopened on the way back from a deck
-    // would close itself.
+    // Re-clicking the Plans tab comes back to the plan list, compared against the count
+    // this mount started on since the effect runs on mount too
     const signalAtMount = useRef(homeSignal);
     useEffect(() => {
         if (homeSignal !== signalAtMount.current) setEditingPlan(null);
@@ -735,8 +733,8 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
         } catch (err) { logError("catch", err); setToast(`Failed to delete ${plan.name}.`, "error"); }
     }
 
-    // A plan with decks still owes SRS reviews, so it can only be disabled once its decks are
-    // unlinked. Re-enabling is always allowed.
+    // A plan with decks still owes reviews, so it can only be disabled once its decks are
+    // unlinked, and re-enabling is always allowed
     async function toggleDisabled(plan) {
         const next = !plan.is_disabled;
         if (next && (summaries[plan.id]?.decks ?? 0) > 0) {
@@ -775,7 +773,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
           })
         : onNavigateToGroup;
 
-    // A day preview hides todos disabled that day, or keeps them dimmed in "all" mode.
+    // A day preview hides todos disabled that day, or keeps them dimmed in all mode
     const displayTodos = weekDay === null || dayMode === "all" ? todos : todos.filter((t) => activeOnDay(t, weekDay));
     const totalTodos = plans.reduce((s, p) => s + (summaries[p.id]?.todos ?? 0), 0);
     const totalResources = plans.reduce((s, p) => s + (summaries[p.id]?.resources ?? 0), 0);

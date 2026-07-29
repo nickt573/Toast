@@ -1,23 +1,22 @@
 /* Decks view */
 .dk-root { display: flex; flex-direction: column; height: 100%; }
 
-/* .dk-list is styled with the other landing lists in App.css */
+/* The deck list is styled with the other landing lists in App.css */
 .dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-title); }
 .dk-deck-name-input { width: 100%; }
 .dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 
-/* Merge and Anki panels extend the landing header so the two read as one band */
-/* The panel is the bottom of the header stack while it is open, so the shadow is its
-   to cast. */
+/* The merge and Anki panels extend the landing header so the two read as one band */
+/* The panel is the bottom of the header stack while it is open, so the shadow is its to cast */
 .landing-hdr:has(+ .dk-merge-panel) { box-shadow: none; }
 .dk-merge-panel { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 10%, #fff); padding: 10px var(--t-page-pad); background: var(--hdr-band); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 .dk-merge-panel input:not([type="checkbox"]), .dk-merge-panel select { border-color: var(--t-blue-bdr); }
 .dk-merge-panel input:focus, .dk-merge-panel select:focus { border-color: var(--t-accent); }
 
-/* Anki field mapping. Long decks scroll instead of pushing the panel offscreen (scrollbar is app-wide). */
+/* Anki field mapping, where long decks scroll instead of pushing the panel offscreen */
 .dk-anki-field-scroll { max-height: 38vh; overflow-y: scroll; display: flex; flex-direction: column; gap: 5px; border-bottom: 1px solid var(--t-blue-bdr); }
-/* Header sits outside the scroll box, so it must reserve the same gutter width
-   (the 10px ::-webkit-scrollbar in App.css) or its columns drift off the checkboxes */
+/* The header sits outside the scroll box, so it must reserve the same 10px gutter the
+   scrollbar takes or its columns drift off the checkboxes */
 .dk-anki-head { display: flex; align-items: center; padding-right: 10px; }
 .dk-anki-row { display: flex; align-items: center; padding: 3px 0; }
 .dk-anki-row--alt { background: rgba(26, 18, 8, 0.04); }
@@ -27,7 +26,7 @@
 .dk-anki-field-count { color: var(--t-text-3); font-size: 11px; margin-left: 6px; }
 .dk-anki-sample { display: flex; align-items: center; gap: 6px; margin: 3px 0 1px; min-width: 0; }
 .dk-anki-pager { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; }
-/* Bare button: inherits the neutral mauve ink, matching the notebook page nav */
+/* A bare button inherits the neutral mauve ink, matching the notebook page nav */
 .dk-anki-arrow { width: 17px; height: 17px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--t-r-btn); font-size: 12px; line-height: 1; }
 .dk-anki-sample-pos { min-width: 22px; text-align: center; font-size: 10px; color: var(--t-text-3); font-variant-numeric: tabular-nums; }
 .dk-anki-sample-quote { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 5px; overflow: hidden; }
@@ -68,8 +67,8 @@
 
 .dk-date-filter { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); flex-wrap: nowrap; }
 .dk-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
-/* Windows (WebView2/Chromium) renders a wide calendar icon inside date inputs,
-   pushing the filter onto its own line; shrink it to fit the row. */
+/* Windows renders a wide calendar icon inside date inputs, pushing the filter onto its own
+   line, so shrink it to fit the row */
 .dk-date-filter input[type="date"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 12px; height: 12px; }
 .dk-date-clear { font-size: 13px; line-height: 1; padding: 0 2px; border: none; background: none; box-shadow: none; color: var(--t-text-3); cursor: pointer; }
 .dk-date-clear:hover { background: none; box-shadow: none; color: var(--t-text); }
@@ -84,25 +83,25 @@
 .dk-filter-btn.active,
 .dk-filter-btn.active:hover { background: var(--t-blue-btn); border-color: var(--t-blue-btn); color: var(--t-btn-fg); }
 
-/* Card table uses a native overlay scrollbar (excluded from App.css rules): no track, floating thumb, takes no layout space. */
+/* The card table uses a native overlay scrollbar, no track and no layout space taken */
 .dk-table-head { flex-shrink: 0; background: var(--t-surface-4); }
-/* Empty gap below a short card list matches the editor pane on the right, so it reads as blank space rather than the form zone (which shares --t-surface-2 with the panel below) */
-/* The top border of the first card row lives on the scroll box itself, so it is a plain
-   div border that always paints and sits fixed at the top of the viewport, right under
-   the header, rather than a table's dropped outer edge. */
+/* The empty gap below a short card list matches the editor pane on the right, so it reads
+   as blank space rather than as the form zone */
+/* The top border of the first card row lives on the scroll box, so it always paints and
+   sits fixed under the header rather than being a table's dropped outer edge */
 .dk-table-scroll { flex: 1; overflow-y: auto; background: #FEF4EC; }
-/* Collapsed borders, so every row is framed top and bottom and the first and last rows'
-   outer edges render. A separate-border table drops those outer edges in WebKit, which is
-   what left the top row with no border under the header. */
+/* Collapsed borders, so every row is framed top and bottom and the outer edges render,
+   which a separate-border table drops in WebKit */
 .dk-card-table { width: 100%; border-collapse: collapse; background: var(--t-row-base); table-layout: fixed; }
 .dk-card-table col.dk-col-due { width: 92px; }
 .dk-card-table col.dk-col-paused { width: 64px; }
 .dk-card-table th { background: var(--t-surface-4); text-align: center; padding: 5px 8px; font-size: 11px; color: var(--t-label); font-weight: 700; }
 .dk-card-table td { padding: 5px 8px; border-top: 1px solid var(--t-border); border-bottom: 1px solid var(--t-border); word-break: break-word; max-width: 0; text-align: center; vertical-align: middle; font-size: 12px; color: var(--t-text-2); height: 51px; }
 .dk-card-table tbody tr { cursor: pointer; }
-/* Zebra striping on plain rows, matching the alternating tint in the deck stats tables. Status and selected rules below win by source order. Class-based because only visible rows are rendered. */
+/* Zebra striping on plain rows, matching the deck stats tables, and class-based since only
+   visible rows are rendered */
 .dk-card-table tr.dk-even td { background: var(--t-row-stripe); }
-/* Row height lives on the td so single-line entries center vertically. The clamp just caps at 2 lines. */
+/* Row height lives on the cell so single-line entries centre, and the clamp caps at two lines */
 .dk-cell-clamp {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -112,9 +111,8 @@
   max-height: 2.9em;
 }
 .dk-card-table tr:hover td { background: var(--t-surface-3); }
-/* Every due state shares one golden highlight, distinct hue from the peachy headers so it
-   reads lighter. The border is opaque, not a translucent gold: over the varying row
-   backgrounds a translucent one composited to a different shade top versus bottom. */
+/* Every due state shares one golden highlight, a distinct hue from the peachy headers, and
+   the border is opaque since a translucent one composited differently per row */
 .dk-card-table tr.is-new-due td,
 .dk-card-table tr.is-review-due td       { background: rgba(224, 169, 46, 0.24); border-top-color: #D3AC57; border-bottom-color: #D3AC57; }
 .dk-card-table tr:has(+ tr.is-new-due) td,
@@ -125,26 +123,25 @@
 /* An overdue card is an ordinary due card apart from the day it says it is due */
 .dk-card-table td .dk-overdue { font-weight: 700; color: var(--t-red); }
 
-/* Selected: distinct slate-blue fill that wins over the caramel due tint (declared last). */
+/* A selected row takes a slate-blue fill that wins over the caramel due tint */
 .dk-card-table tbody tr.selected td,
 .dk-card-table tbody tr.selected:hover td { background: var(--t-blue-bg); color: var(--t-text); border-top-color: var(--t-blue-bdr); border-bottom-color: var(--t-blue-bdr); }
 .dk-card-table tr:has(+ tr.selected) td { border-bottom-color: var(--t-blue-bdr); }
 
 .dk-table-empty { padding: 16px; color: var(--t-text-3); font-style: italic; font-size: 13px; }
 
-/* Creator toggle row, also the drag handle for resizing the panel below it. Sits flush
-   under the table with square corners: the old rounded lip overlapped the table and
-   covered the last row rather than leaving it in a notch. */
+/* Creator toggle row, also the drag handle for the panel below, sitting flush under the
+   table with square corners since the old rounded lip covered the last row */
 .dk-creator-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: none; border-radius: 0; position: relative; padding: 8px 14px; background: var(--t-surface-4); color: var(--t-label); font-weight: 500; cursor: ns-resize; user-select: none; }
 .dk-creator-toggle-row:hover { filter: brightness(0.97); }
 
-/* Muted backdrop so bright editable inputs read as real fields and read-only fields read as locked. */
+/* Muted backdrop so bright editable inputs read as real fields and read-only ones as locked */
 .dk-editor-pane { --dk-pane: #FEF4EC; flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; gap: 12px; background: var(--dk-pane); }
 /* Previewing swaps the muted editor backdrop for the app background, so the paper card and its shadow stand off it */
 .dk-editor-pane--preview { background: var(--t-bg); }
 .dk-editor-pane textarea, .dk-editor-pane input[type="text"] { background: var(--t-surface); }
-/* File pickers keep the muted fill. Named here because the rule above ties with the
-   shared one in App.css and would otherwise win on order. */
+/* File pickers keep the muted fill, named here because the rule above ties with the shared
+   one in App.css and would otherwise win on order */
 .dk-editor-pane input[type="text"].input-readonly { background: var(--dk-pane); }
 .dk-editor-pane input[type="text"].input-readonly.has-file { background: var(--t-file-filled); }
 .dk-editor-none { flex: 1; background: #FEF4EC; color: var(--t-text-3); font-style: italic; padding: 16px; font-size: 13px; }
@@ -155,21 +152,19 @@
 .dk-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); }
 .dk-field-uploaded { border: 1px solid var(--t-border-2); border-radius: var(--t-r-input); padding: 9px 11px; font-size: 13px; background: var(--t-bg); line-height: 1.6; color: var(--t-text-2); }
 .dk-field-row { display: flex; align-items: center; gap: 4px; }
-/* Searchable / Pause: each group snug internally (via .dk-new-card-check), with
-   generous space between the two groups. */
+/* Each check group is snug internally, with generous space between the two groups */
 .dk-field-checks { gap: 20px; }
 .dk-field-row label { font-size: 13px; color: var(--t-text-2); }
 .dk-file-row { display: flex; gap: 6px; align-items: center; }
-/* Fill comes from .input-readonly, the same as every other file picker */
+/* Fill comes from the read-only input rule, the same as every other file picker */
 .dk-file-row input[type="text"] { flex: 1; font-size: 12px; }
 .dk-editor-actions { display: flex; gap: 8px; padding-top: 12px; flex-shrink: 0; align-items: center; flex-wrap: wrap; }
 .dk-card-log { font-size: 11px; color: var(--t-text-3); padding: 8px 10px; margin-top: 2px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-btn); }
 .dk-log-new    { color: #6BA6CE;  font-weight: 700; }   /* sky blue, apart from the deck slate */
 .dk-log-review { color: var(--t-green); font-weight: 700; }
 .dk-priority-star { color: #D9A521; font-size: 12px; line-height: 1; }
-/* A hidden copy of the marks on the left balances the real ones on the right, so the
-   date stays centered while the marks trail at a fixed gap. nowrap stops the narrow
-   column from breaking "Today" apart. */
+/* A hidden copy of the marks on the left balances the real ones on the right, so the date
+   stays centred while the marks trail at a fixed gap */
 .dk-due-cell { display: flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; }
 .dk-due-marks { display: inline-flex; align-items: center; gap: 3px; }
 .dk-due-marks--ghost { visibility: hidden; }
@@ -178,12 +173,11 @@
 /* Anki import tab on cards */
 .dk-uploaded-badge { font-size: 11px; background: var(--t-blue); color: var(--t-accent-fg); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; font-weight: 600; user-select: none; }
 
-/* Capped at half the pane and scrollable: Front/Back textareas are user-resizable,
-   so without the cap a grown form would push its Add Card button off the bottom. */
+/* Capped at half the pane and scrollable, since the textareas are user-resizable and a
+   grown form would otherwise push its Add Card button off the bottom */
 .dk-new-card-dark { background: var(--t-surface-2); border-top: none; flex-shrink: 0; max-height: 50%; overflow-y: scroll; }
-/* The form styling hangs on .dk-new-card, not the deck's wrapper, so the notebook's copy
-   of the same form wears it too and the two creators stay identical. Only the wrapper
-   that carries the panel differs. */
+/* The form styling hangs on the form itself, not the deck's wrapper, so the notebook's copy
+   wears it too and the two creators stay identical */
 .dk-new-card { background: transparent; border-top: none; }
 .dk-new-card input,
 .dk-new-card textarea,
@@ -197,9 +191,8 @@
 .dk-new-card button.primary:hover { background: var(--t-accent-h); border-color: var(--t-accent-h); }
 /* Empty file picker matches the panel backdrop, outranks the input rule above */
 .dk-new-card input.input-readonly { background: var(--t-surface-2); }
-/* Both creator panels sit on a deeper backdrop than the editor pane, so a filled picker
-   can go deeper too and still read as the same step up. Hung on .dk-new-card, which is
-   the form itself, so the notebook's copy of it is covered as well. */
+/* Both creator panels sit on a deeper backdrop than the editor pane, so a filled picker can
+   go deeper too and still read as the same step up */
 .dk-new-card input.input-readonly.has-file { background: var(--t-file-filled-deep); border-color: var(--t-border-3); }
 
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
@@ -207,14 +200,14 @@
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-label); }
 
 .dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
-/* Square (radius 0) so hover highlights sit flush inside the menu container,
-   whose own border radius clips the outer corners */
+/* Square so hover highlights sit flush inside the menu container, whose own radius clips
+   the outer corners */
 .dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }
 .dk-menu-item:hover { background: var(--t-surface-2); color: var(--t-text); box-shadow: none; }
-/* Outranks the global button.danger fill. Flat like its siblings, red tint on hover only. */
+/* Outranks the global danger fill, flat like its siblings with a red tint on hover only */
 .dk-actions-menu .dk-menu-item.danger { background: none; border: none; border-radius: 0; color: var(--t-red); }
 .dk-actions-menu .dk-menu-item.danger:hover { background: var(--t-red-bg); color: var(--t-red); }
 
-/* Takes over the header's shadow while it is up, the way the merge panel does, so the
-   page keeps one edge casting onto it rather than two stacked lines. */
+/* Takes over the header's shadow while it is up, the way the merge panel does, so the page
+   keeps one edge casting onto it rather than two stacked lines */
 .dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); font-size: 13px; color: var(--t-red); flex-shrink: 0; font-style: italic; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }

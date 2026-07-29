@@ -4,9 +4,8 @@ use chrono::Datelike;
 use rusqlite::{Connection, Result};
 use std::path::Path;
 
-/// Snapshot a resource's full info (name/url/type/notes) into a todo_stats log row.
-/// The snapshot persists after the resource is deleted. Live values override it via
-/// COALESCE in the read query while the resource still exists.
+/// Snapshot a resource's full info into a todo_stats log row, kept after the resource is
+/// deleted while live values override it through COALESCE in the read query
 fn insert_stat_resource(stat_id: i64, resource_id: i64, conn: &Connection) -> Result<()> {
     let snap: (String, Option<String>, Option<String>, Option<String>) = conn
         .query_row(
@@ -22,8 +21,8 @@ fn insert_stat_resource(stat_id: i64, resource_id: i64, conn: &Connection) -> Re
     Ok(())
 }
 
-// Archiving keeps a stat line visible but drops it from every total, chart and
-// streak. A merge archives its copies automatically, this is the manual toggle.
+// Archiving keeps a stat line visible but drops it from every total, chart and streak,
+// and a merge archives its copies automatically, so this is the manual toggle
 pub fn set_group_stat_archived(id: i64, archived: bool, conn: &Connection) -> Result<()> {
     conn.execute(
         "UPDATE group_stats SET is_archived = ?2 WHERE id = ?1",
@@ -33,7 +32,7 @@ pub fn set_group_stat_archived(id: i64, archived: bool, conn: &Connection) -> Re
 }
 
 /// Archives or restores the lines behind one deck card, addressed by id the same way
-/// delete_group_stats is.
+/// delete_group_stats is
 pub fn set_group_stats_archived(ids: &[i64], archived: bool, conn: &Connection) -> Result<()> {
     let mut stmt = conn.prepare("UPDATE group_stats SET is_archived = ?2 WHERE id = ?1")?;
     for id in ids {
@@ -75,8 +74,8 @@ pub fn update_todo(todo: Todo, conn: &Connection) -> Result<()> {
         .num_days_from_sunday();
     let today_bit = 1i64 << today;
 
-    // Changing the frequency drops the skip, so disabling and re-enabling a day
-    // starts it fresh instead of coming back still skipped.
+    // Changing the frequency drops the skip, so disabling and re-enabling a day starts it
+    // fresh instead of coming back still skipped
     let (old_frequency, old_skipped): (i64, bool) = conn.query_row(
         "SELECT frequency, is_skipped FROM todo WHERE id = ?1",
         [todo.id],
@@ -119,10 +118,8 @@ pub fn set_todo_skipped(todo_id: i64, skipped: bool, conn: &Connection) -> Resul
     Ok(())
 }
 
-/// Sets or clears a todo's manual order, keeping numbered todos contiguous 1..N
-/// within the plan: the todo is first pulled out (compacting the gap it leaves),
-/// then reinserted at the requested spot, clamped to 1..=N+1, shifting later
-/// todos up by one.
+/// Sets or clears a todo's manual order, keeping numbered todos contiguous within the plan
+/// by pulling the todo out, compacting the gap, then reinserting and shifting later ones up
 pub fn set_todo_position(todo_id: i64, position: Option<i64>, conn: &mut Connection) -> Result<()> {
     let tx = conn.transaction()?;
 
@@ -228,8 +225,8 @@ pub fn update_card(card: Card, conn: &Connection, app_dir: &Path) -> Result<()> 
         card.back_audio.clone()
     };
 
-    // imported_front/back/support are never updated: read-only content set at
-    // import time. The user-editable slots are front/back/support.
+    // The imported columns are read-only content set at import time and never updated
+    // here, the user-editable slots are front, back and support
     conn.execute(
         r#"
         UPDATE card SET
@@ -262,9 +259,8 @@ pub fn update_card(card: Card, conn: &Connection, app_dir: &Path) -> Result<()> 
     Ok(())
 }
 
-/// Flips one card's pause without touching the rest of it, which update_card would.
-/// Pausing a due card gives its slot back, and on_pause_changed refills the queue from
-/// the same track, so something eligible takes its place straight away.
+/// Flips one card's pause without touching the rest of it, which update_card would, and
+/// on_pause_changed refills the queue so something eligible takes a freed slot
 pub fn set_card_paused(card_id: i64, paused: bool, conn: &Connection) -> Result<()> {
     let (group_id, was_paused, was_due): (i64, bool, bool) = conn.query_row(
         "SELECT group_id, is_paused, is_due FROM card WHERE id = ?1",
@@ -281,11 +277,8 @@ pub fn set_card_paused(card_id: i64, paused: bool, conn: &Connection) -> Result<
     on_pause_changed(card_id, group_id, paused, was_due, conn)
 }
 
-/// Pauses a card mid-session and says whether the freed slot pulled a replacement in.
-/// Counts the rest of the deck either side of the pause rather than the slot itself,
-/// since fill_group is what decides where a replacement comes from. The swapped card is
-/// left out of both counts, so the answer holds even for a card that was not due and
-/// therefore freed no slot at all.
+/// Pauses a card mid-session and says whether the freed slot pulled a replacement in, by
+/// counting the rest of the deck either side of the pause with the swapped card left out
 pub fn swap_card(card_id: i64, conn: &Connection) -> Result<bool> {
     let group_id: i64 = conn.query_row(
         "SELECT group_id FROM card WHERE id = ?1",
@@ -451,7 +444,7 @@ pub fn complete_todo(
         ));
     }
     require_unit_pairing(num_value, variant_id)?;
-    // Todo time is stored as whole minutes (the column stays FLOAT)
+    // Todo time is stored as whole minutes, the column stays FLOAT
     let time_spent_minutes = time_spent_minutes.round();
 
     let category_str = category_mask_to_string(category);
@@ -518,7 +511,7 @@ pub fn log_free_todo(
         ));
     }
     require_unit_pairing(num_value, variant_id)?;
-    // Todo time is stored as whole minutes (the column stays FLOAT)
+    // Todo time is stored as whole minutes, the column stays FLOAT
     let time_spent_minutes = time_spent_minutes.round();
 
     let app_today = get_date(&conn)?;
@@ -611,31 +604,29 @@ pub fn update_todo_stat(
     if date.is_empty() {
         return Err(rusqlite::Error::InvalidParameterName("date required".into()));
     }
-    // Nothing may be logged past the day the app is on: the streak walks back from
-    // today and the charts end there, so a future entry is history nobody can see.
+    // Nothing may be logged past the day the app is on, since the streak walks back from
+    // today and the charts end there, so a future entry is history nobody can see
     if date > get_date(conn)? {
         return Err(rusqlite::Error::InvalidParameterName(
             "date can't be in the future".into(),
         ));
     }
     require_unit_pairing(num_value, variant_id)?;
-    // One transaction for the whole edit. Re-dating moves the row to a new id, so a
-    // failure partway through would otherwise leave the entry sitting at that new id
-    // with the old text and time still on it.
+    // One transaction for the whole edit, since re-dating moves the row to a new id and a
+    // failure partway would leave the entry at that new id with the old text and time
     let tx = conn.unchecked_transaction()?;
     let conn = &tx;
 
     let old_date: String = conn.query_row("SELECT date FROM todo_stats WHERE id=?1", [id], |r| {
         r.get(0)
     })?;
-    // Entries within a day are ordered by id, so a re-dated one would keep the place it
-    // had when it was logged and land mid-day. Handing it the next id past every other
-    // row drops it at the bottom of the day it moved to, where the newest entry belongs.
+    // Entries within a day are ordered by id, so handing a re-dated one the next id past
+    // every other row drops it at the bottom of the day it moved to
     let id = if old_date == date {
         id
     } else {
-        // Both join tables point at this id, and their foreign keys are checked
-        // statement by statement, so the children can only follow the parent in here.
+        // Both join tables point at this id, and their foreign keys are checked statement
+        // by statement, so the children can only follow the parent in here
         conn.execute_batch("PRAGMA defer_foreign_keys = ON")?;
         let new_id: i64 =
             conn.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM todo_stats", [], |r| {
@@ -655,16 +646,15 @@ pub fn update_todo_stat(
         )?;
         new_id
     };
-    // Todo time is stored as whole minutes (the column stays FLOAT)
+    // Todo time is stored as whole minutes, the column stays FLOAT
     let time_spent_minutes = time_spent_minutes.round();
     let category_str = category_mask_to_string(category);
     conn.execute(
         "UPDATE todo_stats SET text=?1, category=?2, details=?3, time_spent_minutes=?4, num_value=?5, variant_id=?6 WHERE id=?7",
         rusqlite::params![text, category_str, details, time_spent_minutes, num_value, variant_id, id],
     )?;
-    // By rowid, never by name: the snapshot keeps whatever the group or resource was
-    // called when it was logged, so two rows can share a name and a rename splits them.
-    // The stat_id guard keeps a stray id from reaching into another entry.
+    // By rowid, never by name, since the snapshot keeps whatever the group or resource was
+    // called when it was logged, and the stat_id guard keeps a stray id out of another entry
     for row_id in &remove_group_row_ids {
         conn.execute(
             "DELETE FROM todo_stat_group WHERE stat_id=?1 AND rowid=?2",
@@ -677,8 +667,8 @@ pub fn update_todo_stat(
             rusqlite::params![id, row_id],
         )?;
     }
-    // Only live groups/resources can be added: the snapshot is pulled from the
-    // source row, and the SELECT matches nothing for deleted ids.
+    // Only live groups and resources can be added, since the snapshot is pulled from the
+    // source row and the SELECT matches nothing for deleted ids
     for group_id in &add_group_ids {
         conn.execute(
             r#"
@@ -704,15 +694,15 @@ pub fn update_todo_stat(
     tx.commit()
 }
 
-// A logged amount and its unit travel together: both filled or both empty. One without the
-// other is a number with no meaning or a unit counting nothing, so it never reaches storage.
+// A logged amount and its unit travel together, both filled or both empty, since one
+// without the other is a number with no meaning or a unit counting nothing
 fn require_unit_pairing(num_value: Option<f64>, variant_id: Option<i64>) -> Result<()> {
     if num_value.is_some() != variant_id.is_some() {
         return Err(rusqlite::Error::InvalidParameterName(
             "a unit and its amount must both be set or both be empty".into(),
         ));
     }
-    // Counting zero of something isn't a record worth keeping, so a zero amount is refused.
+    // Counting zero of something isn't a record worth keeping, so a zero amount is refused
     if matches!(num_value, Some(v) if v <= 0.0) {
         return Err(rusqlite::Error::InvalidParameterName(
             "a unit amount must be more than 0".into(),
@@ -721,9 +711,8 @@ fn require_unit_pairing(num_value: Option<f64>, variant_id: Option<i64>) -> Resu
     Ok(())
 }
 
-// Starts a new unit from its spellings, the first as the main. The main variant's id names
-// the group, and every variant carries it, so the grouping holds even after that first
-// spelling is later renamed or removed. Returns the group id.
+// Starts a new unit from its spellings, the first as the main, whose id names the group
+// every variant carries, so the grouping holds after that spelling is renamed or removed
 pub fn create_unit(names: Vec<String>, conn: &Connection) -> Result<i64> {
     let cleaned: Vec<String> = names
         .into_iter()
@@ -770,9 +759,8 @@ pub fn add_variant(group_id: i64, name: &str, conn: &Connection) -> Result<i64> 
     Ok(conn.last_insert_rowid())
 }
 
-// Folds one unit into another: its names become alternates of the target, kept in order
-// after the target's own. Logged entries need no touching, since each still points at its
-// own name, which now belongs to the target's group and so counts under it.
+// Folds one unit into another, its names becoming alternates kept after the target's own,
+// and logged entries need no touching since each name now belongs to the target's group
 pub fn merge_units(from_group: i64, into_group: i64, conn: &Connection) -> Result<()> {
     if from_group == into_group {
         return Err(rusqlite::Error::InvalidParameterName(
@@ -791,9 +779,8 @@ pub fn merge_units(from_group: i64, into_group: i64, conn: &Connection) -> Resul
     Ok(())
 }
 
-// Makes a name the main by dropping its position below the rest of the group. The group
-// reads its main as the lowest-positioned name, so this is all it takes; positions are only
-// an ordering and may go negative.
+// Makes a name the main by dropping its position below the rest of the group, since the
+// group reads its main as the lowest-positioned name and positions may go negative
 pub fn set_main_variant(id: i64, conn: &Connection) -> Result<()> {
     let min: i64 = conn.query_row(
         "SELECT COALESCE(MIN(position), 0) FROM unit_variant
@@ -808,8 +795,8 @@ pub fn set_main_variant(id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-// Renames one name. Entries showing it read the name through a live join, so the change
-// reaches all of them, the way renaming a deck reaches its logged sessions.
+// Renames one name, and entries showing it read through a live join so the change reaches
+// all of them, the way renaming a deck reaches its logged sessions
 pub fn rename_variant(id: i64, name: &str, conn: &Connection) -> Result<()> {
     let name = name.trim();
     if name.is_empty() {
@@ -847,8 +834,8 @@ mod tests {
     use super::*;
     use crate::crud::models::Card;
 
-    // What Swap promises during a session: the card steps out and an eligible one
-    // takes the slot, rather than the day quietly getting one card shorter.
+    // What Swap promises during a session, the card steps out and an eligible one takes
+    // the slot rather than the day quietly getting one card shorter
     #[test]
     fn pausing_a_due_card_pulls_in_a_replacement() {
         let tmp = tempfile::tempdir().unwrap();

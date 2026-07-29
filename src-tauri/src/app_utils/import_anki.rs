@@ -7,10 +7,8 @@ use std::path::{Path, PathBuf};
 
 const FIELD_SEP: char = '\x1f';
 
-/// Removes inline `on*="..."` event-handler attributes (onclick, onload, …)
-/// from imported Anki HTML so it can't run scripts when rendered.
-/// Byte scanner: `i` walks the input; on a match, `j` finds the end of the
-/// attribute name and `k` the end of the quoted value, then `i` jumps past it.
+/// Strip inline event-handler attributes from imported Anki HTML so it can't run scripts,
+/// scanning bytes and jumping past each attribute name and its quoted value
 fn strip_event_handlers(html: &str) -> String {
     let b = html.as_bytes();
     let mut out: Vec<u8> = Vec::with_capacity(b.len());
@@ -110,7 +108,7 @@ fn strip_cloze(html: &str) -> String {
     result
 }
 
-/// Copies one extracted media file into the cards dir under a fresh UUID name.
+/// Copies one extracted media file into the cards dir under a fresh UUID name
 fn copy_media_file(src: &Path, filename: &str, app_dir: &Path) -> Option<String> {
     let ext = Path::new(filename)
         .extension()
@@ -138,10 +136,8 @@ fn copy_media_file(src: &Path, filename: &str, app_dir: &Path) -> Option<String>
     }
 }
 
-/// Rewrites `src` values in place and turns `[sound:file]` into `<audio>` tags.
-/// Files are copied on first reference and cached in `copies`, which must be
-/// scoped to one card so no two cards ever share a file on disk.
-/// NOTE: every branch must advance `pos` past what it consumed, or it loops forever.
+/// Rewrite src values in place and turn Anki sound tags into audio tags, copying files on
+/// first reference, and every branch must advance the cursor or it loops forever
 fn rewrite_media(
     html: &str,
     sources: &HashMap<String, PathBuf>,
@@ -287,7 +283,7 @@ fn read_deck_name(anki_conn: &Connection) -> String {
     let decks_val: Value =
         serde_json::from_str(&decks_json).unwrap_or(Value::Object(Default::default()));
 
-    // id 1 is Anki's built-in "Default" deck; the imported deck is any other
+    // id 1 is Anki's built-in Default deck, so the imported deck is any other
     decks_val
         .as_object()
         .and_then(|m| m.values().find(|d| d["id"].as_i64().unwrap_or(0) != 1))
@@ -296,7 +292,7 @@ fn read_deck_name(anki_conn: &Connection) -> String {
         .to_string()
 }
 
-/// Maps Anki media filenames to their extracted temp-file paths.
+/// Maps Anki media filenames to their extracted temp-file paths
 fn media_sources(tmp_dir: &tempfile::TempDir) -> Result<HashMap<String, PathBuf>> {
     let media_manifest_path = tmp_dir.path().join("media");
     let media_json: HashMap<String, String> = if media_manifest_path.exists() {
@@ -322,9 +318,8 @@ fn media_sources(tmp_dir: &tempfile::TempDir) -> Result<HashMap<String, PathBuf>
     Ok(sources)
 }
 
-/// A selectable field on the mapping screen. Field names routinely misdescribe
-/// their contents, so samples are what you actually map against. `note_count` is
-/// how many notes have something in it (a type can declare a field its notes never fill).
+/// A selectable field on the mapping screen, where samples are what you map against since
+/// names misdescribe, and note_count is how many notes actually fill it
 #[derive(serde::Serialize)]
 pub struct AnkiField {
     pub name: String,
@@ -332,9 +327,8 @@ pub struct AnkiField {
     pub samples: Vec<AnkiSample>,
 }
 
-/// One note's value for a field. `media` names the kinds of media it carries
-/// ("audio", "image"), which the UI must describe rather than print (the field
-/// holds a sound file, it doesn't hold the word "audio").
+/// One note's value for a field, where media names the kinds it carries so the UI can
+/// describe them rather than print them, since the field holds a file and not a word
 #[derive(serde::Serialize, PartialEq)]
 pub struct AnkiSample {
     pub text: String,
@@ -350,7 +344,7 @@ impl AnkiSample {
 const SAMPLES_PER_FIELD: usize = 8;
 const SAMPLE_MAX_CHARS: usize = 90;
 
-/// Flattens a raw Anki field to a short line of plain text plus the media it holds.
+/// Flattens a raw Anki field to a short line of plain text plus the media it holds
 fn preview_sample(raw: &str) -> AnkiSample {
     let mut media: Vec<String> = Vec::new();
 
@@ -406,7 +400,7 @@ struct FieldScan {
     samples: Vec<AnkiSample>,
 }
 
-/// Deterministic xorshift, enough to spread samples across the deck without pulling in an RNG dependency.
+/// Deterministic xorshift, enough to spread samples across the deck without an RNG crate
 struct Rng(u64);
 
 impl Rng {
@@ -418,10 +412,8 @@ impl Rng {
     }
 }
 
-/// Walks every note once, tallying how many actually fill each field and reservoir-
-/// sampling a few values to preview. Sampling the whole deck rather than a window of
-/// it matters twice over: a field's content can start well past the first notes, and
-/// the first notes of a deck are rarely representative of it.
+/// Walk every note once, tallying how many fill each field and sampling a few to preview,
+/// across the whole deck since content can start well past the first notes
 fn scan_notes(
     anki_conn: &Connection,
     models: &HashMap<i64, Vec<String>>,
@@ -461,8 +453,8 @@ fn scan_notes(
             if scan.samples.len() < SAMPLES_PER_FIELD {
                 scan.samples.push(sample);
             } else {
-                // Reservoir: replace with probability SAMPLES_PER_FIELD/filled, so
-                // every distinct value in the deck has an even chance of showing.
+                // Reservoir sampling, so every distinct value in the deck has an even
+                // chance of showing
                 let roll = (rng.next() % scan.filled.max(1) as u64) as usize;
                 if roll < SAMPLES_PER_FIELD {
                     scan.samples[roll] = sample;
@@ -480,7 +472,7 @@ pub struct AnkiPeek {
     pub fields: Vec<AnkiField>,
 }
 
-/// Field names of every note type, keyed by note-type id and ordered by `ord`.
+/// Field names of every note type, keyed by note-type id and kept in Anki's own order
 fn read_models(anki_conn: &Connection) -> std::result::Result<HashMap<i64, Vec<String>>, String> {
     let col_models_json: String = anki_conn
         .query_row("SELECT models FROM col LIMIT 1", [], |row| row.get(0))
@@ -514,10 +506,8 @@ fn read_models(anki_conn: &Connection) -> std::result::Result<HashMap<i64, Vec<S
     Ok(out)
 }
 
-/// The union of field names across every note type that has notes, ordered by the
-/// note types that use them most. Mapping by name rather than position is what
-/// keeps a multi-note-type deck from scrambling, since the same ordinal means
-/// different things in each.
+/// Union of field names across every note type with notes, ordered by heaviest use, and
+/// mapping by name rather than position keeps a multi-note-type deck from scrambling
 pub fn peek_anki_fields(apkg_path: &str) -> std::result::Result<AnkiPeek, String> {
     let tmp_dir = extract_zip(apkg_path).map_err(|e| e.to_string())?;
     let anki_conn = open_anki_db(&tmp_dir).map_err(|e| e.to_string())?;
@@ -525,7 +515,7 @@ pub fn peek_anki_fields(apkg_path: &str) -> std::result::Result<AnkiPeek, String
     let models = read_models(&anki_conn)?;
     let (total_notes, per_model, mut scans) = scan_notes(&anki_conn, &models)?;
 
-    // Biggest note type first so its fields lead the list.
+    // Biggest note type first so its fields lead the list
     let mut used: Vec<(&i64, &i64)> = per_model.iter().filter(|(_, &c)| c > 0).collect();
     used.sort_by(|a, b| b.1.cmp(a.1));
 
@@ -560,9 +550,8 @@ pub fn peek_anki_fields(apkg_path: &str) -> std::result::Result<AnkiPeek, String
     Ok(AnkiPeek { total_notes, fields })
 }
 
-/// Joins the selected field names for one note, resolving each name against that
-/// note's own note type. Names the note type doesn't have, and empty values, are
-/// skipped so they don't leave stray <hr/> dividers.
+/// Join the selected field names for one note, resolving each against the note's own type,
+/// and missing names and empty values are skipped so they don't leave stray dividers
 fn collect_fields(selected: &[String], layout: &[String], values: &[&str]) -> String {
     selected
         .iter()
@@ -623,9 +612,8 @@ pub fn import_anki_deck(
             continue;
         }
 
-        // A note's field order is defined by its note type, and one file can hold
-        // several with different layouts, so the same ordinal means different
-        // things across notes. Resolve the selected names per note type instead.
+        // Field order is per note type and one file can hold several layouts, so resolve
+        // the selected names per note type rather than by ordinal
         let Some(layout) = models.get(&note.mid) else {
             continue;
         };
@@ -651,8 +639,8 @@ pub fn import_anki_deck(
             Some(rewrite_media(&support_html, &sources, app_dir, &mut card_media))
         };
 
-        // imported_front/back are always Some, even when empty: the migration in
-        // db.rs treats a NULL pair as an unmigrated row and would clobber front/back.
+        // The imported pair is always Some even when empty, since the migration treats a
+        // NULL pair as an unmigrated row and would clobber the user fields
         let new_card = NewCard {
             group_id: new_deck.id,
             front: String::new(),
@@ -673,7 +661,7 @@ pub fn import_anki_deck(
         card_count += 1;
 
         if create_flipped {
-            // Fresh media map: the flipped copy gets its own file copies.
+            // A fresh media map, so the flipped copy gets its own file copies
             let mut flipped_media: HashMap<String, String> = HashMap::new();
             let flipped_front = rewrite_media(&back_html, &sources, app_dir, &mut flipped_media);
             let flipped_back = rewrite_media(&front_html, &sources, app_dir, &mut flipped_media);
@@ -713,8 +701,8 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    /// Two note types whose fields sit at different ordinals: "Romaji" is ord 1
-    /// in one and ord 3 in the other. A positional mapping scrambles these.
+    /// Two note types whose fields sit at different ordinals, which a positional mapping
+    /// would scramble
     fn write_apkg(dir: &Path) -> String {
         let col_path = dir.join("collection.anki2");
         let conn = Connection::open(&col_path).unwrap();
@@ -755,7 +743,7 @@ mod tests {
             ["ゼロ\x1f0\x1f[sound:zero.mp3]\x1fzero"],
         )
         .unwrap();
-        // "Late" is empty until here: a fixed-size sample window would miss it.
+        // Late is empty until here, so a fixed-size sample window would miss it
         conn.execute(
             "INSERT INTO notes (id, mid, flds) VALUES (3, 100, ?1)",
             ["2 years old\x1fni sai\x1f二歳\x1fshows up late\x1f"],
@@ -797,20 +785,20 @@ mod tests {
         assert!(names.contains(&"Kanji"));
         assert!(names.contains(&"Expression"));
 
-        // Shared by both note types at different ordinals, so every note fills it.
+        // Shared by both note types at different ordinals, so every note fills it
         assert_eq!(field("Romaji").note_count, 3);
         assert_eq!(texts("Romaji"), vec!["issai", "zero", "ni sai"]);
 
-        // Content that only appears in a later note still gets found.
+        // Content that only appears in a later note still gets found
         assert_eq!(field("Late").note_count, 1);
         assert_eq!(texts("Late"), vec!["shows up late"]);
 
-        // Declared by the note type but never filled: worthless on a card, and
-        // the count has to say so rather than claiming all of the note type's notes.
+        // Declared by the note type but never filled, so the count has to say so rather
+        // than claiming all of the note type's notes
         assert_eq!(field("Unused").note_count, 0);
         assert!(field("Unused").samples.is_empty());
 
-        // Media carries no text of its own; the UI describes it instead of printing it.
+        // Media carries no text of its own, so the UI describes it instead of printing it
         let sound = &field("Sound").samples[0];
         assert!(sound.text.is_empty());
         assert_eq!(sound.media, vec!["audio"]);
@@ -859,8 +847,8 @@ mod tests {
             .map(|r| r.unwrap())
             .collect();
 
-        // Romaji is ord 1 on the Basic notes and ord 3 on the Basique+ one; all land
-        // on the front. The back takes whichever of Kanji/Expression the note type has.
+        // Romaji sits at a different ordinal on each note type and all land on the front,
+        // while the back takes whichever of the two other names the note type has
         assert_eq!(cards[0], ("issai".to_string(), "一歳".to_string()));
         assert_eq!(cards[1], ("zero".to_string(), "ゼロ".to_string()));
         assert_eq!(cards[2], ("ni sai".to_string(), "二歳".to_string()));

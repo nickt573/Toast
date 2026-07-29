@@ -1,113 +1,110 @@
-/* Toast Design System: the Workbook. Paper, rules, ink, tabs. */
+/* Toast design system, the Workbook, paper, rules, ink, tabs */
 
 :root {
-  /* Backgrounds: peachy Neapolitan cream + warm paper surfaces */
-  --t-bg:            #F8E5D6;   /* main app background, peach cream. Kept a touch deeper than the surface so borderless white content reads against it */
-  --t-surface:       #FFF9F4;   /* card / surface fill, warm off-white */
-  --t-surface-2:     #FBEAE0;   /* muted: read-only fields, form zones */
-  --t-surface-3:     #F7D9C4;   /* deep peach: table/section headers over white bodies */
+  /* Backgrounds, peachy Neapolitan cream and warm paper surfaces */
+  --t-bg:            #F8E5D6;   /* main app background, peach cream, kept deeper than the surface so borderless white content reads against it */
+  --t-surface:       #FFF9F4;   /* card or surface fill, warm off-white */
+  --t-surface-2:     #FBEAE0;   /* muted, read-only fields and form zones */
+  --t-surface-3:     #F7D9C4;   /* deep peach, table and section headers over white bodies */
   --t-file-filled:   color-mix(in srgb, var(--t-surface-3) 68%, var(--t-surface));  /* a file picker with something in it */
   --t-file-filled-deep: color-mix(in srgb, var(--t-surface-3) 70%, var(--t-surface-4));  /* the same, on the darker card creator panels */
-  --t-surface-4:     #EFCBB4;   /* darker peach: panels that sit against surface-3 hover tints */
-  /* The card-table zebra: a light base for the plain rows, a peach stripe for the
-     alternates. Both are the table's own, kept off --t-bg so retuning the app background
-     can't drag one row colour down onto the other and flatten the stripe. */
+  --t-surface-4:     #EFCBB4;   /* darker peach, panels that sit against surface-3 hover tints */
+  /* The card-table zebra, a light base and a peach stripe, both kept off --t-bg so
+     retuning the app background can't drag one row colour onto the other */
   --t-row-base:      #FDEEE3;
   --t-row-stripe:    #FAE8DA;
-  --t-bw:            2px;       /* border weight for user content boxes, heavier than the 1px hairline everything else uses. Whole pixels only: a fractional width rounds per edge, so some sides land on 1px and some on 2px */
+  --t-bw:            2px;       /* border weight for user content boxes, heavier than the 1px hairline elsewhere, and whole pixels only since a fractional width rounds per edge */
   --t-border:        #F0D9CC;   /* default dividers */
-  --t-border-2:      #E8CDBD;   /* input / hairline rule color */
-  --t-border-3:      #DCBBA9;   /* deep rules: notebook tables, reveal blocks, hr */
-  /* Body ink let well off: the rule between a card's front and its answer. Thin enough
-     that the full ink would read as flat black rather than as the brown it is */
+  --t-border-2:      #E8CDBD;   /* input and hairline rule color */
+  --t-border-3:      #DCBBA9;   /* deep rules, notebook tables, reveal blocks, hr */
+  /* Body ink let well off for the rule between a card's front and its answer, since the
+     full ink would read as flat black rather than as the brown it is */
   --t-espresso-lt:   color-mix(in srgb, var(--t-text) 64%, var(--t-surface));
 
-  /* Rest-stripe: the bar a row wears at rest. Lighter than the border it deepens to on
-     hover, so highlighting a row is a clear jump rather than a nudge. Each family mixes
-     its own border toward white, except green, which still leans on its own colour. */
+  /* The bar a row wears at rest, lighter than the border it deepens to on hover, each
+     family mixing its own border toward white except green */
   --t-yellow-stripe: color-mix(in srgb, var(--t-yellow-bdr) 80%, #fff);
   --t-accent-stripe: color-mix(in srgb, var(--t-accent-bdr) 82%, #fff);
   --t-green-stripe:  color-mix(in srgb, var(--t-green-bdr) 55%, var(--t-green));
   --t-plum-stripe:   color-mix(in srgb, var(--t-plum-bdr) 72%, #fff);
 
-  /* Text: chocolate-plum */
+  /* Text, chocolate-plum */
   --t-text:          #4A3A3D;   /* primary */
   --t-text-2:        #6B5458;   /* secondary */
-  --t-text-3:        #9A8488;   /* tertiary / quiet */
-  --t-label:         #6B5458;   /* every label that oversees something: table heads, form labels, "Create a Card", the words above a todo's categories and resources. Matches the secondary text ink */
+  --t-text-3:        #9A8488;   /* tertiary or quiet */
+  --t-label:         #6B5458;   /* every label that oversees something, table heads, form labels, the words above a todo's categories and resources, matching the secondary text ink */
   --t-placeholder:   #C0AAAE;
-  --t-title:         #4B2F1E;   /* the name of a thing: header bar titles, "← Back + name" titles, and the name on a plan or deck card. Kept separate from --t-text so body ink can move without dragging the names along */
+  --t-title:         #4B2F1E;   /* the name of a thing, header bar titles and the name on a plan or deck card, kept separate from --t-text so body ink can move without dragging the names along */
   --t-title-size:    22px;
 
-  /* Plans / primary accent: wheat / caramel */
+  /* Plans and primary accent, wheat caramel */
   --t-accent:        #C99A63;
   --t-accent-h:      #B5854E;
   --t-accent-bg:     #F3E4CF;
   --t-accent-bdr:    #DFC59C;
   --t-accent-fg:     #FFF9F4;   /* text on ink fills */
 
-  /* Todos: sunflower yellow (incomplete / pending) */
+  /* Todos, sunflower yellow for incomplete or pending */
   --t-yellow:        #E0A92E;
   --t-yellow-bdr:    #EBD08A;
   --t-time:          #B96A2B;   /* time spent, readable orange from the stat-table family */
 
-  /* Done / safe: forest green */
+  /* Done and safe, forest green */
   --t-green:         #4A8C5E;
   --t-green-h:       #3E764F;   /* hover deepens */
   --t-green-bdr:     #A6C6A8;
 
-  /* Destructive: red */
+  /* Destructive red */
   --t-red:           #B85454;
   --t-red-h:         #A34646;   /* danger ink hover deepens */
   --t-red-bg:        #F5E0E0;
 
-  /* Stat reds (demoted / poor retention): warmer than the danger ink */
+  /* Stat reds for demoted or poor retention, warmer than the danger ink */
   --t-red-2:         #B04A42;
 
-  /* Decks / Cards: light navy. The old slate lost its blue as it lightened and the
-     tints came out grey, so these hold their saturation on the way up. */
+  /* Decks and cards, light navy, held saturated on the way up because the old slate
+     lost its blue as it lightened and the tints came out grey */
   --t-blue:          #456A94;
   --t-blue-bg:       #D8E4F1;
   --t-blue-bdr:      #9DB8D2;
   --t-blue-lt:       #7695B8;   /* the navy lightened, for a deck row's stripes and border */
-  --t-blue-btn:      color-mix(in srgb, var(--t-blue) 82%, #fff);   /* the deck + button, and the selected state its card-view buttons share */
+  --t-blue-btn:      color-mix(in srgb, var(--t-blue) 82%, #fff);   /* the deck add button, and the selected state its card-view buttons share */
   --t-blue-stripe:   color-mix(in srgb, var(--t-blue-bdr) 70%, #fff);   /* a deck row's resting bars, lighter than the border they deepen to */
-  --t-new:           #5C93BC;   /* new cards: a sky a step down from the old light one, still kept apart from the deck slate */
+  --t-new:           #5C93BC;   /* new cards, a sky a step down from the old light one, still kept apart from the deck slate */
 
-  /* Warning / at-risk: weak yellow-tan (amber) */
+  /* Warning and at-risk, weak yellow-tan amber */
   --t-amber:         #C49A44;
 
-  /* Notebooks: plum */
+  /* Notebooks plum */
   --t-plum:          #8A6A96;
   --t-plum-lt:       #B49CBD;   /* the plum lightened, for a notebook card's stripes and border */
   --t-plum-bdr:      #C8B4D2;
-  /* Swap during a study session. A lighter plum, so it is nobody's grade and reads apart from the notebook tab wearing the full plum */
+  /* Swap during a study session, a lighter plum so it is nobody's grade and reads apart from the notebook tab wearing the full plum */
   --t-swap:          #A98BB4;
 
-  /* Resources: red, leaning blood orange (token name kept as legacy "clay"). The old
-     terracotta washed out to peach once it was tinted, so the tints hold their
-     saturation rather than fading toward white. */
+  /* Resources, red leaning blood orange, token name kept as legacy clay, and the tints
+     hold their saturation since the old terracotta washed out to peach */
   --t-clay:          #BD5540;
   --t-clay-bdr:      #DB8B77;
   --t-clay-lt:       #C96A55;   /* deeper than the border, for a hovered row's stripes */
   --t-clay-stripe:   color-mix(in srgb, var(--t-clay-bdr) 70%, #fff);   /* a resource row's resting bars, lighter than the border they deepen to */
 
-  /* Stats: dark / burnt orange (distinct from caramel plans) */
+  /* Stats, dark burnt orange, distinct from caramel plans */
   --t-stat:          #C85A2A;
 
-  /* Toast to Go: silver. A utility tab, not a feature family */
+  /* Toast to Go silver, a utility tab and not a feature family */
   --t-silver:        #A4A6A7;
 
-  /* Strawberry pink: homepage identity + decorative accent */
+  /* Strawberry pink, homepage identity and decorative accent */
   --t-pink:          #F6A7B8;
 
-  /* Neutral (maintenance) buttons: rich mauve ink from the nav family */
+  /* Neutral maintenance buttons, rich mauve ink from the nav family */
   --t-btn:           #8B5F6B;
   --t-btn-h:         #784E5A;   /* hover deepens */
   --t-btn-bdr:       #7D5461;
   --t-btn-fg:        #FFF9F4;   /* text on mauve ink */
 
-  /* Nav: chocolate */
+  /* Nav chocolate */
   --t-nav-bg:        #4A3A3D;
   --t-nav-fg:        #FDE6D8;
   --t-nav-dim:       #B89AA0;
@@ -116,31 +113,27 @@
   --t-font-head:     'Bitter', Georgia, 'Times New Roman', serif;
   --t-font-body:     'Atkinson Hyperlegible Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
-  /* Spacing / shape */
+  /* Spacing and shape */
   --t-nav-h:         54px;
   --t-page-pad:      24px;
-  /* The air between one content item and the next: rows in a list, cards in a landing
-     page, a deck's table and the one under it. Every list in the app measures from this,
-     so the whole app loosens or tightens together. */
+  /* The air between one content item and the next, rows in a list, cards in a landing
+     page, and every list measures from this so the whole app loosens together */
   --t-list-gap:      12px;
-  /* Two corners and no more. Anything that holds content rounds the same amount,
-     whether it is a panel, a table card, a striped row, an input, or a sheet, so
-     nothing ever sits next to something almost-but-not-quite as round. Buttons keep
-     their own tighter corner because they are the one thing that should read as a
-     control rather than a container. */
+  /* Two corners and no more, anything holding content rounds the same amount, and
+     buttons keep a tighter corner so they read as a control rather than a container */
   --t-r:             10px;
   --t-r-btn:         4px;
-  --t-r-input:       4px;   /* fields you type into stay tight, same as the controls. A rounded box is something to read, a square-ish one is somewhere to write */
+  --t-r-input:       4px;   /* fields you type into stay tight like the controls, a rounded box is something to read and a square-ish one is somewhere to write */
   --t-r-tab:         5px 5px 1px 1px;   /* index-divider tab badges, a deliberate shape rather than a container */
   --t-ease:          0.12s ease;
-  /* For the things a pointer sweeps across rather than clicks, like a row's bars or a
-     card and everything riding on it. Slower than --t-ease so the change reads as a fade. */
+  /* For things a pointer sweeps across rather than clicks, like a row's bars, slower
+     than --t-ease so the change reads as a fade */
   --t-ease-hover:    0.16s ease-out;
 
-  /* Shadows: crisp paper edges, no glow */
+  /* Shadows, crisp paper edges, no glow */
   --t-shadow-sm:     0 1px 0 rgba(74,58,61,0.12);
-  /* Only the content cards lift this far. Kept apart from -sm so deepening the cards
-     leaves the panels and sheets that were already on -sm where they are. */
+  /* Only the content cards lift this far, kept apart from -sm so deepening the cards
+     leaves the panels and sheets already on -sm where they are */
   --t-shadow-card:   0 1px 0 rgba(74,58,61,0.13), 0 2px 6px -3px rgba(74,58,61,0.20);
   --t-shadow:        0 1px 0 rgba(74,58,61,0.16), 0 3px 5px -3px rgba(74,58,61,0.18);
   --t-shadow-lg:     0 2px 0 rgba(74,58,61,0.12), 0 10px 16px -10px rgba(74,58,61,0.30);
@@ -148,7 +141,7 @@
   --t-shadow-hdr:    0 3px 6px -2px rgba(74,58,61,0.26);
 }
 
-/* Reset: */
+/* Reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, #root {
@@ -167,7 +160,7 @@ a { color: var(--t-blue); text-decoration: underline; }
 /* Pasted links inside a todo description, wrap so a long url can't overflow */
 .t-inline-link { color: var(--t-blue); text-decoration: underline; cursor: pointer; word-break: break-all; }
 
-/* Universal button: solid ink, presses down instead of lifting */
+/* Universal button, solid ink, presses down instead of lifting */
 button {
   font-family: inherit;
   font-size: 12px;
@@ -189,22 +182,22 @@ button:active { background: var(--t-btn-h); transform: translateY(1px); box-shad
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 2px; }
 
-/* Primary: caramel ink */
+/* Primary caramel ink */
 button.primary { background: var(--t-accent); color: var(--t-accent-fg); border-color: var(--t-accent); }
 button.primary:hover { background: var(--t-accent-h); border-color: var(--t-accent-h); color: var(--t-accent-fg); }
 
-/* Destructive: brick ink, deepens on hover */
+/* Destructive brick ink, deepens on hover */
 button.danger { color: var(--t-accent-fg); border-color: var(--t-red); background: var(--t-red); }
 button.danger:hover { background: var(--t-red-h); border-color: var(--t-red-h); color: var(--t-accent-fg); }
 
-/* Quiet: alias of the neutral mauve (kept for Back/Cancel/Hide semantics) */
+/* Quiet alias of the neutral mauve, kept for Back, Cancel and Hide semantics */
 button.quiet { background: var(--t-btn); border-color: var(--t-btn); color: var(--t-btn-fg); box-shadow: none; }
 button.quiet:hover { background: var(--t-btn-h); border-color: var(--t-btn-h); color: var(--t-btn-fg); }
 
 button.btn-amber { background: var(--t-amber); border-color: var(--t-amber); color: var(--t-accent-fg); }
 button.btn-amber:hover { border-color: var(--t-amber); background: var(--t-amber); color: var(--t-accent-fg); filter: brightness(0.93); }
 
-/* Audio chip: quiet paper look so playback reads as media, not actions */
+/* Audio chip, quiet paper look so playback reads as media, not actions */
 button.audio-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--t-r-btn); border: 1px solid var(--t-border-2); background: var(--t-surface); font-size: 13px; color: var(--t-text-2); box-shadow: none; }
 button.audio-btn:hover { background: var(--t-surface); border-color: var(--t-text-3); color: var(--t-text-2); filter: brightness(0.98); }
 button.audio-btn:active { background: var(--t-surface); filter: brightness(0.95); transform: none; box-shadow: none; }
@@ -213,11 +206,11 @@ button.audio-btn.sm { padding: 2px 10px; font-size: 12px; border-radius: var(--t
 button.btn-blue  { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-accent-fg); }
 button.btn-blue:hover  { border-color: var(--t-blue); background: var(--t-blue); color: var(--t-accent-fg); filter: brightness(0.93); }
 
-/* Checkbox pills/labels: double-click shouldn't text-select them */
+/* Checkbox pills and labels, double-click shouldn't text-select them */
 label:has(input[type="checkbox"]),
 input[type="checkbox"] + label { user-select: none; }
 
-/* Universal inputs: quiet ruled boxes, no glow ring */
+/* Universal inputs, quiet ruled boxes, no glow ring */
 input, textarea, select {
   font-family: inherit;
   font-size: 13px;
@@ -237,7 +230,7 @@ input:focus, textarea:focus, select:focus {
 input::placeholder, textarea::placeholder { color: var(--t-placeholder); }
 textarea { resize: vertical; }
 
-/* Custom checkboxes: checked fill uses currentColor so each picks up its context's family color */
+/* Checked fill uses currentColor so each checkbox picks up its context's family color */
 input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
@@ -263,14 +256,13 @@ input[type="checkbox"]:checked {
   background-position: center;
   background-size: 10px;
 }
-/* Ring only for keyboard focus. Mouse clicks shouldn't leave a glow behind */
+/* Ring only for keyboard focus, mouse clicks shouldn't leave a glow behind */
 input[type="checkbox"]:focus { outline: none; border-color: var(--t-btn-bdr); box-shadow: none; }
 input[type="checkbox"]:checked:focus { border-color: currentColor; }
 input[type="checkbox"]:focus-visible { border-color: var(--t-accent); box-shadow: 0 0 0 1px var(--t-accent); }
 
-/* Read-only field: muted fill, no focus affordance. An empty file picker sits at the
-   muted fill; one holding a file deepens, the same pair in all three panels a picker
-   appears in rather than matching whichever backdrop is behind it. */
+/* Read-only field, muted fill and no focus affordance, and a file picker holding a file
+   deepens to the same pair in all three panels rather than matching its backdrop */
 .input-readonly,
 input.input-readonly, textarea.input-readonly {
   background: var(--t-surface-2);
@@ -279,8 +271,8 @@ input.input-readonly, textarea.input-readonly {
 }
 input.input-readonly.has-file { background: var(--t-file-filled); }
 
-/* Styled scrollbars opt out of the macOS overlay style so the thumb stays visible.
-   .dk-table-scroll excluded, it keeps the native overlay. */
+/* Styled scrollbars opt out of the macOS overlay style so the thumb stays visible,
+   with dk-table-scroll excluded since it keeps the native overlay */
 :not(.dk-table-scroll)::-webkit-scrollbar { width: 10px; height: 10px; }
 :not(.dk-table-scroll)::-webkit-scrollbar-track { background: transparent; }
 :not(.dk-table-scroll)::-webkit-scrollbar-thumb {
@@ -291,11 +283,11 @@ input.input-readonly.has-file { background: var(--t-file-filled); }
 }
 :not(.dk-table-scroll)::-webkit-scrollbar-thumb:hover { background: var(--t-btn-bdr); background-clip: padding-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
-/* scroll not auto: WebKit ignores scrollbar-gutter, this reserves the track.
-   Scroll bodies shave 10px off right padding to match the left gap. */
+/* scroll not auto, since WebKit ignores scrollbar-gutter and this reserves the track,
+   and scroll bodies shave 10px off right padding to match the left gap */
 textarea { overflow-y: scroll; }
 
-/* App shell: */
+/* App shell */
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -303,7 +295,7 @@ textarea { overflow-y: scroll; }
   overflow: hidden;
 }
 
-/* Navigation: dark espresso bar */
+/* Navigation, dark espresso bar */
 .app-nav {
   flex-shrink: 0;
   display: flex;
@@ -361,7 +353,7 @@ textarea { overflow-y: scroll; }
 .app-nav-tab:hover  { background: rgba(255,255,255,0.06); border-color: transparent; color: var(--t-nav-fg); box-shadow: none; }
 .app-nav-tab:active { background: rgba(255,255,255,0.03); box-shadow: none; transform: none; }
 .app-nav-tab.active { color: var(--t-nav-fg); background: none; }
-/* Home: soft pink paper chip instead of an underline */
+/* Home, soft pink paper chip instead of an underline */
 .app-nav-tab--home { height: 36px; align-self: center; border-radius: var(--t-r-btn); }
 .app-nav-tab--home.active { background: rgba(246,167,184,0.16); }
 .app-nav-tab--home.active::after { display: none; }
@@ -375,8 +367,8 @@ textarea { overflow-y: scroll; }
   background: var(--tab-underline, var(--t-accent));
   border-radius: 0;
 }
-/* Above the how-to overlay (z 900), pointer-events off so it still blocks nav.
-   Inset ring, the window top clips an outer shadow. */
+/* Above the how-to overlay at z 900, pointer-events off so it still blocks nav, and an
+   inset ring since the window top clips an outer shadow */
 .app-nav-tab.help-spot {
   z-index: 901;
   pointer-events: none;
@@ -392,8 +384,8 @@ textarea { overflow-y: scroll; }
   flex-shrink: 0;
 }
 
-/* Right spacer basis = logo + Home width, so tabs center and the right side
-   collapses first on narrow windows. */
+/* Right spacer matches the logo plus Home width, so tabs center and the right side
+   collapses first on narrow windows */
 .app-nav-spacer { flex: 1 1 0; }
 .app-nav-spacer--right { flex-basis: 168px; }
 
@@ -409,7 +401,7 @@ textarea { overflow-y: scroll; }
   flex-direction: column;
 }
 
-/* Toast notification: */
+/* Toast notification */
 .toast {
   position: fixed;
   bottom: 18px;
@@ -428,12 +420,12 @@ textarea { overflow-y: scroll; }
   transition: opacity .18s ease, transform .18s ease;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
-/* Red is only for something that actually broke. Something you are simply not
-   allowed to do yet is amber, and it always says so rather than failing quietly. */
+/* Red is only for something that actually broke, and something you are not allowed to
+   do yet is amber, which always says so rather than failing quietly */
 .toast.error { background: var(--t-red); color: var(--t-btn-fg); }
 .toast.warn { background: var(--t-amber); color: var(--t-btn-fg); }
 
-/* Busy overlay (Toast to Go transfers): */
+/* Busy overlay for Toast to Go transfers */
 .busy-overlay {
   position: fixed;
   inset: 0;
@@ -468,20 +460,19 @@ textarea { overflow-y: scroll; }
 }
 @keyframes busy-spin { to { transform: rotate(360deg); } }
 
-/* Shared section label: */
+/* Shared section label */
 .section-label {
   font-size: 11px;
   font-weight: 700;
   color: var(--t-label);
 }
 
-/* Every expand/collapse caret in the app: section headers, deck cards, todo rows, the two
-   card creators. Full espresso ink, so the one mark that says a thing opens is legible
-   rather than a grey hint. Carets that sit on coloured ground keep their own colour. */
+/* Every expand and collapse caret in the app takes full espresso ink so the mark that
+   says a thing opens is legible, and carets on coloured ground keep their own colour */
 .t-caret { font-size: 10px; color: var(--t-text); flex-shrink: 0; user-select: none; }
 
-/* The mark that opens a resource or a deck, wherever one is listed. The arrow glyph is a
-   hairline at this size, so it takes a stroke to be seen without hunting for it. */
+/* The mark that opens a resource or a deck, given a stroke because the arrow glyph is a
+   hairline at this size */
 .t-open-arrow {
   display: inline-flex;
   align-items: center;
@@ -495,7 +486,7 @@ textarea { overflow-y: scroll; }
 }
 .t-open-arrow:hover { filter: brightness(0.8); }
 
-/* Badges: solid ink index-divider tabs */
+/* Badges, solid ink index-divider tabs */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -521,19 +512,19 @@ textarea { overflow-y: scroll; }
 .pill-neutral { background: var(--t-text-3); color: var(--t-surface); }
 .pill-dead    { opacity: 0.45; cursor: default; }
 
-/* Clickable tab: */
+/* Clickable tab */
 .pill-clickable { cursor: pointer; }
 .pill-clickable:hover { filter: brightness(0.92); }
 
-/* Picker chips: the one checkbox-chip control shared by every form/popup */
+/* Picker chips, the one checkbox-chip control shared by every form and popup */
 .picker-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 12px;
   cursor: pointer;
-  /* Single line, like .pill: a name long enough to wrap made the pill grow tall and the
-     centered type badge float to the middle instead of sitting with the text. */
+  /* Single line, since a name long enough to wrap grew the pill tall and floated the
+     centered type badge to the middle instead of sitting with the text */
   white-space: nowrap;
   padding: 3px 10px;
   border-radius: var(--t-r-btn);
@@ -550,7 +541,7 @@ textarea { overflow-y: scroll; }
 /* Lighter than the caramel confirm buttons so a picked frequency never reads as a CTA */
 .picker-pill.active-accent   { border-color: var(--t-accent-bdr); background: var(--t-accent-bdr); color: var(--t-text); }
 
-/* Shared new-card form (Decks + Notebooks): */
+/* Shared new-card form for Decks and Notebooks */
 .dk-new-card {
   flex-shrink: 0;
   border-top: 1px solid var(--t-border);
@@ -593,8 +584,8 @@ textarea { overflow-y: scroll; }
 .dk-new-card-check input[type="checkbox"] { margin: 0; }
 /* cancel the 74px row-label min-width that flings the ? tip far right */
 .dk-new-card-check label { min-width: 0; }
-/* Check row one (~360px) won't fit beside Add Card in the 440px deck pane, so
-   the button sits in row two. Flip-only checks always render so nothing shifts. */
+/* Check row one won't fit beside Add Card in the 440px deck pane, so the button sits in
+   row two, and flip-only checks always render so nothing shifts */
 .dk-new-card-actions {
   display: grid;
   grid-template-columns: 1fr max-content;
@@ -611,42 +602,40 @@ textarea { overflow-y: scroll; }
 }
 .dk-new-card-checkrow:first-child { grid-column: 1 / -1; }
 .dk-new-card-actions button.primary { grid-column: 2; grid-row: 2; justify-self: end; }
-/* fade only box + label when disabled, keep the ? tip readable */
+/* fade only box and label when disabled, keep the ? tip readable */
 .dk-new-card-check.disabled input,
 .dk-new-card-check.disabled label { opacity: 0.4; }
 .dk-new-card-check.disabled label { cursor: default; }
 .dk-new-card button.primary { flex-shrink: 0; }
 
-/* Plans containers: */
+/* Plans containers */
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
-/* Unified landing pages (Plans / Decks / Notebooks): solid family bands */
-/* The band carries the rule's color itself, so no divider line is needed. Feature
-   pages take the shade their content boxes rest their bars in. */
-/* The bar sits above the page and casts onto it, which is the only edge it needs. It has
-   to stay in front for that, since the body paints after it. */
+/* Unified landing pages for Plans, Decks and Notebooks, solid family bands, each taking
+   the shade its content boxes rest their bars in so no divider line is needed */
+/* The bar casts onto the page, so it has to stay in front since the body paints after it */
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 5; box-shadow: var(--t-shadow-hdr); }
 .landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 64%, #fff); --hdr-btn: var(--t-accent-h); background: var(--hdr-band); }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); background: var(--hdr-band); }
 .landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); background: var(--hdr-band); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; flex: 1; color: var(--t-title); }
-/* What the page is holding right now, told quietly at the right of any header bar. Every
-   page bar shares it, so it reads the same on the ones with buttons and the ones without. */
+/* What the page is holding right now, told quietly at the right of every header bar so
+   it reads the same on the ones with buttons and the ones without */
 .hdr-context { margin-left: auto; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: var(--t-text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-/* Action buttons in a landing header take the family colour, matching the round +.
-   Direct children only, so the popup's own Create/Cancel keep their own styling. */
+/* Action buttons in a landing header take the family colour, direct children only so
+   the popup's own Create and Cancel keep their own styling */
 .landing-hdr > button:not(.quiet):not(.primary):not(.danger) { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); }
 .landing-hdr > button:not(.quiet):not(.primary):not(.danger):hover { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); filter: brightness(0.92); }
-/* The scrolling list of cards a landing page is made of. Plans, decks and notebooks all
-   render the same thing, so they share the one rule rather than keeping a copy each. */
+/* The scrolling list of cards a landing page is made of, shared by plans, decks and
+   notebooks rather than each keeping a copy */
 .landing-body,
 .dk-list,
 .nb-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
 
-/* Round "+" in a landing header opens a small create popup, replacing the old bottom bar.
-   The family colour comes from --hdr-btn on the header (gold / blue / plum). */
+/* The round add button in a landing header opens a small create popup, taking its family
+   colour from --hdr-btn on the header */
 .t-add-wrap { position: relative; display: inline-flex; margin-left: 4px; }
 .t-add-btn {
   width: 28px; height: 28px; padding: 0; border-radius: 50%;
@@ -669,10 +658,8 @@ textarea { overflow-y: scroll; }
 .t-add-menu button.primary { background: var(--hdr-btn, var(--t-accent)); border-color: var(--hdr-btn, var(--t-accent)); }
 .t-add-menu button.primary:hover { filter: brightness(0.92); }
 
-/* Amount + unit chooser, shared by the todo loggers and the stat editor. The amount sits
-   left; the unit control names the chosen name, with ‹ › to step through a unit's other
-   names. The chip and fields borrow the app's own input and button rules so nothing here
-   reads as a stray control, and the bare buttons reset the default mauve fill. */
+/* Amount and unit chooser, shared by the todo loggers and the stat editor, with arrows to
+   step through a unit's other names, and the bare buttons reset the default mauve fill */
 .unit-picker { position: relative; display: flex; gap: 6px; align-items: stretch; }
 .unit-picker-value { flex: 1; min-width: 0; }
 .unit-picker-control { display: flex; align-items: stretch; gap: 1px; }
@@ -683,7 +670,7 @@ textarea { overflow-y: scroll; }
 .unit-picker-arrow:hover { background: transparent; border: none; color: var(--t-accent-h); }
 .unit-picker-arrow:active { background: transparent; transform: none; box-shadow: none; }
 
-/* The chip is shaped like one of the app's input fields, not a filled button. */
+/* The chip is shaped like one of the app's input fields, not a filled button */
 .unit-picker-select {
   display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   background: var(--t-surface); border: 1px solid var(--t-border-2); color: var(--t-text-3);
@@ -701,26 +688,26 @@ textarea { overflow-y: scroll; }
 }
 .unit-picker-clear:hover { color: var(--t-red); }
 
-/* A padded surface popup, like the app's create menu. No coloured bars: the list scrolls
-   and the Add button simply sits under it, so it stays reachable without a divided footer. */
+/* A padded surface popup like the app's create menu, with no coloured bars, so the list
+   scrolls and the Add button sits under it without a divided footer */
 .unit-picker-menu {
   position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
-  /* Fixed width so appearing content (like the delete warning) grows the panel down, never
-     out. The text wraps within this width instead of stretching it. */
+  /* Fixed width so appearing content grows the panel down and never out, with the text
+     wrapping within this width instead of stretching it */
   width: 264px;
   display: flex; flex-direction: column; gap: 8px; padding: 10px;
   background: var(--t-surface); border-radius: var(--t-r); box-shadow: 0 4px 16px rgba(0,0,0,0.16);
-  /* When this opens inside the logger popup it grows that popup's scroll region to fit; the
-     margin keeps a little breathing room below it rather than butting the popup's edge. */
+  /* Opening inside the logger popup grows that popup's scroll region to fit, so the margin
+     keeps room below rather than butting the popup's edge */
   margin-bottom: 14px;
 }
 .unit-picker-list { display: flex; flex-direction: column; gap: 2px; max-height: 210px; overflow-y: auto; }
 .unit-picker-hint { font-size: 12px; color: var(--t-text-3); font-style: italic; padding: 6px 8px; }
-/* Rows never compress: the "No unit" line kept collapsing when the list filled up. Only the
-   name highlights on hover/selection, so the Edit button beside it stays its own colour. */
+/* Rows never compress, since the No unit line kept collapsing when the list filled up, and
+   only the name highlights so the Edit button beside it stays its own colour */
 .unit-picker-row { display: flex; align-items: center; gap: 6px; flex-shrink: 0; border-radius: var(--t-r-input); }
-/* A flex row so only the name ellipsizes; the "+N" alternates count and the merge tag never
-   get clipped by a long name, they hold their place at the ends. */
+/* A flex row so only the name ellipsizes, and the alternates count and merge tag hold
+   their place at the ends instead of being clipped by a long name */
 .unit-picker-opt {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 5px; text-align: left;
   background: transparent; border: none; box-shadow: none;
@@ -732,19 +719,19 @@ textarea { overflow-y: scroll; }
 .unit-picker-opt.active,
 .unit-picker-row.active > .unit-picker-opt { background: var(--t-accent-bg); }
 .unit-picker-count { flex-shrink: 0; color: var(--t-text-3); font-size: 11px; font-weight: 400; }
-/* Order marker while merging: the first pick is the main, the rest number after it. */
+/* Order marker while merging, the first pick is the main and the rest number after it */
 .unit-picker-tag {
   flex-shrink: 0; padding: 1px 6px; border-radius: 999px;
   background: var(--t-accent); color: var(--t-accent-fg); font-size: 10px; font-weight: 700;
 }
 
-/* Create / edit a unit's names. Fields inherit the global input rule; the × resets the
-   default fill and turns the app's delete red on hover. */
+/* Create or edit a unit's names, where fields inherit the global input rule and the
+   remove glyph resets the default fill and turns the app's delete red on hover */
 .unit-picker-form { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
 .unit-picker-form-title { font-size: 13px; font-weight: 700; color: var(--t-title); }
 .unit-picker-field { width: 100%; }
-/* Every field row carries the same inset so the inputs line up and stay one size; the main
-   just fills its inset with a peach wash, telling the story without resizing its field. */
+/* Every field row carries the same inset so the inputs line up and stay one size, and the
+   main just fills its inset with a peach wash rather than resizing its field */
 .unit-picker-fieldrow { display: flex; align-items: center; gap: 6px; padding: 4px; border-radius: var(--t-r-input); }
 .unit-picker-fieldrow .unit-picker-field { flex: 1; min-width: 0; }
 .unit-picker-fieldrow.is-main { background: var(--t-accent-bg); }
@@ -755,19 +742,19 @@ textarea { overflow-y: scroll; }
 .unit-picker-del:hover { background: transparent; border: none; color: var(--t-red); }
 .unit-picker-del:active { background: transparent; transform: none; box-shadow: none; }
 .unit-picker-addalt { align-self: flex-start; }
-/* Small swap glyph that promotes a name to the main, quieter than a labelled button. */
+/* Small swap glyph that promotes a name to the main, quieter than a labelled button */
 .unit-picker-swap { flex-shrink: 0; background: transparent; border: none; box-shadow: none; color: var(--t-text-3); font-size: 14px; line-height: 1; padding: 2px 5px; }
 .unit-picker-swap:hover { background: transparent; border: none; color: var(--t-accent-h); }
 .unit-picker-swap:active { background: transparent; transform: none; box-shadow: none; }
-/* The action row is the panel's peach foot: it bleeds past the 10px padding to the panel's
-   own edges (negative margins cancel the padding) and rounds its bottom to match. */
+/* The action row is the panel's peach foot, bleeding past the 10px padding to the panel's
+   own edges with negative margins and rounding its bottom to match */
 .unit-picker-actions {
   display: flex; gap: 8px; justify-content: flex-end;
   margin: 0 -10px -10px; padding: 10px;
   background: var(--t-accent-bg); border-radius: 0 0 var(--t-r) var(--t-r);
 }
-/* When the foot also carries a message (merge hint, delete warning) it stacks: the message
-   on top, the buttons on their own right-aligned row under it. */
+/* When the foot also carries a message it stacks, the message on top and the buttons on
+   their own right-aligned row under it */
 .unit-picker-actions.col { flex-direction: column; align-items: stretch; gap: 6px; }
 .unit-picker-actionrow { display: flex; gap: 8px; justify-content: flex-end; }
 .unit-picker-actions .unit-picker-hint { padding: 0; }
@@ -787,8 +774,8 @@ textarea { overflow-y: scroll; }
   font-style: italic;
 }
 
-/* Shared card look for all list items: white body, crisp edge, no box border.
-   Hover only deepens the stripes, never moves or grows a shadow. */
+/* Shared card look for all list items, white body, crisp edge, no box border, and hover
+   only deepens the stripes rather than moving or growing a shadow */
 .landing-card {
   display: flex;
   align-items: center;
@@ -797,18 +784,13 @@ textarea { overflow-y: scroll; }
   cursor: pointer;
 }
 
-/* Three vertical bars tucked into the right edge, the rest of the box left white.
-   Every box below sets two colors: --t-stripe for the bars at rest and
-   --t-stripe-hi for the same family a shade deeper. The deeper one draws the
-   border, so a user content box always reads as one weight heavier than the plain
-   panels around it, and hovering just brings the bars up to meet it.
+/* Three vertical bars tucked into the right edge, where every box sets --t-stripe for the
+   bars at rest and --t-stripe-hi a shade deeper for the border they meet on hover */
+/* --t-stripe-u is both the bar thickness and the gap, and stops count back from the right
+   edge so a bar sits the same distance in on every box whatever its height */
 
-   --t-stripe-u scales the set for smaller rows: it is both the bar thickness and
-   the gap. Stops count back from the right edge, so a bar k units back sits k units
-   in on every box and height never enters into it. */
-
-/* A plain custom property jumps from one colour to the next, so the bars would snap
-   on hover. Registering it as a colour lets the gradient fade instead. */
+/* A plain custom property jumps from one colour to the next and the bars would snap on
+   hover, so registering it as a colour lets the gradient fade instead */
 @property --t-stripe {
   syntax: "<color>";
   inherits: true;
@@ -829,10 +811,8 @@ textarea { overflow-y: scroll; }
 .plan-todo-row,
 .plan-todo-edit {
   --t-stripe-u: 12px;
-  /* Keeps content clear of the bars: the leftmost one sits 6 units in, plus a unit of
-     air. Scales with --t-stripe-u, so the half size rows get a half size gutter. Every
-     box below spends it as its own right padding, so nothing inside can land on the
-     bars and long content wraps or truncates the way that spot already does. */
+  /* Keeps content clear of the bars, the leftmost sitting 6 units in plus a unit of air,
+     and it scales with --t-stripe-u so half size rows get a half size gutter */
   --t-stripe-gutter: calc(7 * var(--t-stripe-u));
   transition: --t-stripe var(--t-ease-hover);
   border: var(--t-bw) solid var(--t-stripe-hi);
@@ -849,8 +829,8 @@ textarea { overflow-y: scroll; }
     transparent calc(100% - 1 * var(--t-stripe-u)));
 }
 
-/* Hovering brings the bars up to the border color. The open-editor version of this
-   lives in Plans.css, where it can outrank the resting color those rows set. */
+/* Hovering brings the bars up to the border color, and the open-editor version lives in
+   Plans.css where it can outrank the resting color those rows set */
 .landing-card:hover,
 .hp-todo-row:hover,
 .hp-free-todo-option:hover,
@@ -861,15 +841,13 @@ textarea { overflow-y: scroll; }
 .plan-resource-row:hover,
 .plan-todo-row:hover { --t-stripe: var(--t-stripe-hi); }
 
-/* The Log Extra templates are half-height rows, so they carry half-size bars.
-   The hover half has to be here too, or it would out-specify the size and the
-   bars would jump as the pointer crossed them. */
+/* The Log Extra templates are half-height rows carrying half-size bars, and the hover half
+   has to be here too or it would out-specify the size and the bars would jump */
 .hp-free-todo-option,
 .hp-free-todo-option:hover { --t-stripe-u: 6px; }
 
-/* The New / Review readouts sit at the right of a row, just inside the bars. Each one
-   is a solid box in its own family color with white numerals, so the number carries the
-   weight of a count instead of trailing off as loose text. */
+/* The New and Review readouts sit just inside the bars, each a solid box in its own family
+   color with white numerals so the number carries the weight of a count */
 .hp-deck-new,
 .hp-deck-review,
 .hp-deck-cram,
@@ -889,7 +867,7 @@ textarea { overflow-y: scroll; }
 .hp-deck-cram      { background: var(--t-plum); }
 
 
-/* Per-feature stripe colors: bars at rest, then the deeper shade for border and hover */
+/* Per-feature stripe colors, bars at rest and the deeper shade for border and hover */
 .landing-card--plan     { --t-stripe: var(--t-accent-stripe); --t-stripe-hi: var(--t-accent); }
 .landing-card--deck     { --t-stripe: var(--t-blue-stripe);   --t-stripe-hi: var(--t-blue-lt); }
 .landing-card--notebook { --t-stripe: var(--t-plum-stripe);   --t-stripe-hi: var(--t-plum-lt); }
@@ -905,12 +883,11 @@ textarea { overflow-y: scroll; }
 .landing-stat { --stat-c: var(--t-text-2); display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; min-width: 64px; }
 .landing-stat b { font-family: var(--t-font-head); font-size: 24px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; color: var(--stat-c); font-variant-numeric: tabular-nums; }
 .landing-stat > span { font-size: 14px; font-weight: 600; color: var(--t-text-2); }
-/* Text values (e.g. a plan name) instead of a count */
+/* Text values like a plan name instead of a count */
 .landing-stat--text { min-width: 0; }
 .landing-stat--text b { font-size: 24px; line-height: 1; letter-spacing: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* The plan name is a word, not a figure, so it rides smaller than the counts beside it.
-   It sits in the same tall line box as the 24px counts so the smaller word centers against
-   them, instead of sharing their bottom edge and hanging low. */
+/* The plan name is a word, not a figure, so it rides smaller in the same tall line box as
+   the 24px counts and centers against them instead of hanging low on their bottom edge */
 .landing-stat--plan b { font-size: 22px; line-height: 24px; font-weight: 750; }
 .landing-stat-divider { width: 2px; height: 30px; background: var(--t-border); margin: 0 16px; flex-shrink: 0; align-self: center; }
 .landing-card--plan     .landing-stat-divider { background: var(--t-accent); }
@@ -930,7 +907,7 @@ textarea { overflow-y: scroll; }
 .todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
 .todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
-/* Plan builder: */
+/* Plan builder */
 .plan-builder-cols { display: flex; flex-direction: column; gap: 26px; }
 .plan-col-main { min-width: 0; }
 .plan-col-side { min-width: 0; padding-top: 22px; border-top: var(--t-bw) solid var(--t-border-2); }
@@ -940,7 +917,7 @@ textarea { overflow-y: scroll; }
 .plan-col-label--resources { color: var(--t-clay); }
 .plan-col-label--srs       { color: var(--t-blue); }
 
-/* ProseMirror editor styles: */
+/* ProseMirror editor styles */
 /* 13px must match DEFAULT_FONT_SIZE in Notebooks.jsx, which clears the font-size mark */
 .nb-editor-scroll .ProseMirror {
   outline: none;
@@ -962,7 +939,7 @@ textarea { overflow-y: scroll; }
   padding: 0.5em 1em;
   color: var(--t-text-2);
   /* A step off the deep peach the section headers wear, so a quote sits quietly in the
-     middle of a page instead of reading as a header band. */
+     middle of a page instead of reading as a header band */
   background: color-mix(in srgb, var(--t-surface-3) 24%, var(--t-surface));
   border-radius: var(--t-r);
 }
@@ -995,12 +972,12 @@ textarea { overflow-y: scroll; }
 .nb-view-content .ProseMirror { cursor: default; }
 .nb-view-content .ProseMirror a { cursor: pointer; }
 
-/* Resource card (name / type / url / notes), shared by Stats + study page: */
+/* Resource card with name, type, url and notes, shared by Stats and the study page */
 .st-resource-cards { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .st-resource-card { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 7px var(--t-stripe-gutter) 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-title); }
 .st-resource-card-type { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
-/* Only the nudge off the baseline it shares with the name, the mark itself is .t-open-arrow */
+/* Only the nudge off the baseline it shares with the name, the mark itself is t-open-arrow */
 .st-resource-card-url { margin-top: 3px; }
 .st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }

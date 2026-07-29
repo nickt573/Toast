@@ -1,9 +1,5 @@
-// Neither WebKitGTK (Linux) nor WebView2 (Windows) grant getUserMedia by
-// default in an embedded webview: WebKitGTK silently denies every request
-// unless the host connects to `permission-request`, and WebView2 needs an
-// explicit `PermissionRequested` handler to auto-allow instead of leaving
-// the mic permanently blocked. macOS/iOS grant via the audio-input
-// entitlement instead, so there's nothing to wire up there.
+// Neither WebKitGTK nor WebView2 grant getUserMedia by default in an embedded webview, so
+// each needs its own handler wired up here, while Apple platforms grant by entitlement
 use tauri::WebviewWindow;
 
 pub fn allow_media_permissions(window: &WebviewWindow) {

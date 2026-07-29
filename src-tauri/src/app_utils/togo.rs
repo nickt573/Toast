@@ -16,9 +16,8 @@ pub fn endpoint() -> &'static str {
     option_env!("TOAST_TOGO_ENDPOINT").unwrap_or("https://toast-to-go.njt112233.workers.dev")
 }
 
-// Instance config
-// Lives at app_dir/togo.json and is never bundled. That's what keeps the UUID
-// instance-specific: a pull replaces your data but not your identity.
+// Instance config, which lives beside the database and is never bundled, so a pull replaces
+// your data but not your identity
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -56,7 +55,7 @@ pub fn load_config(app_dir: &Path) -> Result<ToGoConfig, String> {
         if let Ok(cfg) = serde_json::from_str::<ToGoConfig>(&raw) {
             return Ok(cfg);
         }
-        // instance_id is the slot key, keep the bytes recoverable
+        // instance_id is the slot key, so keep the bytes recoverable
         let bad = config_path(app_dir).with_extension("json.bad");
         let _ = fs::rename(config_path(app_dir), &bad);
         log::error!(
@@ -76,7 +75,7 @@ pub fn load_config(app_dir: &Path) -> Result<ToGoConfig, String> {
     Ok(cfg)
 }
 
-/// Writes via temp + rename so a crash mid-write can't corrupt the identity.
+/// Writes to a temp file then renames, so a crash mid-write can't corrupt the identity
 pub fn save_config(app_dir: &Path, cfg: &ToGoConfig) -> Result<(), String> {
     let json = serde_json::to_string_pretty(cfg).map_err(|e| e.to_string())?;
     let tmp = config_path(app_dir).with_extension("json.tmp");
@@ -84,7 +83,7 @@ pub fn save_config(app_dir: &Path, cfg: &ToGoConfig) -> Result<(), String> {
     fs::rename(&tmp, config_path(app_dir)).map_err(|e| e.to_string())
 }
 
-/// Seconds until this instance may push again, or 0 if it can push now.
+/// Seconds until this instance may push again, or 0 if it can push now
 pub fn push_cooldown(cfg: &ToGoConfig) -> i64 {
     let Some(last) = cfg.last_push.as_ref() else {
         return 0;
@@ -98,7 +97,7 @@ pub fn push_cooldown(cfg: &ToGoConfig) -> i64 {
     (MIN_PUSH_SECS - elapsed).max(0)
 }
 
-/// Most-recent-first, deduped by id (a re-pull keeps its label), capped at 3.
+/// Most recent first, deduped by id so a re-pull keeps its label, and capped at three
 pub fn record_pull(cfg: &mut ToGoConfig, id: &str) {
     let now = chrono::Local::now().to_rfc3339();
     let label = cfg
@@ -120,8 +119,8 @@ pub fn record_pull(cfg: &mut ToGoConfig, id: &str) {
     cfg.last_pull = Some(now);
 }
 
-/// Push/pull scratch space. Prefixed so sweep_stale_temp can find dirs whose
-/// TempDir cleanup never ran (force-kill, power loss).
+/// Scratch space for a push or pull, prefixed so sweep_stale_temp can find dirs whose
+/// cleanup never ran
 fn togo_tempdir() -> Result<tempfile::TempDir, String> {
     tempfile::Builder::new()
         .prefix(TEMP_PREFIX)
@@ -129,8 +128,8 @@ fn togo_tempdir() -> Result<tempfile::TempDir, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Startup guard: a killed transfer strands its scratch dir (up to 1 GB).
-/// Age-gated so a second running instance mid-transfer keeps its files.
+/// Startup guard, since a killed transfer strands a large scratch dir, age-gated so a second
+/// running instance mid-transfer keeps its files
 pub fn sweep_stale_temp() {
     let Ok(entries) = fs::read_dir(std::env::temp_dir()) else {
         return;
@@ -172,7 +171,7 @@ pub struct UploadedPart {
 
 const THROTTLED: &str = "Too many requests. Wait a minute and try again.";
 
-/// A 429's body says how long to wait (a minute vs. a day). Pass it through.
+/// A rate-limit body says how long to wait, anything from a minute to a day, so pass it on
 async fn throttle_msg(res: reqwest::Response) -> String {
     #[derive(Deserialize)]
     struct Body {
@@ -189,8 +188,8 @@ fn network_err(e: reqwest::Error) -> String {
     "Couldn't reach Toast to Go. Check your connection.".into()
 }
 
-/// Uploads a package to `id`'s slot in 50 MB parts. Aborts the upload on any
-/// failure so an incomplete one can't linger in the bucket.
+/// Uploads a package to that id's slot in parts, aborting on any failure so an incomplete
+/// upload can't linger in the bucket
 pub async fn upload(zip_path: &Path, id: &str) -> Result<(), String> {
     let client = reqwest::Client::new();
     let base = format!("{}/p/{id}", endpoint());
@@ -266,7 +265,7 @@ pub async fn upload(zip_path: &Path, id: &str) -> Result<(), String> {
         part_number += 1;
     }
 
-    // The slot only changes here, an aborted push never becomes visible.
+    // The slot only changes here, so an aborted push never becomes visible
     let res = client
         .post(format!("{base}/mpu/{upload_id}/complete"))
         .json(&serde_json::json!({ "parts": parts }))
@@ -289,7 +288,7 @@ pub async fn upload(zip_path: &Path, id: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Downloads `id`'s package to a temp file.
+/// Downloads that id's package to a temp file
 pub async fn download(id: &str) -> Result<(tempfile::TempDir, PathBuf), String> {
     let mut res = reqwest::Client::new()
         .get(format!("{}/p/{id}", endpoint()))
@@ -327,7 +326,7 @@ pub struct SlotInfo {
     pub uploaded: Option<String>,
 }
 
-/// The package at `id`, or None if the slot is empty.
+/// The package at that id, or None if the slot is empty
 pub async fn slot_info(id: &str) -> Result<Option<SlotInfo>, String> {
     let res = reqwest::Client::new()
         .head(format!("{}/p/{id}", endpoint()))
@@ -372,8 +371,8 @@ pub struct Manifest {
     pub created_at: String,
 }
 
-/// Zips a database snapshot plus the media trees. The TempDir in the result
-/// owns the path and must outlive the caller's use.
+/// Zips a database snapshot plus the media trees, and the temp dir in the result owns the
+/// path so it must outlive the caller's use
 pub fn bundle(
     app_dir: &Path,
     conn: &Connection,
@@ -381,7 +380,7 @@ pub fn bundle(
 ) -> Result<(tempfile::TempDir, PathBuf), String> {
     let tmp = togo_tempdir()?;
 
-    // VACUUM INTO, not a byte copy: the live connection may be mid-write.
+    // VACUUM INTO rather than a byte copy, since the live connection may be mid-write
     let snapshot = tmp.path().join("database.db");
     conn.execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()])
         .map_err(|e| format!("Could not snapshot the database: {e}"))?;
@@ -437,7 +436,7 @@ pub fn bundle(
     Ok((tmp, zip_path))
 }
 
-/// Parses "1.5.0" into a comparable (major, minor, patch) triple.
+/// Parses a version string into a comparable major, minor and patch triple
 fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     let mut parts = v.trim().split('.').map(|p| p.parse::<u64>().ok());
     let triple = (parts.next()??, parts.next()??, parts.next()??);
@@ -452,7 +451,7 @@ fn read_manifest(zip_path: &Path, stage: &Path) -> Result<Manifest, String> {
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
 
-        // Reject zip-slip: absolute paths and traversal.
+        // Reject zip-slip, meaning absolute paths and traversal
         let Some(name) = entry.enclosed_name() else {
             return Err("Package contains an unsafe path.".into());
         };
@@ -468,7 +467,7 @@ fn read_manifest(zip_path: &Path, stage: &Path) -> Result<Manifest, String> {
         if let Some(parent) = out.parent() {
             fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        // Cap what a zip can expand to, and don't trust its declared sizes.
+        // Cap what a zip can expand to, and don't trust its declared sizes
         let mut buf = Vec::new();
         (&mut entry)
             .take(budget + 1)
@@ -492,18 +491,18 @@ fn read_manifest(zip_path: &Path, stage: &Path) -> Result<Manifest, String> {
     Ok(manifest)
 }
 
-/// Validates a package, then swaps it in and reopens `conn` against it.
-/// Destructive on success. `app_date` is deliberately left as it came, see staleness check below.
+/// Validates a package, then swaps it in and reopens the connection against it, destructively
+/// on success, and app_date is deliberately left as it came for the staleness check below
 pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result<(), String> {
-    // Staged inside app_dir: the swap renames below can't cross filesystems,
-    // and the system temp dir often lives on one (tmpfs).
+    // Staged inside app_dir, since the swap renames below can't cross filesystems and the
+    // system temp dir often lives on another one
     let staged = tempfile::Builder::new()
         .prefix(".togo-staging")
         .tempdir_in(app_dir)
         .map_err(|e| e.to_string())?;
     let manifest = read_manifest(zip_path, staged.path())?;
 
-    // Newer packages are refused; older ones are migrated by init_schema below.
+    // Newer packages are refused, older ones are migrated by init_schema below
     if manifest.format > MANIFEST_FORMAT {
         return Err("This package was made by a newer version of Toast. Update Toast on this machine to pull it.".into());
     }
@@ -524,8 +523,8 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
         return Err("That package's data format is newer than this version of Toast. Update Toast on this machine to pull it.".into());
     }
 
-    // Reject a package dated ahead of local: pulling it would import stats and
-    // SRS state dated past today, and update_date only ticks forward.
+    // Reject a package dated ahead of local, since pulling it would import stats and SRS
+    // state dated past today and update_date only ticks forward
     let local_date = scheduling::get_date(conn).map_err(|e| e.to_string())?;
     if local_date < manifest.app_date {
         return Err(format!(
@@ -534,8 +533,8 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
         ));
     }
 
-    // Fail before destroying anything, not after. Migrations run here, on the
-    // staged db, so a failure can't strand a half-migrated live one.
+    // Fail before destroying anything, and migrations run here on the staged db so a
+    // failure can't strand a half-migrated live one
     let staged_db = staged.path().join("database.db");
     {
         let probe = Connection::open(&staged_db)
@@ -549,7 +548,7 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
         db::init_schema(&probe, app_dir).map_err(|e| e.to_string())?;
     }
 
-    // Close the live connection before touching the file: Windows won't rename a file with an open handle.
+    // Close the live connection first, Windows won't rename a file with an open handle
     let old = std::mem::replace(
         conn,
         Connection::open_in_memory().map_err(|e| e.to_string())?,
@@ -560,8 +559,8 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
     let _ = fs::remove_dir_all(&rollback);
     fs::create_dir_all(&rollback).map_err(|e| e.to_string())?;
 
-    // db moves aside first and back last, so "live db missing" brackets the
-    // whole swap, that's what recover_interrupted_swap keys on.
+    // The db moves aside first and back last, so a missing live db brackets the whole swap,
+    // which is what recover_interrupted_swap keys on
     let swap = || -> std::io::Result<()> {
         for name in ["database.db", "cards", "pages"] {
             let live = app_dir.join(name);
@@ -598,7 +597,7 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
     Ok(())
 }
 
-/// Startup guard: a crash mid-swap leaves the live db in `.togo-rollback/`.
+/// Startup guard, since a crash mid-swap leaves the live db in the rollback dir
 pub fn recover_interrupted_swap(app_dir: &Path) {
     if let Ok(entries) = fs::read_dir(app_dir) {
         for e in entries.flatten() {
@@ -628,7 +627,7 @@ pub fn recover_interrupted_swap(app_dir: &Path) {
 mod tests {
     use super::*;
 
-    /// An app dir with a schema'd db, one card, and one media file.
+    /// An app dir with a schema'd db, one card, and one media file
     fn make_app(date: &str) -> (tempfile::TempDir, Connection) {
         let dir = tempfile::tempdir().unwrap();
         let app_dir = dir.path();
@@ -655,7 +654,7 @@ mod tests {
         (dir, conn)
     }
 
-    /// Rewrites a field in the package's manifest, repacking the zip.
+    /// Rewrites a field in the package's manifest, repacking the zip
     fn tamper(zip_path: &Path, edit: impl Fn(&mut Manifest)) -> PathBuf {
         let staged = tempfile::tempdir().unwrap();
         let mut manifest = read_manifest(zip_path, staged.path()).unwrap();
@@ -701,8 +700,8 @@ mod tests {
 
     #[test]
     fn restore_leaves_app_date_alone() {
-        // The pulled date must survive: update_date ticks the SRS forward by
-        // (today - stored), so overwriting it here would skip the rollover.
+        // The pulled date must survive, since update_date ticks the SRS forward by the gap
+        // to today and overwriting it here would skip the rollover
         let (src, conn) = make_app("2026-07-10");
         let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
 
@@ -732,7 +731,7 @@ mod tests {
         let err = restore(dst.path(), &zip, &mut dconn).unwrap_err();
         assert!(err.contains("from the future"), "{err}");
 
-        // Local data must be untouched by a refused pull.
+        // Local data must be untouched by a refused pull
         let n: i64 = dconn
             .query_row("SELECT COUNT(*) FROM card", [], |r| r.get(0))
             .unwrap();
@@ -770,8 +769,8 @@ mod tests {
         assert!(restore(dst.path(), &bad, &mut dconn).is_err());
     }
 
-    /// A pull from an older release must succeed; init_schema migrates the
-    /// staged database before the swap.
+    /// A pull from an older release must succeed, init_schema migrates the staged database
+    /// before the swap
     #[test]
     fn accepts_older_version_package() {
         let (src, conn) = make_app("2026-07-14");
@@ -829,7 +828,7 @@ mod tests {
         let (dir, conn) = make_app("2026-07-14");
         drop(conn);
 
-        // Simulate a crash after the live tree moved aside.
+        // Simulate a crash after the live tree moved aside
         let rollback = dir.path().join(".togo-rollback");
         fs::create_dir_all(&rollback).unwrap();
         for name in ["database.db", "cards", "pages"] {
@@ -845,16 +844,15 @@ mod tests {
         assert!(!dir.path().join(".togo-staging-abc").exists());
     }
 
-    /// Hits the live Worker. Run explicitly:
-    ///   cargo test live_round_trip -- --ignored --nocapture
+    /// Hits the live Worker, so it only runs when asked for by name with the ignored flag
     #[ignore]
     #[tokio::test]
     async fn live_round_trip() {
         let id = uuid::Uuid::new_v4().to_string();
 
         let (src, conn) = make_app("2026-07-14");
-        // Something big enough to force a multi-part upload path is overkill
-        // here; the worker was already proven at 130 MB. Prove the wiring.
+        // Forcing the multi-part upload path is overkill here since the worker was already
+        // proven at size, so this just proves the wiring
         fs::write(src.path().join("cards/audio/big.wav"), vec![7u8; 3 * 1024 * 1024]).unwrap();
         let (_tmp, zip) = bundle(src.path(), &conn, &id).unwrap();
 

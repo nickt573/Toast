@@ -3,8 +3,8 @@ import { loggedInvoke, logError } from "../logger";
 import { open } from "@tauri-apps/plugin-dialog";
 import { CardFace, AudioPlayer, renderAnkiHtml, stripHtml, normalizeSearchText, stripAudioTags, extractRawAudioSrcs } from "./CardFace";
 
-// Audio tags stripped from Anki fields: asset:// audio never plays on Linux WebKitGTK
-// and its controls just render "Error". Replaced with AudioPlayer.
+// Audio tags are stripped from Anki fields since asset audio never plays on Linux WebKitGTK
+// and its controls just render an error, so AudioPlayer stands in
 function UploadedHtmlField({ html }) {
   const srcs = extractRawAudioSrcs(html);
   return (
@@ -44,13 +44,14 @@ const fileFieldClass = (file) => `input-readonly${file ? " has-file" : ""}`;
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
-// Mirrors PRIORITY_CEIL in scheduling.rs: sequences below this are prioritized
+// Mirrors PRIORITY_CEIL in the backend, sequences below this are prioritized
 const PRIORITY_CEIL = -50000;
 
-// Describes what the field contains rather than its type name, since it holds files not the words "audio" or "image".
+// Describes what the field contains rather than its type name, since it holds files
 const mediaNote = (media) => `contains ${media.join(" and ")} content`;
 
-// Anki field-mapping row. Field names are unreliable, so samples (paged through real values) are what you map against.
+// Anki field-mapping row, where field names are unreliable so real sample values are what
+// you map against
 function AnkiFieldRow({ field, index, totalNotes, front, back, support, onToggle }) {
   const [at, setAt] = useState(0);
   const samples = field.samples;
@@ -176,7 +177,7 @@ function DeckList({ setToast, onOpenDeck }) {
     if (!ankiPending) return;
     if (ankiFrontFields.length === 0) { setToast("Please select at least one front field.", "warn"); return; }
     if (ankiBackFields.length === 0) { setToast("Please select at least one back field.", "warn"); return; }
-    // Fields land on the card in the order they're listed here, not the order they were ticked.
+    // Fields land on the card in the order listed here, not the order they were ticked
     const inListOrder = (picked) => ankiPending.fields.map((f) => f.name).filter((n) => picked.includes(n));
     try {
       const [, count] = await loggedInvoke("import_anki_deck", {
@@ -222,7 +223,7 @@ function DeckList({ setToast, onOpenDeck }) {
     } catch (e) { logError("catch", e); setToast(`Failed to delete ${target?.name ?? "Deck"}.`, "error"); }
   };
 
-  // "<name> (copy)", bumping a counter until the name is free
+  // The name with a copy suffix, bumping a counter until it is free
   const uniqueCopyName = (base) => {
     const existing = new Set(decks.map((d) => d.name));
     let name = `${base} (copy)`;
@@ -262,8 +263,8 @@ function DeckList({ setToast, onOpenDeck }) {
     if (mergeDeckA === mergeDeckB) { setToast("Please select two different decks.", "warn"); return; }
     if (!mergeName.trim()) { setToast("Please enter a name for the merged deck.", "warn"); return; }
     try {
-      // archiveSources only matters with a reset. Without one the merge moves the
-      // sources' study onto the new deck and archives them regardless.
+      // archiveSources only matters with a reset, since without one the merge moves the
+      // sources' study onto the new deck and archives them regardless
       const newDeck = await loggedInvoke("merge_decks", {
         deckAId: mergeDeckA,
         deckBId: mergeDeckB,
@@ -372,7 +373,7 @@ function DeckList({ setToast, onOpenDeck }) {
           </div>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={ankiMakeSearchable} onChange={(e) => setAnkiMakeSearchable(e.target.checked)} />
-            {/* 4px text-to-tip gap matches .dk-new-card-check */}
+            {/* The gap from text to tip matches the new card checks */}
             <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               Make all searchable
               <Tip text="Searchable cards appear in the similar cards panel shown during study sessions. Similar cards are based on any matching terms separated by commas or semicolons and ignore anything in parentheses." />
@@ -495,12 +496,13 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     if (!f || !base || !target || f.id !== target.id || skipAutoSaveRef.current) return;
     const snap = snapshotCard(f);
     if (Object.keys(base).every((k) => snap[k] === base[k])) return;
-    // Emptied fronts or backs are silently dropped and the stored card stays intact
+    // An emptied front or back is silently dropped and the stored card stays intact
     if (!f.is_uploaded && (!f.front.trim() || !f.back.trim())) return;
     try {
       const fresh = await loggedInvoke("update_card", { card: { ...f, support: f.support || null, front_image: f.front_image || null, back_image: f.back_image || null, front_audio: f.front_audio || null, back_audio: f.back_audio || null } });
       baselineRef.current = snapshotCard(fresh);
-      // Media paths are regenerated server-side, so the form must adopt them or the next diff re-saves the files
+      // Media paths are regenerated server-side, so the form must adopt them or the next
+      // diff re-saves the files
       setForm((prev) => prev && prev.id === fresh.id ? { ...prev, front_image: fresh.front_image, back_image: fresh.back_image, front_audio: fresh.front_audio, back_audio: fresh.back_audio } : prev);
       onSaved(fresh);
     } catch (e) { logError("catch", e); setToast("Failed to save card changes.", "error"); }
@@ -521,7 +523,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     return () => { autoSave(card); };
   }, [card?.id]);
 
-  // logVersion reloads the log after deck actions that wipe it (reset)
+  // logVersion reloads the log after a deck action wipes it
   useEffect(() => {
     if (!card) return;
     let cancelled = false;
@@ -531,8 +533,8 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     return () => { cancelled = true; };
   }, [card?.id, logVersion]);
 
-  // Debounced autosave while editing, so changes survive even if the app
-  // closes before the card-switch autosave gets a chance to run
+  // Debounced autosave while editing, so changes survive even if the app closes before
+  // the card-switch autosave gets a chance to run
   useEffect(() => {
     if (!form) return;
     const t = setTimeout(() => autoSave(card), 1200);
@@ -929,7 +931,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
-  // Which fields the text search matches. At least one stays on at all times.
+  // Which fields the text search matches, and at least one stays on at all times
   const [scopeMain, setScopeMain] = useState(true);
   const [scopeSupport, setScopeSupport] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -944,7 +946,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [logVersion, setLogVersion] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
-  // Dragged panel height remembered while this deck view is open. null means use the CSS default.
+  // Dragged panel height remembered while this deck view is open, null meaning the default
   const [creatorHeight, setCreatorHeight] = useState(null);
   const tablePaneRef = useRef(null);
   const toggleRowRef = useRef(null);
@@ -959,13 +961,13 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   // Below this height a released drag snaps the panel closed
   const CREATOR_CLOSE_PX = 60;
 
-  // The toggle row doubles as a drag handle: clicks still toggle, drags resize
+  // The toggle row doubles as a drag handle, clicks still toggle and drags resize
   const startCreatorDrag = (e) => {
     if (e.button !== 0) return;
     const pane = tablePaneRef.current;
     const toggle = toggleRowRef.current;
     if (!pane || !toggle) return;
-    // Top limit sits just under the Front/Back header, or the search bar when the table is empty
+    // The top limit sits just under the table header, or the search bar when there is none
     const topEdge = (pane.querySelector(".dk-table-head") ?? pane.querySelector(".dk-table-search")).getBoundingClientRect().bottom;
     const maxHeight = pane.getBoundingClientRect().bottom - topEdge - toggle.offsetHeight;
     const startHeight = pane.querySelector(".dk-new-card-dark")?.offsetHeight ?? 0;
@@ -988,7 +990,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
       if (!moved) return;
       if (heightAt(ev) < CREATOR_CLOSE_PX) {
         setCreatorOpen(false);
-        // Keep the pre-drag height so reopening restores it instead of a sliver
+        // Keep the pre-drag height so reopening restores it rather than a sliver
         setCreatorHeight(startHeight >= CREATOR_CLOSE_PX ? startHeight : null);
       }
     };
@@ -1059,7 +1061,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
       if (archivePrevious) await loggedInvoke("archive_deck_stats", { groupId: deck.id });
       const updated = await loggedInvoke("get_cards", { deckId: deck.id });
       setCards(updated);
-      // Reset wipes the grade logs, so the last-seen filter and editor log must reload too
+      // A reset wipes the grade logs, so the last-seen filter and editor log reload too
       const pairs = await loggedInvoke("get_card_last_seen_dates", { deckId: deck.id });
       setLastSeenMap(Object.fromEntries(pairs));
       setLogVersion((v) => v + 1);
@@ -1068,7 +1070,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     } catch (e) { logError("catch", e); setToast("Failed to reset deck.", "error"); }
   };
 
-  // Turning a scope off is blocked when it's the last one selected.
+  // Turning a scope off is blocked when it's the last one selected
   const toggleScope = (which) => {
     if (which === "main") { if (scopeMain && !scopeSupport) return; setScopeMain(v => !v); }
     else { if (scopeSupport && !scopeMain) return; setScopeSupport(v => !v); }
@@ -1109,7 +1111,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     if (dateSince) result = result.filter(c => lastSeenMap[c.id] && lastSeenMap[c.id] >= dateSince);
 
     if (sort === "sequence") result = [...result].sort((a, b) => sortDir === "asc" ? a.sequence - b.sequence : b.sequence - a.sequence);
-    // else: trust backend ORDER BY (position ASC NULLS LAST, id ASC) for merged-deck zipper order
+    // otherwise trust the backend ordering, which keeps the merged-deck zipper order
     else if (sortDir === "desc") result = [...result].reverse();
 
     return result;
@@ -1122,7 +1124,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   };
   const sortArrow = (key) => sort === key ? (sortDir === "asc" ? " ▴" : " ▾") : "";
 
-  // Only rows near the viewport are rendered, with spacer rows holding the scroll height
+  // Only rows near the viewport render, with spacer rows holding the scroll height
   useLayoutEffect(() => {
     const el = tableScrollRef.current;
     if (!el) return;
@@ -1259,7 +1261,8 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
             </div>
           ) : (
             <>
-              {/* Header outside the scroll area so the scrollbar starts below it. Both tables share fixed column widths to stay aligned. */}
+              {/* Header outside the scroll area so the scrollbar starts below it, and both
+                  tables share fixed column widths to stay aligned */}
               <div className="dk-table-head">
                 <table className="dk-card-table">
                   <colgroup><col /><col /><col className="dk-col-due" /><col className="dk-col-paused" /></colgroup>
@@ -1363,10 +1366,8 @@ export default function Decks({ setToast, initialDeck, onClearInitial, returnTo,
   const openDeck = (deck) => { setActiveDeck(deck); setView(VIEW_CARDS); };
   const goBack = () => { setActiveDeck(null); setView(VIEW_DECKS); };
 
-  // Re-clicking the Decks tab comes back here. Compared against the count this mount
-  // started on, since the effect runs on mount too and the count is only zero until the
-  // first re-click anywhere: testing it directly would bounce a deck opened from a plan
-  // straight back out to the list.
+  // Re-clicking the Decks tab comes back here, compared against the count this mount
+  // started on since the effect runs on mount too
   const signalAtMount = useRef(homeSignal);
   useEffect(() => {
     if (homeSignal !== signalAtMount.current) goBack();

@@ -140,8 +140,8 @@ pub fn merge_decks(
         )?;
     }
 
-    // Without a reset, copy both sources' counting study (per plan and date) and archive every
-    // source row so only the copy counts, one-time. With a reset nothing is copied, sources keep counting unless archive_sources set
+    // Without a reset, copy both sources' counting study per plan and date and archive every
+    // source row so only the copy counts, and with a reset nothing is copied
     if !reset {
         tx.execute(
             r#"
@@ -174,7 +174,7 @@ pub fn merge_decks(
         rusqlite::params![deck_a_id, deck_b_id],
     )?;
 
-    // Delete the two source decks (cards already moved, so no cascade loss)
+    // Delete the two source decks, cards already moved so no cascade loss
     tx.execute(
         r#"DELETE FROM "group" WHERE id = ?1 AND group_type = 'deck'"#,
         [deck_a_id],
@@ -184,8 +184,7 @@ pub fn merge_decks(
         [deck_b_id],
     )?;
 
-    // Assign zipper positions so fill_track interleaves cards from both decks
-    // A[0]->pos 0, B[0]->pos 1, A[1]->pos 2, B[1]->pos 3, ...
+    // Assign zipper positions so fill_track alternates cards from the two decks
     let max_len = a_ids.len().max(b_ids.len());
     let mut interleaved: Vec<i64> = Vec::with_capacity(a_ids.len() + b_ids.len());
     for i in 0..max_len {
@@ -234,8 +233,8 @@ struct DupCardRow {
     position: Option<i64>,
 }
 
-// Copy a deck and its cards into a new unassigned deck, media copied under fresh names so the two never share files
-// reset wipes SRS state on the copy, otherwise progress carries over but due flags clear (no plan)
+// Copy a deck and its cards into a new unassigned deck, media copied under fresh names so
+// the two never share files, and reset wipes SRS state on the copy
 pub fn duplicate_deck(
     deck_id: i64,
     new_name: String,
@@ -529,7 +528,7 @@ pub fn merge_notebooks(
 }
 
 // Copy a notebook and its pages into a new unassigned notebook, images and audio copied
-// under fresh names so the two never share files. Created dates kept so ordering matches the source
+// under fresh names so the two never share files, and created dates kept so ordering holds
 pub fn duplicate_notebook(
     notebook_id: i64,
     new_name: String,
@@ -805,7 +804,7 @@ mod stat_row_invariant_tests {
             }
             Op::Reset => reset_deck(deck, conn).unwrap(),
             Op::Study => {
-                // Opening the session creates the line, out of a plan there's nowhere to write, no-op
+                // Opening the session creates the line, and out of a plan there's nowhere to write
                 let line = open_stat_line(deck, conn).unwrap()?;
                 conn.execute(
                     "UPDATE group_stats SET num_new = num_new + 1 WHERE id = ?1",
@@ -841,8 +840,8 @@ mod stat_row_invariant_tests {
         Some(deck)
     }
 
-    // One line per deck, plan, and day unless something closed the earlier one, only a reset
-    // or archiving can. So a non-newest line for its day is archived or has a reset at or above its id
+    // One line per deck, plan and day unless a reset or archiving closed the earlier one, so a
+    // non-newest line for its day is archived or has a reset at or above its id
     fn check_one_plain_line_per_day(conn: &Connection, trace: &str) {
         let dupes: i64 = conn
             .query_row(
@@ -862,7 +861,7 @@ mod stat_row_invariant_tests {
         assert_eq!(dupes, 0, "duplicate plain line for one day after {trace}");
     }
 
-    // Only opening a session writes a line, join/leave/reset/day-roll leave the count alone
+    // Only opening a session writes a line, joining, leaving, resetting and day rolls do not
     fn check_only_sessions_write(before: i64, now: i64, op: Op, trace: &str) {
         if matches!(op, Op::Study) {
             return;
@@ -870,7 +869,7 @@ mod stat_row_invariant_tests {
         assert_eq!(now, before, "line count moved without a session after {trace}");
     }
 
-    // A reset always has a run under it (the one it ended), never on a deck with no history
+    // A reset always has the run it ended under it, never on a deck with no history
     fn check_resets_have_a_run_behind_them(conn: &Connection, trace: &str) {
         let stranded: i64 = conn
             .query_row(
@@ -1068,8 +1067,8 @@ mod stat_row_tests {
             .sum()
     }
 
-    // Rows behind one deck card on the stats page, passed to bulk delete and archive
-    // Live and dead decks are separate cards even on the same id, so group_id is part of the pick
+    // Rows behind one deck card on the stats page, passed to bulk delete and archive, where
+    // live and dead decks are separate cards on the same id so group_id is part of the pick
     fn card_rows(conn: &Connection, origin: i64, plan: i64, dead: bool) -> Vec<i64> {
         conn.prepare(
             "SELECT id FROM group_stats
@@ -1448,7 +1447,7 @@ mod stat_row_tests {
         let merged = merge_decks(1, 2, "joint".into(), true, false, &mut conn).unwrap();
         assert_eq!(rows(&conn, merged.id), 0, "the new deck starts empty");
         assert_eq!(archived_split(&conn, 1), (0, 1), "the caller decides, not the merge");
-        assert_eq!(plan_total(&conn, 1), 8, "so the sources keep counting");
+        assert_eq!(plan_total(&conn, 1), 8, "so the sources keep their stats");
     }
 
     #[test]
@@ -1519,7 +1518,7 @@ mod stat_row_tests {
     }
 
     // On an old database that reused an id before the migration reserved it, a dead and live
-    // deck can share origin_group_id. The stats page draws them as separate cards, clearing one can't touch the other
+    // deck can share origin_group_id, so clearing one card must not touch the other
     #[test]
     fn t30_clearing_a_dead_decks_stats_leaves_a_live_deck_on_the_same_id() {
         let mut conn = setup();
@@ -1583,7 +1582,7 @@ mod stat_row_tests {
         assert_eq!(rows(&conn, 1), 2);
     }
 
-    // A reset is deck-wide, every plan the deck was studied in sees it (the old per-plan marker didn't)
+    // A reset is deck-wide, so every plan the deck was studied in sees it
     #[test]
     fn t33_a_reset_divides_every_plan_the_deck_has_lines_in() {
         let mut conn = setup();
