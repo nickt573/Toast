@@ -130,7 +130,17 @@ function computeMetrics(groupStats, todoStats) {
   groupStats.forEach(r => { totalP += r.num_promote; totalD += r.num_demote; });
   const avgRetention = (totalP + totalD) > 0 ? totalP / (totalP + totalD) : null;
 
-  return { studyMins, todoMins, newCardsStudied, totalCardsStudied, todosDone, avgRetention };
+  // Average time per calendar day across the studied span, decks and todos together the
+  // way the header's "study time" counts them. The span runs from the first active day to
+  // the last, not to today, so a plan left idle keeps the daily figure it had at its peak
+  // instead of bleeding down over the dead days after it was abandoned.
+  const studyDates = [...groupStats, ...todoStats].map(r => r.date).sort();
+  const studySpan = studyDates.length
+    ? daysBetween(studyDates[0], studyDates[studyDates.length - 1]) + 1
+    : 0;
+  const avgDailyStudy = studySpan > 0 ? (studyMins + todoMins) / studySpan : null;
+
+  return { studyMins, todoMins, newCardsStudied, totalCardsStudied, todosDone, avgRetention, avgDailyStudy };
 }
 
 // Chart data builders:
@@ -465,11 +475,28 @@ const stretchRetention = {
 
 // Metric card:
 
-function MetricCard({ label, value, color }) {
+// A single figure, or a small stack of them clicking the card steps through when `faces`
+// holds more than one. The dots below just mark the place.
+function MetricCard({ label, value, color, faces }) {
+  const items = faces ?? [{ label, value, color }];
+  const [i, setI] = useState(0);
+  const idx = i % items.length;
+  const cur = items[idx];
+  const multi = items.length > 1;
   return (
-    <div className="st-metric">
-      <div className="st-metric-value" style={color ? { color } : {}}>{value}</div>
-      <div className="st-metric-label">{label}</div>
+    <div className={`st-metric${multi ? " st-metric--multi" : ""}`}
+      onClick={multi ? () => setI(idx + 1) : undefined}>
+      <div className="st-metric-body">
+        <div className="st-metric-value" style={cur.color ? { color: cur.color } : {}}>{cur.value}</div>
+        <div className="st-metric-label">{cur.label}</div>
+      </div>
+      {multi && (
+        <div className="st-metric-dots">
+          {items.map((_, k) => (
+            <span key={k} className={`st-metric-dot${k === idx ? " active" : ""}`} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1542,7 +1569,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [groupStats,     setGroupStats]    = useState([]);
   const [deckResets,     setDeckResets]    = useState([]);
   const [todoStats,      setTodoStats]     = useState([]);
-  const [streakInfo,     setStreakInfo]    = useState({ streak: 0, studied_today: false });
+  const [streakInfo,     setStreakInfo]    = useState({ streak: 0, studied_today: false, longest: 0 });
   const [contentTab,     setContentTab]    = useState(() => returnContext?.contentTab ?? "decks");
   const [today,          setToday]         = useState(null);
   const [loading,        setLoading]       = useState(true);
@@ -1636,7 +1663,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       setGroupStats([]);
       setDeckResets([]);
       setTodoStats([]);
-      setStreakInfo({ streak: 0, studied_today: false });
+      setStreakInfo({ streak: 0, studied_today: false, longest: 0 });
       setPlanResources([]);
       return;
     }
@@ -1701,16 +1728,33 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={metrics.avgRetention !== null ? `${Math.round(metrics.avgRetention * 100)}%` : "-"}
               color={metrics.avgRetention !== null ? retColor : GRAY}
             />
-            <MetricCard label="Unique Cards Seen" value={metrics.newCardsStudied} color="var(--t-blue)" />
-            <MetricCard label="Total Cards Seen" value={metrics.totalCardsStudied} color="var(--t-blue)" />
+            <MetricCard faces={[
+              { label: "Unique Cards Studied", value: metrics.newCardsStudied, color: "var(--t-blue)" },
+              { label: "Total Cards Studied", value: metrics.totalCardsStudied, color: "var(--t-blue)" },
+            ]} />
             <MetricCard label="Todos Done"    value={metrics.todosDone}     color="var(--t-yellow)" />
-            <MetricCard label="Deck Time" value={fmtTime(metrics.studyMins)} color="var(--t-time)" />
-            <MetricCard label="Todo Time"  value={fmtTime(metrics.todoMins)}  color="var(--t-time)" />
+            <MetricCard faces={[
+              { label: "Deck Time", value: fmtTime(metrics.studyMins), color: "var(--t-time)" },
+              { label: "Todo Time", value: fmtTime(metrics.todoMins), color: "var(--t-time)" },
+              { label: "Total Time", value: fmtTime(metrics.studyMins + metrics.todoMins), color: "var(--t-time)" },
+            ]} />
             <MetricCard
-              label="Study Streak"
-              value={`${streakInfo.streak}d`}
-              color={streakInfo.streak === 0 ? GRAY : atRisk ? AMBER : "var(--t-green)"}
+              label="Avg. Daily Time"
+              value={metrics.avgDailyStudy !== null ? fmtTime(Math.round(metrics.avgDailyStudy)) : "-"}
+              color={metrics.avgDailyStudy !== null ? "var(--t-time)" : GRAY}
             />
+            <MetricCard faces={[
+              {
+                label: "Current Streak",
+                value: `${streakInfo.streak}d`,
+                color: streakInfo.streak === 0 ? GRAY : atRisk ? AMBER : "var(--t-green)",
+              },
+              {
+                label: "Longest Streak",
+                value: `${streakInfo.longest}d`,
+                color: streakInfo.longest === 0 ? GRAY : "var(--t-green)",
+              },
+            ]} />
             <MetricCard
               label="Total Days"
               value={totalDays !== null ? `${totalDays}d` : "-"}
