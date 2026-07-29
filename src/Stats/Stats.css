@@ -13,8 +13,9 @@
   --st-deck-band-2: #9AC3D8;
   --st-todo-band-2: #E9C47A;
   /* The name on a deck or todo card, darker than body ink now that it sits on a band.
-     Its own colour so the rest of what --t-text writes stays put. */
-  --st-card-name: var(--t-title);
+     Its own colour so the rest of what --t-text writes stays put. Deepened past --t-title
+     so it reads strongly against the blue and gold bands. */
+  --st-card-name: #331E10;
 }
 /* A real orange rather than the peach it used to mix, but muted, so it sits at the same
    strength as the bands on the other pages. */
@@ -24,27 +25,31 @@
 
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
 
-/* Seven fixed columns so the metric cards fill the row edge to edge, no wrapping. minmax(0,1fr) lets them shrink to share the width evenly. */
-.st-metrics { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; margin-bottom: 16px; }
-/* Eight cards across the window leaves about 103px of room inside each one, which the
-   longest label ("Unique Cards Seen") and the longest value both clear by a few pixels.
-   The gap and the side padding are what buy that room, so neither can grow. Taller
-   padding keeps the card from looking cramped. */
-/* Every card is stretched to the tallest one in the row, and the labels that wrap to two
-   lines are what set that height. Stacking the contents and centring them keeps the
-   one-line cards from sitting high in their own box. */
+/* Seven metric cards capped narrow so they read square rather than as long bars, spread
+   edge to edge to line up with the panel below. */
+.st-metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 128px)); justify-content: space-between; gap: 5px; margin-bottom: 16px; }
+/* The number and label are one block sitting in the middle row, so equal 1fr rows above
+   and below centre it in the card whether or not the card has dots. The dots take the
+   bottom row and centre themselves in it, landing evenly between the label and the floor.
+   The min-height gives those 1fr rows enough slack that the dots never crowd the label. */
 .st-metric {
+  position: relative;
   background: var(--t-surface);
   border-radius: var(--t-r);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-  padding: 12px 6px;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  justify-items: center;
+  min-height: 90px;
+  padding: 0 6px;
   box-shadow: var(--t-shadow-sm);
 }
-.st-metric-value { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 3px; color: var(--t-text); }
-.st-metric-label { font-size: 11px; color: var(--t-label); font-weight: 600; }
+.st-metric-body { grid-row: 2; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.st-metric-dots { grid-row: 3; align-self: center; display: flex; justify-content: center; gap: 4px; }
+.st-metric-value { font-family: var(--t-font-head); font-size: 22px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; color: var(--t-text); }
+.st-metric-label { font-size: 11px; line-height: 1.2; color: var(--t-label); font-weight: 600; }
+.st-metric--multi { cursor: pointer; }
+.st-metric-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--t-border); }
+.st-metric-dot.active { background: var(--t-text-3); }
 
 .st-chart-panel { background: var(--t-surface); border-radius: var(--t-r); padding: 14px; margin-bottom: 16px; box-shadow: var(--t-shadow-sm); }
 .st-chart-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
