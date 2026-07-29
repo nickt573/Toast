@@ -36,7 +36,7 @@
   --t-text-3:        #9A8488;   /* tertiary / quiet */
   --t-label:         #6B5458;   /* every label that oversees something: table heads, form labels, "Create a Card", the words above a todo's categories and resources. Matches the secondary text ink */
   --t-placeholder:   #C0AAAE;
-  --t-title:         #4A3A3D;   /* the name of a thing: header bar titles, "← Back + name" titles, and the name on a plan or deck card. Kept separate from --t-text so body ink can move without dragging the names along */
+  --t-title:         #4B2F1E;   /* the name of a thing: header bar titles, "← Back + name" titles, and the name on a plan or deck card. Kept separate from --t-text so body ink can move without dragging the names along */
   --t-title-size:    22px;
 
   /* Plans / primary accent: wheat / caramel */
@@ -627,15 +627,13 @@ textarea { overflow-y: scroll; }
 /* The bar sits above the page and casts onto it, which is the only edge it needs. It has
    to stay in front for that, since the body paints after it. */
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
-/* Gold rather than the accent's peach, which read pink next to the other bands. Its own
-   colour, so the caramel the rest of the plan family wears stays where it is. */
-.landing-hdr--plan     { --hdr-band: color-mix(in srgb, #D0900E 56%, var(--t-surface)); --hdr-btn: color-mix(in srgb, #D0900E 88%, #000); background: var(--hdr-band); }
+.landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 64%, #fff); --hdr-btn: var(--t-accent-h); background: var(--hdr-band); }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); background: var(--hdr-band); }
 .landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); background: var(--hdr-band); }
-.landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
+.landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; flex: 1; color: var(--t-title); }
 /* What the page is holding right now, told quietly at the right of any header bar. Every
    page bar shares it, so it reads the same on the ones with buttons and the ones without. */
-.hdr-context { margin-left: auto; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: color-mix(in srgb, var(--t-title) 62%, transparent); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hdr-context { margin-left: auto; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: var(--t-text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 /* Action buttons in a landing header take the family colour, matching the round +.
    Direct children only, so the popup's own Create/Cancel keep their own styling. */
 .landing-hdr > button:not(.quiet):not(.primary):not(.danger) { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); }
@@ -913,7 +911,7 @@ textarea { overflow-y: scroll; }
 /* The plan name is a word, not a figure, so it rides smaller than the counts beside it.
    It sits in the same tall line box as the 24px counts so the smaller word centers against
    them, instead of sharing their bottom edge and hanging low. */
-.landing-stat--plan b { font-size: 22px; line-height: 24px; }
+.landing-stat--plan b { font-size: 22px; line-height: 24px; font-weight: 750; }
 .landing-stat-divider { width: 2px; height: 30px; background: var(--t-border); margin: 0 16px; flex-shrink: 0; align-self: center; }
 .landing-card--plan     .landing-stat-divider { background: var(--t-accent); }
 .landing-card--deck     .landing-stat-divider { background: var(--t-blue); }
@@ -1001,7 +999,7 @@ textarea { overflow-y: scroll; }
 .st-resource-cards { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .st-resource-card { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 7px var(--t-stripe-gutter) 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-text); }
+.st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-title); }
 .st-resource-card-type { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
 /* Only the nudge off the baseline it shares with the name, the mark itself is .t-open-arrow */
 .st-resource-card-url { margin-top: 3px; }
