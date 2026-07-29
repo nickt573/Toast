@@ -16,6 +16,9 @@ const activeOnDay = (todo, day) => (todo.frequency & (1 << day)) !== 0;
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
+// Disabled plans sink to the bottom of the list, alphabetical among themselves
+const byLiveThenName = (a, b) => (a.is_disabled ? 1 : 0) - (b.is_disabled ? 1 : 0) || byName(a, b);
+
 // SRS Group Row
 
 function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData, srsGroups, setToast, onNavigateToGroup }) {
@@ -868,7 +871,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
             </div>
             <div className="landing-body">
                 {!loading && plans.length === 0 && <div className="landing-empty">No plans yet. Create one above.</div>}
-                {plans.map(plan => (
+                {[...plans].sort(byLiveThenName).map(plan => (
                     <div key={plan.id} className={`landing-card landing-card--plan${plan.is_disabled ? " landing-card--disabled" : ""}`}
                         onClick={() => editingId !== plan.id && loadPlanData(plan)}>
                         {editingId !== plan.id && (
