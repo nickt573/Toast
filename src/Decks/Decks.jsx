@@ -393,7 +393,7 @@ function DeckList({ setToast, onOpenDeck }) {
       )}
 
       <div className="dk-list">
-        {!loading && decks.length === 0 && <div className="landing-empty">No decks yet. Create one below.</div>}
+        {!loading && decks.length === 0 && <div className="landing-empty">No decks yet. Create one above.</div>}
         {decks.map((deck) => (
           <div className="landing-card landing-card--deck" key={deck.id} onClick={() => onOpenDeck(deck)}>
             <div className="landing-card-body">

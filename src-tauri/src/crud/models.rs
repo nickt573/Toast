@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct Plan {
     pub id: i64,
     pub name: String,
+    pub is_disabled: bool,
 }
 
 #[derive(Serialize, Deserialize)]

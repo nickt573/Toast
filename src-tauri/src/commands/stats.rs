@@ -5,16 +5,18 @@ use crate::AppState;
 pub struct StreakInfo {
     streak: i64,
     studied_today: bool,
+    longest: i64,
 }
 
 #[tauri::command]
 pub fn get_plan_streak(plan_id: i64, state: tauri::State<AppState>) -> Result<StreakInfo, String> {
     let conn = state.conn.lock().unwrap();
-    let (streak, studied_today) =
+    let (streak, studied_today, longest) =
         scheduling::get_plan_streak(plan_id, &conn).map_err(|e| e.to_string())?;
     Ok(StreakInfo {
         streak,
         studied_today,
+        longest,
     })
 }
 

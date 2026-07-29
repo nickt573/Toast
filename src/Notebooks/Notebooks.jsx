@@ -223,7 +223,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
                 </div>
             )}
             <div className="nb-list">
-                {!loading && notebooks.length === 0 && <div className="landing-empty">No notebooks yet. Create one below.</div>}
+                {!loading && notebooks.length === 0 && <div className="landing-empty">No notebooks yet. Create one above.</div>}
                 {notebooks.map((nb) => (
                     <div className="landing-card landing-card--notebook" key={nb.id} onClick={() => onOpenNotebook(nb)}>
                         <div className="landing-card-body">

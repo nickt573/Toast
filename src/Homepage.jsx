@@ -1103,6 +1103,7 @@ const VIEW_SESSION = "session";
 
 export default function Homepage({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, refreshDayCount, onRefreshDay, onOpenHelp, firstLaunch, homeSignal }) {
     const [plans, setPlans] = useState([]);
+    const [hasDisabledPlans, setHasDisabledPlans] = useState(false);
     const [view, setView] = useState(VIEW_HOME);
     const [activePlan, setActivePlan] = useState(null);
     const [activeGroup, setActiveGroup] = useState(null);
@@ -1164,8 +1165,10 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
 
     async function loadPlans() {
         try {
-            const p = await loggedInvoke("get_plans");
+            const all = await loggedInvoke("get_plans");
+            const p = all.filter(plan => !plan.is_disabled);
             setPlans(p);
+            setHasDisabledPlans(p.length === 0 && all.length > 0);
 
             const counts = {};
             await Promise.all(p.map(async (plan) => {
@@ -1233,8 +1236,12 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                 <path d="M3 9h18M9 21V9"/>
                             </svg>
                         </div>
-                        <div className="hp-empty-title">No plans yet</div>
-                        <div className="hp-empty-sub">Head to <strong>Plans</strong> to create your first study plan.</div>
+                        <div className="hp-empty-title">{hasDisabledPlans ? "No plans" : "No plans yet"}</div>
+                        <div className="hp-empty-sub">
+                            {hasDisabledPlans
+                                ? <>Head to <strong>Plans</strong> to create a new study plan or enable an old one.</>
+                                : <>Head to <strong>Plans</strong> to create your first study plan.</>}
+                        </div>
                     </div>
                 ) : (
                     <div>
