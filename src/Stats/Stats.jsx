@@ -111,11 +111,17 @@ function counted(groupStats) {
 // How long the plan has been going, measured by its own record: the first day it logged
 // anything through today, counting that first day. Archived rows count here even though
 // every other aggregate skips them, since a merged or reset deck still dates the plan.
-function totalPlanDays(groupStats, todoStats, today) {
+// A deleted plan stops there instead, ending on its last logged day, since nothing can
+// be added to it any more.
+function totalPlanDays(groupStats, todoStats, today, deleted) {
   if (!today) return null;
-  let earliest = null;
-  [...groupStats, ...todoStats].forEach(r => { if (earliest === null || r.date < earliest) earliest = r.date; });
-  return earliest === null ? null : daysBetween(earliest, today) + 1;
+  let earliest = null, latest = null;
+  [...groupStats, ...todoStats].forEach(r => {
+    if (earliest === null || r.date < earliest) earliest = r.date;
+    if (latest === null || r.date > latest) latest = r.date;
+  });
+  if (earliest === null) return null;
+  return daysBetween(earliest, deleted ? latest : today) + 1;
 }
 
 function computeMetrics(groupStats, todoStats) {
@@ -841,10 +847,15 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
   const deckKeys = Object.keys(byDeck)
     .sort((a, b) => deckName(a).localeCompare(deckName(b), undefined, { sensitivity: "base" }));
 
+  // Decks still in play lead, then the archived, deleted and merged ones, each group
+  // alphabetical, and the filter row and the tables below share the order
+  const orderedKeys = [...deckKeys]
+    .sort((a, b) => (deadState(byDeck[a]) ? 1 : 0) - (deadState(byDeck[b]) ? 1 : 0));
+
   // Deleting or merging the deck you had filtered to leaves the key pointing at
   // nothing, which would read as an empty page rather than a cleared filter
   const activeFilter = byDeck[deckFilter] ? deckFilter : "all";
-  const visibleKeys = activeFilter === "all" ? deckKeys : deckKeys.filter(k => k === activeFilter);
+  const visibleKeys = activeFilter === "all" ? orderedKeys : orderedKeys.filter(k => k === activeFilter);
 
   const toggle = key => setExpanded(e => ({ ...e, [key]: !e[key] }));
 
@@ -893,7 +904,7 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
         {/* Read the name off the same row the deck's card does. Rows are newest
             first, and a rename or merge only ever updates the live deck, so older
             rows can still carry a name this deck hasn't gone by in a while. */}
-        {Object.keys(byDeck).map(id => {
+        {orderedKeys.map(id => {
           const dead = deadState(byDeck[id]);
           const isActive = activeFilter === id;
           return (
@@ -1562,6 +1573,16 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
 
 // Root:
 
+// Plans still in play lead, then the disabled and deleted ones together, each group
+// alphabetical, and the page opens on whichever one this puts first
+function orderPlanPills(active, deleted) {
+  return [
+    ...active.map(p => ({ ...p, dead: p.is_disabled ? "archived" : null })),
+    ...deleted.map(p => ({ ...p, dead: "deleted", deleted: true })),
+  ].sort((a, b) => (a.dead ? 1 : 0) - (b.dead ? 1 : 0)
+    || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+}
+
 export default function Stats({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext }) {
   const [activePlans,    setActivePlans]   = useState([]);
   const [deletedPlans,   setDeletedPlans]  = useState([]);
@@ -1590,7 +1611,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       setDeletedPlans(dp);
       setAllGroups(gs);
       loadTotals();
-      const firstId = returnContext?.selectedPlanId ?? ps[0]?.id ?? dp[0]?.id ?? null;
+      const firstId = returnContext?.selectedPlanId ?? orderPlanPills(ps, dp)[0]?.id ?? null;
       setSelectedPlanId(firstId);
       if (returnContext) onConsumeReturnContext();
       setLoading(false);
@@ -1647,7 +1668,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       const dp = freshDeleted.map(([id, name]) => ({ id, name }));
       setDeletedPlans(dp);
       if (selectedPlanId === planId) {
-        const next = activePlans[0]?.id ?? dp[0]?.id ?? null;
+        const next = orderPlanPills(activePlans, dp)[0]?.id ?? null;
         setSelectedPlanId(next);
       }
       loadTotals();
@@ -1670,11 +1691,13 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
     loadStats(selectedPlanId);
   }, [selectedPlanId]);
 
+  const planDeleted = deletedPlans.some(p => p.id === selectedPlanId);
   const metrics = computeMetrics(counted(groupStats), todoStats);
-  const totalDays = totalPlanDays(groupStats, todoStats, today);
+  const totalDays = totalPlanDays(groupStats, todoStats, today, planDeleted);
   const recordDays = totals?.earliest && today ? daysBetween(totals.earliest, today) + 1 : null;
   const retColor = metrics.avgRetention !== null ? retentionColor(metrics.avgRetention) : GRAY;
   const atRisk = streakInfo.streak > 0 && !streakInfo.studied_today;
+  const planPills = orderPlanPills(activePlans, deletedPlans);
 
   return (
     <>
@@ -1696,25 +1719,18 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           {/* Plan selector */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16 }}>
             <div className="st-plan-bar" style={{ flex: 1, marginBottom: 0 }}>
-              {activePlans.map(p => (
+              {planPills.map(p => (
                 <button
-                  key={p.id}
-                  className={`st-pill${selectedPlanId === p.id ? " active" : ""}`}
+                  key={p.deleted ? `d-${p.id}` : p.id}
+                  className={`st-pill${p.dead ? ` st-pill-dead st-pill-dead--${p.dead}` : ""}${selectedPlanId === p.id ? " active" : ""}`}
                   onClick={() => setSelectedPlanId(p.id)}
                 >
                   {p.name}
                 </button>
               ))}
-              {deletedPlans.map(p => (
-                <button
-                  key={`d-${p.id}`}
-                  className={`st-pill st-pill-dead st-pill-dead--deleted${selectedPlanId === p.id ? " active" : ""}`}
-                  onClick={() => setSelectedPlanId(p.id)}
-                >{p.name}</button>
-              ))}
-              {!loading && activePlans.length === 0 && deletedPlans.length === 0 && <span style={{ color: "var(--t-text-3)", fontSize: 13 }}>No plans yet.</span>}
+              {!loading && planPills.length === 0 && <span style={{ color: "var(--t-text-3)", fontSize: 13 }}>No plans yet.</span>}
             </div>
-            {selectedPlanId && deletedPlans.some(p => p.id === selectedPlanId) && (
+            {selectedPlanId && planDeleted && (
               <div style={{ flexShrink: 0 }}>
                 <ConfirmDelete label="Delete All Stats" onConfirm={() => deleteDeletedPlan(selectedPlanId)} />
               </div>
@@ -1743,18 +1759,28 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={metrics.avgDailyStudy !== null ? fmtTime(Math.round(metrics.avgDailyStudy)) : "-"}
               color={metrics.avgDailyStudy !== null ? "var(--t-time)" : GRAY}
             />
-            <MetricCard faces={[
-              {
-                label: "Current Streak",
-                value: `${streakInfo.streak}d`,
-                color: streakInfo.streak === 0 ? GRAY : atRisk ? AMBER : "var(--t-green)",
-              },
-              {
-                label: "Longest Streak",
-                value: `${streakInfo.longest}d`,
-                color: streakInfo.longest === 0 ? GRAY : "var(--t-green)",
-              },
-            ]} />
+            {/* A deleted plan can't be studied again, so its current streak is
+                always zero and only the longest says anything */}
+            {planDeleted ? (
+              <MetricCard
+                label="Longest Streak"
+                value={`${streakInfo.longest}d`}
+                color={streakInfo.longest === 0 ? GRAY : "var(--t-green)"}
+              />
+            ) : (
+              <MetricCard faces={[
+                {
+                  label: "Current Streak",
+                  value: `${streakInfo.streak}d`,
+                  color: streakInfo.streak === 0 ? GRAY : atRisk ? AMBER : "var(--t-green)",
+                },
+                {
+                  label: "Longest Streak",
+                  value: `${streakInfo.longest}d`,
+                  color: streakInfo.longest === 0 ? GRAY : "var(--t-green)",
+                },
+              ]} />
+            )}
             <MetricCard
               label="Total Days"
               value={totalDays !== null ? `${totalDays}d` : "-"}
