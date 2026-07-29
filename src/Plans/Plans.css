@@ -2,7 +2,7 @@
 
 .plan-srs-row { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: var(--t-list-gap); }
 .plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.plan-srs-name { min-width: 0; font-weight: 700; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-text); }
+.plan-srs-name { min-width: 0; font-weight: 700; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-title); }
 /* The name no longer eats the leftover space, so the counts are what hold the right edge
    and the arrow can sit against the name it opens */
 .plan-srs-counts { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
@@ -28,7 +28,7 @@
 .plan-resource-edit-actions { display: flex; gap: 6px; }
 .plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
 .plan-resource-body { flex: 1; min-width: 0; }
-.plan-resource-name { font-weight: 700; font-size: 17px; color: var(--t-text); }
+.plan-resource-name { font-weight: 700; font-size: 17px; color: var(--t-title); }
 /* Raw URLs stay hidden behind a compact arrow */
 /* Only the nudge off the baseline it shares with the name, the mark itself is .t-open-arrow */
 .plan-resource-url { margin-top: 2px; }
