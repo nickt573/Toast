@@ -25,12 +25,13 @@ pub fn rewrite_image_nodes(node: &mut Value, app_dir: &Path) -> Result<()> {
                     if src.starts_with("http") || src.starts_with("asset:") || src.starts_with("data:") {
                         // Not a local file, leave alone
                     } else if is_stored_media(&src, app_dir, "pages/images") {
-                        // Already stored: normalize to relative in place
+                        // Already stored, so normalize to relative in place
                         let rel = to_relative(&src, app_dir);
                         attrs["src"] = Value::String(rel.clone());
                         attrs["rawPath"] = Value::String(rel);
                     } else if let Some(new_path) = save_page_image(Some(src), app_dir)? {
-                        // rawPath must track the stored copy too, otherwise display keeps pointing at the picked file
+                        // rawPath must track the stored copy too, or display keeps pointing
+                        // at the picked file
                         attrs["src"] = Value::String(new_path.clone());
                         attrs["rawPath"] = Value::String(new_path);
                     }
@@ -77,9 +78,8 @@ pub fn collect_image_paths(node: &Value, paths: &mut Vec<String>) {
     }
 }
 
-/// Paths present in old_content but not new_content. Both sides are compared
-/// in relative form so a legacy absolute path never diffs against its own
-/// relative equivalent (which would delete a still-referenced file).
+/// Paths present in the old content but not the new, compared in relative form so a legacy
+/// absolute path never diffs against its own relative equivalent
 pub fn removed_image_paths(old_content: &str, new_content: &str, app_dir: &Path) -> Vec<String> {
     let old_paths: Vec<String> = extract_image_paths(old_content)
         .iter()
@@ -95,9 +95,8 @@ pub fn removed_image_paths(old_content: &str, new_content: &str, app_dir: &Path)
         .collect()
 }
 
-/// Collects local `src` attribute values from card HTML for file cleanup.
-/// Matches every `src=` regardless of tag, so audio sources are included too,
-/// but callers only use the paths for deletion where that overlap is harmless.
+/// Collects local src values from card HTML for file cleanup, matching every tag so audio
+/// sources come along too, which is harmless since callers only delete by these paths
 pub fn extract_image_paths_from_html(html: &str) -> Vec<String> {
     let mut paths = Vec::new();
     let mut rest = html;

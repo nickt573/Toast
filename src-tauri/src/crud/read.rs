@@ -13,7 +13,7 @@ pub fn get_plans(conn: &Connection) -> Result<Vec<Plan>> {
         .collect()
 }
 
-/// One summary row per plan: (plan_id, todo_count, resource_count, linked_deck_count).
+/// One summary row per plan, with its todo, resource and linked deck counts
 pub fn get_plan_summaries(conn: &Connection) -> Result<Vec<(i64, i64, i64, i64)>> {
     conn.prepare(
         r#"
@@ -116,7 +116,7 @@ pub fn get_decks(conn: &Connection) -> Result<Vec<Group>> {
     .collect()
 }
 
-// Column order is load-bearing: card_from_row indexes into it.
+// Column order is load-bearing, card_from_row indexes into it
 const CARD_COLUMNS: &str = r#"
     id, group_id, front, back, is_searchable, support,
     imported_front, imported_back, imported_support,
@@ -159,10 +159,8 @@ pub fn get_card(card_id: i64, conn: &Connection) -> Result<Card> {
     )
 }
 
-/// Picks the next card for a study session. Preference order: a due card other than
-/// the one just shown; the just-shown due card if it is the only one left (a repeat
-/// beats dropping into cram early, so cram never appears while any due card remains);
-/// then the same two steps for the cram pool.
+/// Picks the next card for a study session, preferring a due card other than the one just
+/// shown, then that one again, then the same two steps for cram
 pub fn next_session_card(
     conn: &Connection,
     group_id: i64,
@@ -223,7 +221,7 @@ pub fn get_card_last_seen_dates(deck_id: i64, conn: &Connection) -> Result<Vec<(
     .collect()
 }
 
-/// (deck_id, card_count) for every deck, including decks with no cards.
+/// The card count for every deck, including decks with no cards
 pub fn get_deck_card_counts(conn: &Connection) -> Result<Vec<(i64, i64)>> {
     conn.prepare(
         r#"
@@ -285,7 +283,7 @@ pub fn get_pages(notebook_id: i64, conn: &Connection) -> Result<Vec<Page>> {
     .collect()
 }
 
-/// (deck_id, new_total, review_total) for every deck.
+/// The new and review totals for every deck
 pub fn get_deck_srs_summaries(conn: &Connection) -> Result<Vec<(i64, i64, i64)>> {
     conn.prepare(
         r#"
@@ -302,7 +300,7 @@ pub fn get_deck_srs_summaries(conn: &Connection) -> Result<Vec<(i64, i64, i64)>>
     .collect()
 }
 
-/// (notebook_id, page_count) for every notebook, including empty notebooks.
+/// The page count for every notebook, including empty notebooks
 pub fn get_notebook_page_counts(conn: &Connection) -> Result<Vec<(i64, i64)>> {
     conn.prepare(
         r#"
@@ -317,7 +315,7 @@ pub fn get_notebook_page_counts(conn: &Connection) -> Result<Vec<(i64, i64)>> {
     .collect()
 }
 
-/// Returns all groups in a plan that have a scheduler, along with the scheduler.
+/// Every group in a plan that has a scheduler, along with the scheduler
 pub fn get_plan_srs_groups(plan_id: i64, conn: &Connection) -> Result<Vec<(Group, Scheduler)>> {
     let mut stmt = conn.prepare(
         r#"
@@ -362,7 +360,7 @@ pub fn get_plan_srs_groups(plan_id: i64, conn: &Connection) -> Result<Vec<(Group
     results.collect()
 }
 
-/// Returns all groups not currently assigned to any plan, available to add to a plan.
+/// Every group not currently assigned to any plan, available to add to one
 pub fn get_unassigned_groups(conn: &Connection) -> Result<Vec<Group>> {
     let mut stmt = conn.prepare(
         r#"
@@ -461,9 +459,8 @@ pub fn get_todo_groups(todo_id: i64, conn: &Connection) -> Result<Vec<Group>> {
     Ok(rows)
 }
 
-/// group_name is a snapshot taken when the session was logged, so a later rename or
-/// merge leaves it stale. Prefer the live deck's name and keep the snapshot as the
-/// fallback for decks that no longer exist, the same way todo stat groups do.
+/// group_name is a snapshot taken when the session was logged, so the live deck's name wins
+/// and the snapshot is only the fallback for decks that no longer exist
 pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>> {
     conn.prepare(
         r#"
@@ -498,10 +495,8 @@ pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>
     .collect()
 }
 
-/// Deck minutes, todo minutes, and the first day anything was logged, across the whole
-/// record rather than one plan. Archived deck lines are left out of the time the same
-/// way every other total leaves them out, but they still date the record: a merged or
-/// reset deck was studied on the day it says it was.
+/// Deck minutes, todo minutes and the first logged day across the whole record rather than
+/// one plan, where archived lines are left out of the time but still date the record
 pub fn get_record_totals(conn: &Connection) -> Result<(f64, f64, Option<String>)> {
     conn.query_row(
         r#"
@@ -516,9 +511,8 @@ pub fn get_record_totals(conn: &Connection) -> Result<(f64, f64, Option<String>)
     )
 }
 
-/// Every reset belonging to a deck this plan has lines for. A reset is deck-wide, so the
-/// same one is handed to every plan the deck was studied in and each draws its own
-/// boundary from it, wherever its own lines fall either side of the mark.
+/// Every reset belonging to a deck this plan has lines for, and since a reset is deck-wide
+/// the same one goes to every plan the deck was studied in to draw its own boundary
 pub fn get_plan_resets(plan_id: i64, conn: &Connection) -> Result<Vec<DeckReset>> {
     conn.prepare(
         r#"
@@ -540,10 +534,8 @@ pub fn get_plan_resets(plan_id: i64, conn: &Connection) -> Result<Vec<DeckReset>
     .collect()
 }
 
-/// A deleted plan's name only survives in its stat rows, and renaming a plan never
-/// rewrote them, so a plan renamed mid-life left rows under several names. DISTINCT
-/// then handed back one pair per name and the tab drew a pill for each. Group by the
-/// plan and keep the name from its most recent recorded day.
+/// A deleted plan's name survives only in its stat rows and a rename never rewrote them, so
+/// group by the plan and keep the name from its most recent recorded day
 pub fn get_deleted_plan_ids(conn: &Connection) -> Result<Vec<(i64, String)>> {
     conn.prepare(
         r#"
@@ -641,9 +633,8 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
     .filter_map(|r| r.ok())
     .for_each(|(sid, group)| stat_groups.entry(sid).or_default().push(group));
 
-    // Resources persist their full info (url/type/notes) like the name does:
-    // live values win via COALESCE while the resource exists; the snapshot
-    // remains after it's deleted (resource_id goes NULL).
+    // Resources persist their full info the way the name does, live values winning through
+    // COALESCE while the resource exists and the snapshot remaining after it's deleted
     let mut stat_resources: HashMap<i64, Vec<StatResource>> = HashMap::new();
     conn.prepare(
         r#"
@@ -717,9 +708,8 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
 }
 
 pub fn get_units(conn: &Connection) -> Result<Vec<Unit>> {
-    // One pass over the variants, grouped in Rust. Ordered so a group's rows arrive together
-    // with the main first, and the groups themselves sort by that main name. Each carries a
-    // count of the entries that chose it, for the delete warning.
+    // One pass over the variants, grouped in Rust, ordered so a group's rows arrive together
+    // with the main first, and each carries a count of the entries that chose it
     let rows: Vec<(i64, i64, String, i64)> = conn
         .prepare(
             "SELECT v.group_id, v.id, v.name,
@@ -787,8 +777,8 @@ mod cram_tests {
         get_card(id, conn).unwrap().is_cram
     }
 
-    // Reproduces the reported session: a due new card plus a card that gets crammed,
-    // then the mark-for-review-while-crammed case, then a day tick.
+    // Reproduces the reported session, a due new card plus one that gets crammed, then the
+    // mark for review while crammed case, then a day tick
     #[test]
     fn cram_serving_counts_and_clearing() {
         let mut conn = Connection::open_in_memory().unwrap();
@@ -810,8 +800,8 @@ mod cram_tests {
             &mut conn,
         )
         .unwrap();
-        // id 10 is a fresh new card, id 20 a graduated review card. fill_group (run by
-        // add_group_to_plan) schedules whatever exists, so insert then top up.
+        // id 10 is a fresh new card and id 20 a graduated review card, and fill_group
+        // schedules whatever exists, so insert then top up
         conn.execute_batch(
             "INSERT INTO card (id, group_id, front, back, tier, ease, sequence)
              VALUES (10, 1, 'nf', 'nb', 0, 0.0, 0), (20, 1, 'rf', 'rb', 3, 0.0, 0);",
@@ -820,14 +810,14 @@ mod cram_tests {
         crate::crud::scheduling::fill_group(1, &conn).unwrap();
         assert_eq!(counts(&conn), (1, 1, 0), "one new + one review due, no cram");
 
-        // Rate the review card poorly: it should leave the due pool and enter cram.
+        // Rate the review card poorly, so it leaves the due pool and enters cram
         grade_item(20, 1, &mut conn).unwrap();
         assert!(is_cram(&conn, 20), "demote flags the card as cram");
         assert!(!get_card(20, &conn).unwrap().is_due, "a crammed card is not due");
         assert_eq!(counts(&conn), (1, 0, 1), "review clears, cram appears");
 
-        // The bug: spamming One More Time on the new card kept it due; cram must not
-        // surface while a due card remains, even when that card is the one excluded.
+        // Spamming One More Time on the new card kept it due, and cram must not surface
+        // while a due card remains, even when that card is the one excluded
         grade_item(10, 4, &mut conn).unwrap();
         assert!(get_card(10, &conn).unwrap().is_due, "One More Time keeps the new card due");
         for _ in 0..8 {
@@ -836,31 +826,31 @@ mod cram_tests {
             assert!(served.is_due, "served as a real due card, not cram");
         }
 
-        // Clear the new card. Now cram is the legitimate next serving, and it is is_due
-        // = false so the frontend renders the cram buttons.
+        // Clear the new card, so cram is the legitimate next serving and is_due is false,
+        // which is what makes the frontend render the cram buttons
         grade_item(10, 5, &mut conn).unwrap();
         assert_eq!(counts(&conn), (0, 0, 1), "only the cram card is left");
         let served = next_session_card(&conn, 1, Some(10)).unwrap().unwrap();
         assert_eq!(served.id, 20, "cram card served once no due cards remain");
         assert!(!served.is_due, "cram serving carries is_due = false");
 
-        // One More Time on the last cram card loops it rather than ending the session.
+        // One More Time on the last cram card loops it rather than ending the session
         let looped = next_session_card(&conn, 1, Some(20)).unwrap().unwrap();
         assert_eq!(looped.id, 20, "the sole cram card repeats");
 
-        // Mark-for-review while crammed: the card counts in BOTH pools (+1 each).
+        // Marking for review while crammed counts the card in both pools
         mark_for_review(20, &conn).unwrap();
         assert_eq!(counts(&conn), (0, 1, 1), "counts as review AND cram at once");
         let review = next_session_card(&conn, 1, None).unwrap().unwrap();
         assert_eq!(review.id, 20);
         assert!(review.is_due, "served from the due pool first, as review");
 
-        // Rating the review version poorly clears the review but keeps the cram flag.
+        // Rating the review version poorly clears the review but keeps the cram flag
         grade_item(20, 1, &mut conn).unwrap();
         assert_eq!(counts(&conn), (0, 0, 1), "review cleared, still crammed");
         assert!(!next_session_card(&conn, 1, None).unwrap().unwrap().is_due, "back to cram-only");
 
-        // A new day clears every cram.
+        // A new day clears every cram
         conn.execute("UPDATE app_date SET date = date(date, '-1 day')", []).unwrap();
         update_date(&conn).unwrap();
         assert!(!is_cram(&conn, 20), "the day tick clears the cram flag");

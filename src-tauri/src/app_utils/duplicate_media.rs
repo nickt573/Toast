@@ -6,14 +6,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use uuid::Uuid;
 
-/// Copies one referenced media file to a fresh uuid-named file in the same
-/// subdir and returns the new app-dir-relative path. The `cache`, keyed by the
-/// source's relative path, keeps a file referenced more than once mapping to a
-/// single copy. When the source is missing on disk (a card or page can point at
-/// media that never landed), the original reference is returned unchanged so the
-/// duplicate is no more broken than the original. A source that exists but
-/// fails to copy is an error, so the whole duplicate fails rather than
-/// producing a copy that silently shares files with the original.
+/// Copies one referenced media file to a fresh uuid-named file in the same subdir, with a
+/// cache so a file referenced twice makes one copy, and a missing source passes through
 pub fn copy_media_file(
     stored: &str,
     app_dir: &Path,
@@ -26,8 +20,8 @@ pub fn copy_media_file(
     if let Some(existing) = cache.get(&rel) {
         return Ok(existing.clone());
     }
-    // Only remap paths that live in one of our media subdirs; a url or a stray
-    // value passes straight through.
+    // Only remap paths living in one of our media subdirs, a url or a stray value passes
+    // straight through
     let Some(subdir) = MEDIA_SUBDIRS
         .iter()
         .find(|d| rel.starts_with(&format!("{d}/")))
@@ -61,7 +55,7 @@ pub fn copy_media_file(
     Ok(new_rel)
 }
 
-/// Copies an optional media column, leaving None and empty strings untouched.
+/// Copies an optional media column, leaving None and empty strings untouched
 pub fn copy_media_opt(
     stored: &Option<String>,
     app_dir: &Path,
@@ -74,9 +68,8 @@ pub fn copy_media_opt(
     }
 }
 
-/// Copies every media file referenced by imported Anki HTML and rewrites the
-/// src values to point at the new copies. Both <img> and <audio> srcs are
-/// covered, since extract_image_paths_from_html matches every `src=`.
+/// Copies every media file referenced by imported Anki HTML and rewrites the src values to
+/// the new copies, images and audio alike since the extractor matches every tag
 pub fn copy_html_media(
     html: &Option<String>,
     app_dir: &Path,
@@ -95,8 +88,8 @@ pub fn copy_html_media(
     Ok(Some(out))
 }
 
-/// Copies every image referenced in a page's editor JSON and rewrites both
-/// `src` and `rawPath` to the new copies.
+/// Copies every image referenced in a page's editor JSON and rewrites both src and rawPath
+/// to the new copies
 pub fn copy_page_content_media(
     content: &str,
     app_dir: &Path,
@@ -109,8 +102,8 @@ pub fn copy_page_content_media(
     Ok(json.to_string())
 }
 
-/// Deletes the copies made so far, for unwinding a failed duplicate. Values in
-/// the cache are exactly the new files created by this operation.
+/// Deletes the copies made so far to unwind a failed duplicate, since the cache values are
+/// exactly the new files this operation created
 pub fn remove_copied_files(cache: &HashMap<String, String>, app_dir: &Path) {
     for new_rel in cache.values() {
         let _ = std::fs::remove_file(app_dir.join(new_rel));

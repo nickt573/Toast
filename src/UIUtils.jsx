@@ -64,25 +64,18 @@ export function Tip({ text }) {
   );
 }
 
-// Disc and letter live in one SVG so they rasterise as a single unit. A CSS circle and a
-// 9px glyph snap to the pixel grid by different rules, and on the WebKit webview that
-// disagreement lands a different way depending on where the badge sits, so the letter
-// drifts off the disc from one place to the next.
-//
-// So these are not letters at all. They are the outlines of Atkinson Hyperlegible Next at
-// weight 700, lifted out of the font and placed so each one's ink is dead centre on the
-// disc. Nothing here is measured, rounded or hinted at draw time, so all three discs read
-// the same wherever they land. Regenerate them if the body font ever changes.
+// Disc and letter live in one SVG so they rasterise as a single unit, since a CSS circle
+// and a small glyph snap to the pixel grid by different rules and the letter drifts
+// These are glyph outlines lifted out of the body font and placed dead centre on the disc,
+// so nothing is measured or hinted at draw time, and they need regenerating if it changes
 const DISC_GLYPHS = {
   A: "M4.002 10.006 6.276 3.994H7.726L9.998 10.006H8.571L8.191 8.889H5.809L5.429 10.006ZM6.164 7.817H7.829L6.993 5.375Z",
   D: "M4.319 10.006V3.994H6.235Q7.004 3.994 7.637 4.155Q8.27 4.316 8.728 4.671Q9.185 5.026 9.433 5.598Q9.681 6.17 9.681 6.998Q9.681 7.84 9.431 8.417Q9.18 8.994 8.717 9.344Q8.254 9.694 7.627 9.85Q6.999 10.006 6.235 10.006ZM5.633 8.9H6.254Q6.699 8.9 7.079 8.822Q7.458 8.744 7.737 8.541Q8.015 8.338 8.171 7.964Q8.327 7.59 8.327 6.998Q8.327 6.408 8.171 6.031Q8.015 5.654 7.733 5.448Q7.451 5.242 7.075 5.163Q6.699 5.085 6.254 5.085H5.633Z",
   N: "M4.313 10.006V3.994H6.017L8.417 8.433V3.994H9.687V10.006H7.984L5.583 5.562V10.006Z",
 };
 
-// How far the letters sit off dead centre, in the same units the paths are drawn in.
-// DISC_DROP moves all three together, and a letter can take its own sideways nudge on top:
-// D has a flat stem down its left and all its weight in the bowl, so centring it by its
-// outline leaves it looking a touch left of where the others sit.
+// How far the letters sit off dead centre, in the same units the paths are drawn in, where
+// DISC_DROP moves all three together and a letter can take its own sideways nudge on top
 const DISC_DROP = 0;
 const DISC_SHIFT = { D: 0.15 };
 
@@ -122,7 +115,7 @@ export function Linkify({ text }) {
     <>
       {text.split(URL_PATTERN).map((part, i) => {
         if (i % 2 === 0) return part;
-        // Trailing punctuation reads as sentence punctuation, not part of the link
+        // Trailing punctuation reads as sentence punctuation, not as part of the link
         const trimmed = part.replace(/[.,;:!?)\]]+$/, "");
         const tail = part.slice(trimmed.length);
         return (
@@ -145,7 +138,7 @@ export function Linkify({ text }) {
   );
 }
 
-// Full-info resource card, shared by Stats and the study page.
+// Full-info resource card, shared by Stats and the study page
 export function ResourceCard({ res }) {
   const openResource = () => res.url && openUrl(res.url.startsWith("http") ? res.url : `https://${res.url}`);
   return (
@@ -160,8 +153,8 @@ export function ResourceCard({ res }) {
   );
 }
 
-// Full-screen blocker for operations that must not be interrupted (Toast to Go
-// transfers). Sits under .toast (z 1000) so error toasts stay readable.
+// Full-screen blocker for operations that must not be interrupted, sitting under the toast
+// layer so error toasts stay readable
 export function BusyOverlay({ title, note }) {
   return (
     <div className="busy-overlay">
@@ -174,9 +167,8 @@ export function BusyOverlay({ title, note }) {
   );
 }
 
-// The round "+" in a landing header and its create popup. The parent owns `open` so the
-// other header buttons can close it and it can close them, the way those buttons already
-// cancel each other.
+// The round add button in a landing header and its create popup, where the parent owns the
+// open state so this and the other header buttons can cancel each other
 export function CreateMenu({ open, onToggle, value, onChange, onCreate, title, placeholder }) {
   return (
     <span className="t-add-wrap">

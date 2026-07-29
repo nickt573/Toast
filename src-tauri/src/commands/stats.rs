@@ -36,7 +36,7 @@ pub struct RecordTotals {
     earliest: Option<String>,
 }
 
-/// What the stats header speaks for: the whole record, every plan at once.
+/// What the stats header speaks for, the whole record and every plan at once
 #[tauri::command]
 pub fn get_record_totals(state: tauri::State<AppState>) -> Result<RecordTotals, String> {
     let conn = state.conn.lock().unwrap();

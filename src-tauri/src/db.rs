@@ -78,7 +78,7 @@ fn migrate_media_paths(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()
             let rel = |v: &Option<String>| v.as_ref().map(|p| to_relative(p, app_dir));
             let (nfi, nbi, nfa, nba) = (rel(&fi), rel(&bi), rel(&fa), rel(&ba));
 
-            // Media only in imported HTML, front/back/support are user text, never rewrite those
+            // Media only in imported HTML, front, back and support are user text
             let rel_html =
                 |v: &Option<String>| v.as_ref().and_then(|s| relativize_html_media(s, app_dir));
             let (nfront, nback, nsupport) = if is_uploaded {
@@ -155,8 +155,8 @@ fn has_autoincrement(conn: &Connection, table: &str) -> rusqlite::Result<bool> {
     Ok(sql.contains("AUTOINCREMENT"))
 }
 
-/// Rebuild a table with an AUTOINCREMENT key (SQLite only sets it at create), counter bumped past
-/// the highest id the stats tables still reference. Pragmas set outside the transaction, rebuild runs in a real one
+/// Rebuild a table with an AUTOINCREMENT key, which SQLite only sets at create, with the
+/// counter bumped past the highest id the stats tables still reference
 fn rebuild_with_autoincrement(
     conn: &Connection,
     table: &str,
@@ -195,7 +195,7 @@ fn rebuild_with_autoincrement(
     result
 }
 
-/// Split "~5 pages" into (5.0, "pages"), skip leading junk to the first number, trimmed rest is the name
+/// Splits a logged amount from its unit name, skipping leading junk to the first number
 /// None if either half is missing
 fn parse_legacy_unit(raw: &str) -> Option<(f64, String)> {
     let bytes = raw.as_bytes();
@@ -213,7 +213,7 @@ fn parse_legacy_unit(raw: &str) -> Option<(f64, String)> {
             break;
         }
     }
-    // Eat a trailing dot ("5.") so the name starts clean after it
+    // Eat a trailing dot so the name starts clean after it
     let value: f64 = raw[start..end].trim_end_matches('.').parse().ok()?;
     let name = raw[end..].trim().to_string();
     // Zero or less isn't an allowed record, leave it unmigrated and blank
@@ -280,14 +280,14 @@ fn new_unit_group(conn: &Connection, name: &str) -> rusqlite::Result<i64> {
 
 /// Migrations for older databases, each call idempotent
 fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
-    // v1.1.0 read-only Anki support, kept out of front/back and similar-card matching
+    // v1.1.0 read-only Anki support, kept out of front and back and similar-card matching
     add_column_if_missing(conn, "card", "imported_support", "TEXT")?;
-    // v1.2.0 manual todo order, numbered sort first, contiguous 1..N per plan (set_todo_position)
+    // v1.2.0 manual todo order, numbered sort first, contiguous per plan via set_todo_position
     add_column_if_missing(conn, "todo", "position", "INTEGER DEFAULT NULL")?;
     // v1.2.0 todo time is whole minutes now, round decimals from older releases
     conn.execute_batch("UPDATE todo_stats SET time_spent_minutes = ROUND(time_spent_minutes);")?;
-    // v1.5.0 move uploaded Anki HTML to imported_front/back so front/back are user fields
-    // Unmigrated rows are both-NULL, must run before the media-path pass
+    // v1.5.0 move uploaded Anki HTML into the imported columns so front and back are user
+    // fields, and unmigrated rows are both NULL, so this runs before the media-path pass
     add_column_if_missing(conn, "card", "imported_front", "TEXT")?;
     add_column_if_missing(conn, "card", "imported_back", "TEXT")?;
     conn.execute_batch(
@@ -360,7 +360,7 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
          )"#,
     )?;
     // deck_reset uses a stat line's id to place it either side of a reset, so a reused id
-    // would put post-reset study before the boundary. Also clears a watermark from a deleted line
+    // would put post-reset study before the boundary, and this clears a deleted line's mark
     rebuild_with_autoincrement(
         conn,
         "group_stats",
@@ -397,7 +397,7 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     Ok(())
 }
 
-/// Creates all tables (idempotent) and enables foreign keys
+/// Creates all tables idempotently and enables foreign keys
 pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     conn.execute_batch(r#"
             PRAGMA foreign_keys = ON;
@@ -721,8 +721,8 @@ mod tests {
         conn.execute("INSERT INTO plan (name) VALUES ('p')", []).unwrap();
         let plan_id = conn.last_insert_rowid();
 
-        // Same spelling twice, a case variant (its own unit, no folding), an
-        // unparseable string, and a bare number
+        // Same spelling twice, a case variant which is its own unit, an unparseable
+        // string, and a bare number
         for raw in ["5 pages", "read 3 pages", "2 Pages", "grandma's address", "10"] {
             conn.execute(
                 "INSERT INTO todo_stats (plan_id, date, text, category, num_unit)
@@ -733,12 +733,12 @@ mod tests {
         }
         migrate_legacy_units(&conn).unwrap();
 
-        // "pages" is one variant shared by both entries that spelled it that way
+        // pages is one variant shared by both entries that spelled it that way
         let pages: i64 = conn
             .query_row("SELECT COUNT(*) FROM unit_variant WHERE name = 'pages'", [], |r| r.get(0))
             .unwrap();
         assert_eq!(pages, 1, "identical spellings must not duplicate");
-        // "pages" and "Pages" differ, so two separate units
+        // pages and Pages differ, so two separate units
         let variants: i64 = conn.query_row("SELECT COUNT(*) FROM unit_variant", [], |r| r.get(0)).unwrap();
         assert_eq!(variants, 2, "different spellings each get their own unit");
         let filled: i64 = conn
@@ -750,7 +750,7 @@ mod tests {
             .unwrap();
         assert_eq!(filled, 3, "the three parseable entries carry units");
 
-        // Each migrated variant anchors its own group (group_id equals its own id)
+        // Each migrated variant anchors its own group, group_id equal to its own id
         let anchored: i64 = conn
             .query_row("SELECT COUNT(*) FROM unit_variant WHERE group_id = id", [], |r| r.get(0))
             .unwrap();
@@ -762,8 +762,8 @@ mod tests {
         assert_eq!(after, 2, "a second pass must not add units");
     }
 
-    // group_stats still has origin_group_id and plan_id after the deck or plan is deleted, so a
-    // reused rowid would attach one thing's history to the next. A plain INTEGER PRIMARY KEY does that
+    // group_stats keeps origin_group_id and plan_id after the deck or plan is deleted, so a
+    // reused rowid would attach one thing's history to the next
     #[test]
     fn deleted_decks_and_plans_never_hand_their_id_to_the_next_one() {
         let conn = Connection::open_in_memory().unwrap();
@@ -802,8 +802,8 @@ mod tests {
         );
     }
 
-    // The migration must cover ids freed before it ran, the dangerous case. The row is gone so
-    // MAX(id) misses it, but group_stats still references it and would reuse it for the next deck
+    // The migration must cover ids freed before it ran, since the row is gone and the max
+    // misses it while group_stats still references it and would reuse it for the next deck
     #[test]
     fn upgrading_an_old_database_keeps_freed_ids_out_of_circulation() {
         let conn = Connection::open_in_memory().unwrap();
@@ -872,8 +872,8 @@ mod tests {
 
     #[test]
     fn upgrades_a_real_pre_stat_run_database() {
-        // group and group_stats as released, before resets had anywhere to record. New columns come
-        // from migration, since CREATE TABLE IF NOT EXISTS leaves an existing table alone
+        // group and group_stats as released, before resets had anywhere to record, and new
+        // columns come from migration since CREATE TABLE IF NOT EXISTS leaves a table alone
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
@@ -1074,7 +1074,7 @@ mod tests {
 
     #[test]
     fn upgrades_a_real_pre_imported_columns_database() {
-        // The card table as released before imported_front/imported_back existed
+        // The card table as released before the imported columns existed
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch(
             r#"
@@ -1163,8 +1163,8 @@ mod tests {
         assert_eq!(front2, "my note");
     }
 
-    /// The column move must carry media references, cleanup only scans imported_*, so
-    /// anything left in front/back would look orphaned
+    /// The column move must carry media references, since cleanup only scans the imported
+    /// columns and anything left in front or back would look orphaned
     #[test]
     fn migrated_html_media_survives_cleanup() {
         let tmp = tempfile::tempdir().unwrap();

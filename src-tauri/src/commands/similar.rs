@@ -7,9 +7,8 @@ pub struct SimilarResult {
     back: Vec<Card>,
 }
 
-/// Similar cards: any is_searchable card in the same deck whose front matches a
-/// front token OR whose back matches a back token of the studied card.
-/// Partitioned front-matching first, back-only second.
+/// Similar cards are any searchable card in the same deck whose front matches a front token
+/// or whose back matches a back token, partitioned front-matching first
 #[tauri::command]
 pub fn get_similar_cards(
     item_id: i64,
@@ -49,8 +48,8 @@ pub fn get_similar_cards(
         });
     }
 
-    // No SQL text prefilter: raw columns hold HTML with entities (&nbsp; etc.)
-    // so LIKE against decoded tokens drops valid matches. Matching is done on tokenized text below.
+    // No SQL text prefilter, since raw columns hold HTML with entities and a LIKE against
+    // decoded tokens drops valid matches, so matching is done on tokenized text below
     let sql = "SELECT id, group_id, front, back, support, imported_front, imported_back, imported_support, \
          front_image, back_image, front_audio, back_audio, \
          tier, ease, sequence, is_searchable, is_due, is_overdue, is_paused, is_uploaded, position, is_cram \
@@ -91,8 +90,8 @@ pub fn get_similar_cards(
     let mut front_matched: Vec<Card> = Vec::new();
     let mut back_only: Vec<Card> = Vec::new();
     for card in results {
-        // Candidates are tokenized the same way as the studied card so both sides
-        // compare HTML-free, entity-decoded, and paren-stripped.
+        // Candidates are tokenized the same way as the studied card so both sides compare
+        // HTML-free, entity-decoded and paren-stripped
         let cand_front = side_tokens(&card.front, card.imported_front.as_deref());
         let cand_back = side_tokens(&card.back, card.imported_back.as_deref());
         let fm = front_tokens
@@ -115,7 +114,7 @@ pub fn get_similar_cards(
     })
 }
 
-// One side's search terms: user text plus any imported Anki HTML.
+// One side's search terms, user text plus any imported Anki HTML
 fn side_tokens(user: &str, imported: Option<&str>) -> Vec<String> {
     let mut tokens = extract_tokens(user);
     if let Some(html) = imported {
@@ -124,8 +123,8 @@ fn side_tokens(user: &str, imported: Option<&str>) -> Vec<String> {
     tokens
 }
 
-// Whole-word containment: prevents "you" matching "younger". Non-ASCII bytes
-// (e.g. Japanese) count as word boundaries.
+// Whole-word containment, so a short word can't match inside a longer one, and non-ASCII
+// bytes count as word boundaries
 fn word_boundary_match(text: &str, token: &str) -> bool {
     if token.is_empty() {
         return false;
@@ -155,7 +154,7 @@ fn word_boundary_match(text: &str, token: &str) -> bool {
     false
 }
 
-// Removes <tag …>…</tag> including content.
+// Removes a tag and everything inside it
 fn remove_tag_pair(s: &str, tag: &str) -> String {
     let open = format!("<{}", tag);
     let close = format!("</{}>", tag);
@@ -180,7 +179,7 @@ fn remove_tag_pair(s: &str, tag: &str) -> String {
     result
 }
 
-// Replaces each opening <tag …> with `replacement`; closing tags are left for strip_html.
+// Replaces each opening tag with the replacement, leaving closing tags for strip_html
 fn replace_tag_with(s: &str, tag: &str, replacement: &str) -> String {
     let open = format!("<{}", tag);
     let mut result = String::new();
@@ -205,15 +204,15 @@ fn replace_tag_with(s: &str, tag: &str, replacement: &str) -> String {
     result
 }
 
-// Decodes common named entities plus any numeric entity (&#39;, &#xa0;, ...).
-// Unrecognized entities pass through unchanged.
+// Decodes common named entities plus any numeric entity, and unrecognized entities pass
+// through unchanged
 fn decode_entities(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut rest = s;
     while let Some(start) = rest.find('&') {
         out.push_str(&rest[..start]);
         rest = &rest[start..];
-        // Entity names are short, a distant ';' means this '&' is literal text
+        // Entity names are short, so a distant terminator means this is literal text
         let end = rest.find(';').filter(|&end| end <= 12);
         let decoded = end.and_then(|end| {
             let name = &rest[1..end];
@@ -252,8 +251,8 @@ fn decode_entities(s: &str) -> String {
     out
 }
 
-// Same canonical form as normalizeSearchText in CardFace.jsx: invisible
-// characters removed, curly quotes straightened, whitespace collapsed.
+// Same canonical form as normalizeSearchText in CardFace, invisible characters removed,
+// curly quotes straightened and whitespace collapsed
 fn normalize_text(s: &str) -> String {
     let mapped: String = s
         .chars()
@@ -268,9 +267,8 @@ fn normalize_text(s: &str) -> String {
     mapped.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-// Splits a card field into comma- or semicolon-separated tokens: br/hr/div
-// become separators, remaining HTML is stripped, entities decoded,
-// parenthetical text discarded.
+// Splits a card field into comma or semicolon separated tokens, where line-breaking tags
+// become separators and remaining HTML, entities and parenthetical text are cleared out
 fn extract_tokens(s: &str) -> Vec<String> {
     let s = remove_tag_pair(s, "audio");
     let s = replace_tag_with(&s, "br", ",");

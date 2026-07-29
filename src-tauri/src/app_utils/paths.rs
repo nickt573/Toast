@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
-/// Media directories under the app data dir. Stored paths are relative to
-/// app_dir and always use forward slashes, e.g. "cards/images/<uuid>.png".
+/// Media directories under the app data dir, where stored paths are relative to app_dir and
+/// always use forward slashes
 pub const MEDIA_SUBDIRS: [&str; 4] = ["cards/images", "cards/audio", "pages/images", "pages/audio"];
 
 fn is_url(path: &str) -> bool {
@@ -11,10 +11,8 @@ fn is_url(path: &str) -> bool {
         || path.starts_with("blob:")
 }
 
-/// Canonicalizes a stored media reference to app_dir-relative form.
-/// Absolute paths under the current app_dir are stripped to their media subpath.
-/// Absolute paths under a stale root (renamed username, app dir copied from another machine)
-/// are recovered by locating the media subdir marker. URLs and non-media paths are unchanged.
+/// Canonicalizes a stored media reference to app_dir-relative form, recovering a stale root
+/// by locating the media subdir marker, and leaving urls and non-media paths alone
 pub fn to_relative(path: &str, app_dir: &Path) -> String {
     if path.is_empty() || is_url(path) {
         return path.to_string();
@@ -33,7 +31,7 @@ pub fn to_relative(path: &str, app_dir: &Path) -> String {
         }
     }
 
-    // Stale root: keep everything from the media subdir marker onward
+    // Stale root, so keep everything from the media subdir marker onward
     for subdir in MEDIA_SUBDIRS {
         let marker = format!("/{subdir}/");
         if let Some(idx) = normalized.find(&marker) {
@@ -44,9 +42,8 @@ pub fn to_relative(path: &str, app_dir: &Path) -> String {
     path.to_string()
 }
 
-/// Resolves a stored path for filesystem access: rooted/absolute paths pass
-/// through (has_root so Unix-absolute strings aren't mis-joined on Windows),
-/// relative paths are joined to app_dir.
+/// Resolves a stored path for filesystem access, passing rooted paths through so a
+/// Unix-absolute string isn't mis-joined on Windows, and joining relative ones to app_dir
 pub fn resolve_media_path(app_dir: &Path, stored: &str) -> PathBuf {
     let p = Path::new(stored);
     if p.has_root() || p.is_absolute() {
@@ -56,9 +53,8 @@ pub fn resolve_media_path(app_dir: &Path, stored: &str) -> PathBuf {
     }
 }
 
-/// True if `path` already refers to a saved file in `subdir` ("cards/images",
-/// …): relative under it, or absolute under it in the current or a stale
-/// app_dir. Such paths must not be copied again on save.
+/// True if the path already refers to a saved file in that subdir, relative or absolute
+/// under a current or stale app_dir, since such paths must not be copied again on save
 pub fn is_stored_media(path: &str, app_dir: &Path, subdir: &str) -> bool {
     if path.is_empty() || is_url(path) {
         return false;
@@ -66,9 +62,8 @@ pub fn is_stored_media(path: &str, app_dir: &Path, subdir: &str) -> bool {
     to_relative(path, app_dir).starts_with(&format!("{subdir}/"))
 }
 
-/// Rewrites src="…" / src='…' attribute values in card HTML to relative form.
-/// Returns None when nothing changed. Scans like extract_image_paths_from_html
-/// so exactly the same references are matched.
+/// Rewrites src attribute values in card HTML to relative form, None when nothing changed,
+/// scanning like extract_image_paths_from_html so exactly the same references are matched
 pub fn relativize_html_media(html: &str, app_dir: &Path) -> Option<String> {
     let mut out = String::with_capacity(html.len());
     let mut rest = html;
@@ -112,9 +107,8 @@ pub fn relativize_html_media(html: &str, app_dir: &Path) -> Option<String> {
     changed.then_some(out)
 }
 
-/// Relativizes attrs.src of every TipTap image node and syncs attrs.rawPath to the stored copy.
-/// rawPath historically kept pointing at the originally picked file, not the app-dir copy.
-/// Returns true if anything changed.
+/// Relativizes the src of every TipTap image node and syncs rawPath to the stored copy,
+/// which it historically didn't, and reports whether anything changed
 pub fn relativize_image_nodes(node: &mut serde_json::Value, app_dir: &Path) -> bool {
     use serde_json::Value;
 
@@ -185,8 +179,8 @@ mod tests {
 
     #[test]
     fn strips_macos_style_path() {
-        // Databases created on macOS store this form (note the space in
-        // "Application Support") and must port cleanly to other machines
+        // Databases created on macOS store this form, spaces and all, and must port
+        // cleanly to other machines
         assert_eq!(
             to_relative(
                 "/Users/bob/Library/Application Support/com.toast.app/cards/audio/e.mp3",

@@ -1,23 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { loggedInvoke, logError } from "./logger";
 
-// Amount field plus a unit chooser. A unit is a name with any number of alternate names; you
-// pick a unit and step ‹ › through its names to choose which one shows on this entry. The
-// list lets you add, edit, merge, or delete units. Units are global, shared by every picker.
+// Amount field plus a unit chooser, where a unit is a name with any number of alternates and
+// you step through them to pick the one shown, and units are global to every picker
 export default function UnitPicker({ value, variantId, onChange, setToast, onUnitsChanged, autoFocusValue = false }) {
   const warn = (msg) => setToast ? setToast(msg, "warn") : setErr(msg);
   // Reload the picker's own list, then let the parent refresh anything showing unit names so
-  // a rename, merge, or delete lands in the stat table and graph at once, never stale.
+  // a rename, merge or delete lands in the stat table and graph at once
   const reload = async () => { const u = await load(); onUnitsChanged?.(); return u; };
   const [units, setUnits] = useState([]);
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState("list");   // "list" | "create" | groupId (editing)
-  const [draft, setDraft] = useState([""]);    // names while creating; first is the primary
+  const [view, setView] = useState("list");   // list, create, or the group id being edited
+  const [draft, setDraft] = useState([""]);    // names while creating, the first is primary
   const [addName, setAddName] = useState("");  // new alternate name while editing a unit
-  const [nameEdits, setNameEdits] = useState({}); // in-progress name text while editing, keyed by variant id
+  const [nameEdits, setNameEdits] = useState({}); // in-progress name text, keyed by variant id
   const [merging, setMerging] = useState(false);
-  const [mergeSel, setMergeSel] = useState([]); // group ids to merge, in pick order; first is main
-  const [pendingDel, setPendingDel] = useState(null); // { kind, id, name, uses } awaiting confirm
+  const [mergeSel, setMergeSel] = useState([]); // group ids to merge in pick order, first is main
+  const [pendingDel, setPendingDel] = useState(null); // the delete awaiting confirmation
   const [err, setErr] = useState("");
   const wrapRef = useRef(null);
 
@@ -36,7 +35,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
 
   const closeMenu = () => { setOpen(false); setView("list"); setErr(""); setAddName(""); setNameEdits({}); setMerging(false); setMergeSel([]); };
   const backToList = () => { setView("list"); setErr(""); setAddName(""); setNameEdits({}); setPendingDel(null); };
-  // Editing a unit is done, not saved-or-discarded, so leaving only checks nothing is blank.
+  // Editing a unit is done rather than saved or discarded, so leaving only checks for blanks
   const finishEdit = () => {
     if (editUnit && editUnit.variants.some(v => (nameEdits[v.id] ?? v.name).trim() === "")) {
       warn("A name can't be empty."); return;
@@ -70,7 +69,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
 
   const submitCreate = async () => {
     const names = draft.map(s => s.trim());
-    // Every field must hold a name: a blank one warns and stops rather than being dropped.
+    // Every field must hold a name, so a blank one warns and stops rather than being dropped
     if (names.some(s => !s)) { warn("Enter a name for the unit."); return; }
     try {
       const groupId = await loggedInvoke("create_unit", { names });
@@ -99,7 +98,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
   };
 
   // Deleting a name or unit that entries chose clears it off them, so it asks first when the
-  // count is above zero; an unused one goes straight away.
+  // count is above zero, while an unused one goes straight away
   const askDeleteVariant = (v) => v.uses > 0
     ? setPendingDel({ kind: "variant", id: v.id, name: v.name, uses: v.uses })
     : doDeleteVariant(v.id);
@@ -132,15 +131,15 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
     } catch (e) { logError("catch", e); setErr(errorFor(e, "Could not delete that unit.")); }
   };
 
-  // The first unit picked is the main; the rest fold into it, their names becoming its
-  // alternates. Entries keep the name they logged, now counting under the main.
+  // The first unit picked is the main and the rest fold into it as alternates, while entries
+  // keep the name they logged, now counting under the main
   const submitMerge = async () => {
     if (mergeSel.length < 2) return;
     const [main, ...rest] = mergeSel;
     try {
       for (const from of rest) await loggedInvoke("merge_units", { fromGroup: from, intoGroup: main });
-      // The chosen name keeps its id through a merge, so the selection stays valid on its own,
-      // still showing the exact spelling that was picked, now grouped under the main.
+      // The chosen name keeps its id through a merge, so the selection stays valid and still
+      // shows the exact spelling picked, now grouped under the main
       await reload();
       cancelMerge();
     } catch (e) { logError("catch", e); setErr("Could not merge those units."); }

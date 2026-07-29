@@ -24,10 +24,10 @@ pub struct Todo {
     pub category: i64,
     pub is_done: bool,
     pub is_disabled: bool,
-    // Skipped for today. Set via set_todo_skipped, never through update_todo.
+    // Skipped for today, set via set_todo_skipped and never through update_todo
     #[serde(default)]
     pub is_skipped: bool,
-    // Manual order, set via set_todo_position and never through update_todo.
+    // Manual order, set via set_todo_position and never through update_todo
     #[serde(default)]
     pub position: Option<i64>,
 }
@@ -63,8 +63,8 @@ pub struct Card {
     pub sequence: i32,
 
     pub support: Option<String>,
-    // imported_x: read-only Anki HTML set at import time, never written by
-    // update_card. x is the user's own text on every card.
+    // The imported fields are read-only Anki HTML set at import time and never written by
+    // update_card, while the plain ones are the user's own text
     #[serde(default)]
     pub imported_front: Option<String>,
     #[serde(default)]
@@ -185,8 +185,8 @@ pub struct GroupStat {
     pub is_archived: bool,
 }
 
-/// A reset the stats page draws as a boundary. after_stat_id is the highest line id
-/// there was when it happened, so lines at or below it belong to the run it ended.
+/// A reset the stats page draws as a boundary, where after_stat_id is the highest line id at
+/// the time so lines at or below it belong to the run it ended
 #[derive(Serialize, Deserialize)]
 pub struct DeckReset {
     pub origin_group_id: i64,
@@ -206,8 +206,8 @@ pub struct CardGradeLog {
 
 #[derive(Serialize, Deserialize)]
 pub struct StatResource {
-    /// todo_stat_resource's rowid. The snapshot outlives the resource, so this is the
-    /// only stable way to point at one line of it.
+    /// todo_stat_resource's rowid, the only stable way to point at one line since the
+    /// snapshot outlives the resource
     pub row_id: i64,
     pub name: String,
     pub url: Option<String>,
@@ -217,7 +217,7 @@ pub struct StatResource {
 
 #[derive(Serialize, Deserialize)]
 pub struct TodoStatGroup {
-    /// todo_stat_group's rowid, see StatResource::row_id.
+    /// todo_stat_group's rowid, the same idea as StatResource row_id
     pub row_id: i64,
     pub group_id: Option<i64>,
     pub name: String,
@@ -235,9 +235,8 @@ pub struct TodoStat {
     pub category: String,
     pub details: Option<String>,
     pub time_spent_minutes: f64,
-    // How much got done and which unit variant it counts in: both set or both None. The two
-    // names are looked up live from the variant, so a rename shows through: unit_label is the
-    // exact variant this entry chose, unit_name is its group's main label for the graph.
+    // How much got done and which unit variant it counts in, both set or both None, where
+    // unit_label is the variant this entry chose and unit_name its group's main label
     pub num_value: Option<f64>,
     pub variant_id: Option<i64>,
     pub unit_group_id: Option<i64>,
@@ -252,12 +251,12 @@ pub struct UnitVariant {
     pub id: i64,
     pub name: String,
     // How many logged entries chose this name, so the picker can warn before a delete clears
-    // it from them.
+    // it from them
     pub uses: i64,
 }
 
-// A unit is a group of accepted spellings. id is the group; variants are ordered, with the
-// first as the "main" the group shows by. The graph and totals treat every variant as one.
+// A unit is a group of accepted spellings, id being the group and variants ordered with the
+// first as the main it shows by, and the graph and totals treat every variant as one
 #[derive(Serialize, Deserialize)]
 pub struct Unit {
     pub id: i64,

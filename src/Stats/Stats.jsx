@@ -19,7 +19,7 @@ import "./Stats.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend);
 
-// Constants:
+// Constants
 
 // Themed palette matching the app's feature families
 const BLUE   = "#5A7A90";  // slate, new cards
@@ -35,10 +35,10 @@ const GREEN_BG  = "rgba(74,140,94,0.78)";
 const RED_BG    = "rgba(184,84,84,0.78)";
 const YELLOW_BG = "rgba(224,169,46,0.78)";
 
-// Category colors are defined once in PlanUtils and shared with Todos.
+// Category colors are defined once in PlanUtils and shared with Todos
 const CATEGORY_COLORS = CATEGORY_COLOR_BY_LABEL;
 
-// Helpers:
+// Helpers
 
 function fmtTime(minutes) {
   if (!minutes) return "0m";
@@ -51,7 +51,7 @@ function plural(n, word) {
   return `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
 }
 
-// "5 pages" for a logged amount and its unit; empty string unless both are present.
+// Formats a logged amount with its unit, empty unless both are present
 function fmtUnit(value, name) {
   if (value === null || value === undefined || !name) return "";
   const n = Number.isInteger(value) ? value : Math.round(value * 100) / 100;
@@ -75,7 +75,7 @@ function daysBetween(from, to) {
   return Math.round(ms / 86400000);
 }
 
-// "Jul 8" style, for the ends of a session window
+// Short month and day, for the ends of a session window
 function fmtShortDay(dateStr) {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -90,7 +90,7 @@ function addDays(dateStr, n) {
 function parseCategories(catStr) {
   if (!catStr) return [];
   return catStr.split(",").map(s => s.trim()).filter(Boolean)
-    // "Other" was renamed to "Culture" (bit 64), alias old stat rows
+    // Other was renamed to Culture at bit 64, so alias the old stat rows
     .map(s => s === "Other" ? "Culture" : s);
 }
 
@@ -101,18 +101,16 @@ function categoryStringToMap(catStr) {
   return map;
 }
 
-// An archived row was either copied into a merged deck or set aside by a reset, so
-// either way something else is the record now. Every aggregate reads through this,
-// otherwise a merge inflates the plan.
+// An archived row was copied into a merged deck or set aside by a reset, so something
+// else is the record now and counting it would inflate the plan
 function counted(groupStats) {
   return groupStats.filter(r => !r.is_archived);
 }
 
-// How long the plan has been going, measured by its own record: the first day it logged
-// anything through today, counting that first day. Archived rows count here even though
-// every other aggregate skips them, since a merged or reset deck still dates the plan.
-// A deleted plan stops there instead, ending on its last logged day, since nothing can
-// be added to it any more.
+// How long the plan has run, from its first logged day through today counting that first
+// day, and archived rows count since a merged or reset deck still dates the plan. A
+// deleted plan stops there instead, ending on its last logged day, since nothing can be
+// added to it any more
 function totalPlanDays(groupStats, todoStats, today, deleted) {
   if (!today) return null;
   let earliest = null, latest = null;
@@ -136,10 +134,8 @@ function computeMetrics(groupStats, todoStats) {
   groupStats.forEach(r => { totalP += r.num_promote; totalD += r.num_demote; });
   const avgRetention = (totalP + totalD) > 0 ? totalP / (totalP + totalD) : null;
 
-  // Average time per calendar day across the studied span, decks and todos together the
-  // way the header's "study time" counts them. The span runs from the first active day to
-  // the last, not to today, so a plan left idle keeps the daily figure it had at its peak
-  // instead of bleeding down over the dead days after it was abandoned.
+  // Average time per calendar day across the studied span, decks and todos together, and
+  // the span ends on the last active day so an idle plan keeps the figure it had at its peak
   const studyDates = [...groupStats, ...todoStats].map(r => r.date).sort();
   const studySpan = studyDates.length
     ? daysBetween(studyDates[0], studyDates[studyDates.length - 1]) + 1
@@ -149,10 +145,10 @@ function computeMetrics(groupStats, todoStats) {
   return { studyMins, todoMins, newCardsStudied, totalCardsStudied, todosDone, avgRetention, avgDailyStudy };
 }
 
-// Chart data builders:
+// Chart data builders
 
-// Bucket key per unit: "day" = the date itself (raw daily bars, unchanged),
-// "week" = the Monday of that week, "month" = "YYYY-MM". Labels keep the year.
+// Bucket key per unit, day is the date itself, week is that week's Monday, month is the
+// year and month, and labels keep the year
 function bucketKey(dateStr, unit) {
   if (unit === "week") {
     const dow = new Date(dateStr + "T00:00:00Z").getUTCDay();
@@ -171,10 +167,8 @@ function nextBucket(key, unit) {
   return addDays(key, unit === "week" ? 7 : 1);
 }
 
-// Every bucket between the ends gets a label, empty or not. Otherwise a day nothing was
-// studied on simply vanishes and the bars either side of it read as consecutive. The
-// ends come from the window being shown when there is one, so a 30d page stays 30 wide
-// however little of it was studied, and from the data itself for "All".
+// Every bucket between the ends gets a label so an unstudied day doesn't vanish and leave
+// the bars either side reading as consecutive, and the ends come from the shown window
 function bucketRange(keys, unit, from = null, to = null) {
   const sorted = [...keys].sort();
   const start = from ?? sorted[0];
@@ -185,9 +179,8 @@ function bucketRange(keys, unit, from = null, to = null) {
   return out;
 }
 
-// A window starts at its first bucket with something in it, so two sessions in the last
-// three days read as three days rather than four blanks and then three. Blanks after
-// that stay, including a run at the end: not having studied yet today is worth seeing.
+// A window starts at its first bucket with something in it, so it doesn't open on blanks,
+// but blanks after that stay, including a run at the end
 function windowBuckets(byDate, unit, win) {
   const dates = bucketRange(
     Object.keys(byDate),
@@ -223,13 +216,12 @@ function buildOverTimeData(groupStats, unit = "day", win = null) {
     ],
   };
 
-  // Retention rides the same labels as the bars so the two line up, but a bucket with
-  // nothing reviewed has no rate to plot, so it goes in as a null. The line runs straight
-  // over those days, they just have no dot of their own to hover.
+  // Retention rides the same labels as the bars, and a bucket with nothing reviewed goes
+  // in as null so the line runs straight over it with no dot to hover
   const rate = (p, d) => (p + d) > 0 ? Math.round((p / (p + d)) * 100) : null;
   const daily = dates.map(d => rate(at(d).p, at(d).d));
-  // Every review in the window up to and including that bucket, so the line shows the
-  // average settling rather than how each day went on its own.
+  // Every review up to and including that bucket, so the line shows the average settling
+  // rather than how each day went on its own
   let runP = 0, runD = 0;
   const cumulative = dates.map(d => {
     const { p, d: dem } = at(d);
@@ -248,15 +240,13 @@ const retentionLine = (dates, data) => ({
       label: "Retention %",
       data,
       borderColor: AMBER,
-      // Spelled out because the flat runs at the edges are drawn by hand and have to
-      // match the line they continue.
+      // Spelled out because the flat runs at the edges are drawn by hand and have to match
       borderWidth: 3,
       tension: 0.3,
       fill: false,
       pointRadius: 3,
       spanGaps: true,
-      // Without this the chart trims anything past its top edge, so a 100% day
-      // loses the upper half of its dot.
+      // Without this the chart trims past its top edge and a 100% day loses half its dot
       clip: false,
     },
   ],
@@ -335,10 +325,8 @@ function buildByCategoryData(todoStats) {
   };
 }
 
-// One unit's story per bucket over the window. Every spelling of the unit counts as one
-// (grouped by unit_group_id). "total" sums the amount done; "time" divides the time spent
-// by the amount to show how long one of them took on average, so seven videos in
-// forty-five minutes reads as about six-minute videos rather than just a big count.
+// One unit per bucket over the window, every spelling counted as one by unit_group_id,
+// where total sums the amount done and time divides time spent by amount
 function buildByUnitData(todoStats, groupId, mode, unit = "day", win = null) {
   const byDate = {};
   todoStats.forEach(r => {
@@ -358,9 +346,8 @@ function buildByUnitData(todoStats, groupId, mode, unit = "day", win = null) {
   return { labels: dates, datasets: [{ label: mode === "time" ? "Minutes each" : "Amount", data, backgroundColor: YELLOW_BG }] };
 }
 
-// The distinct units that actually appear in a plan's logged todos, keyed by their group and
-// labelled with the group's main spelling, name-sorted for a stable dropdown. Units created
-// but never logged don't clutter the chooser.
+// The distinct units that appear in a plan's logged todos, keyed by group and labelled
+// with the group's main spelling, so units created but never logged stay out
 function unitOptionsFrom(todoStats) {
   const seen = new Map();
   todoStats.forEach(r => {
@@ -376,12 +363,12 @@ const UNIT_MODES = [
   { key: "time",  label: "Time" },
 ];
 
-// Shared chart options:
+// Shared chart options
 
-// Caps how many date labels render as history grows, the bars themselves are unaffected.
+// Caps how many date labels render as history grows, the bars themselves are unaffected
 const DATE_TICKS = { autoSkip: true, maxTicksLimit: 12, maxRotation: 30, font: { size: 10 } };
 
-// Wraps a label onto word-boundary lines, only truncates past the line limit.
+// Wraps a label onto word-boundary lines, only truncates past the line limit
 function wrapTickLabel(label, width = 14, maxLines = 2) {
   const lines = [];
   let line = "";
@@ -403,8 +390,7 @@ function wrapTickLabel(label, width = 14, maxLines = 2) {
   return lines.length === 1 ? lines[0] : lines;
 }
 
-// Deck names are categorical: never skip a label (every bar stays identified), never
-// rotate, wrap long names instead. Tooltips still show the full name.
+// Deck names are categorical, so never skip or rotate a label, wrap long names instead
 const DECK_TICKS = {
   autoSkip: false,
   maxRotation: 0,
@@ -414,9 +400,8 @@ const DECK_TICKS = {
   },
 };
 
-// The cards chart and the retention chart under it are read as one picture, so both give
-// their y axis the same fixed width. Left to themselves they size to their own labels,
-// "9" against "100%", and the two plots start at different x.
+// The cards chart and the retention chart under it are read as one picture, so both fix
+// the same y axis width, otherwise their labels size differently and the plots misalign
 const PAIRED_AXIS_W = 46;
 const pairedAxis = (scale) => { scale.width = PAIRED_AXIS_W; };
 
@@ -430,8 +415,7 @@ const barOpts = (stacked = false, yLabel = "", xTicks = null, pairedY = false) =
       stacked,
       beginAtZero: true,
       ticks: { stepSize: 1, font: { size: 10 } },
-      // A literal, not the token: this is drawn onto a canvas, and an unresolved
-      // var() is silently ignored there rather than falling back to anything.
+      // A literal, not the token, since canvas ignores an unresolved var with no fallback
       title: { display: !!yLabel, text: yLabel, font: { size: 10 }, color: GRAY },
       ...(pairedY ? { afterFit: pairedAxis } : {}),
     },
@@ -444,17 +428,15 @@ const lineOpts = {
   layout: { padding: { top: 10 } },
   plugins: { legend: { display: false } },
   scales: {
-    // A line normally starts hard against the left edge, a bar sits in the middle of its
-    // slot. offset gives the line the same slots, so a day lands under its own bars.
+    // A line starts hard against the left edge while a bar sits mid-slot, so offset gives
+    // the line the same slots and a day lands under its own bars
     x: { offset: true, grid: { display: false, offset: true }, ticks: DATE_TICKS },
     y: { beginAtZero: true, max: 100, afterFit: pairedAxis, ticks: { callback: v => v + "%", font: { size: 10 } } },
   },
 };
 
-// Sitting in the bars' slots leaves the line short of both edges by half a slot, and an
-// end with nothing reviewed leaves it shorter still. This carries the first and last rate
-// out flat to the edges so the line spans the chart. Nothing is drawn on those runs, so
-// there is no dot out there to hover and no reading to misread.
+// Sitting in the bars' slots leaves the line short of both edges, so this carries the
+// first and last rate out flat, drawing nothing there so no dot can be hovered
 const stretchRetention = {
   id: "stretchRetention",
   beforeDatasetsDraw(chart) {
@@ -479,10 +461,7 @@ const stretchRetention = {
   },
 };
 
-// Metric card:
-
-// A single figure, or a small stack of them clicking the card steps through when `faces`
-// holds more than one. The dots below just mark the place.
+// Metric card
 function MetricCard({ label, value, color, faces }) {
   const items = faces ?? [{ label, value, color }];
   const [i, setI] = useState(0);
@@ -507,7 +486,7 @@ function MetricCard({ label, value, color, faces }) {
   );
 }
 
-// Chart panel:
+// Chart panel
 
 const RET_MODES = [
   { key: "daily",      label: "Daily" },
@@ -531,24 +510,23 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
 
   const groupStats = counted(allGroupStats);
 
-  // Snap back to the most recent window when the underlying data changes (e.g. plan
-  // switch). Keyed on the prop, since the filtered copy is new on every render.
+  // Snap back to the most recent window when the underlying data changes, keyed on the
+  // prop since the filtered copy is new on every render
   useEffect(() => setOffset(0), [allGroupStats, todoStats]);
 
-  // Each chart windows over its own date domain
   function computeWindow(allDates) {
     const minDate = allDates[0] ?? null;
     const maxDate = allDates[allDates.length - 1] ?? null;
     // A fixed range ends today rather than on the last day studied, so a quiet stretch
-    // since the last session shows as the blank days it is.
+    // since the last session shows as the blank days it is
     const anchor = today ?? maxDate;
     let start = null, end = null;
     if (range !== null && anchor) {
       end   = addDays(anchor, -offset * range);
       start = addDays(end, -(range - 1));
     }
-    // "All" keeps every datapoint but widens the unit so a lifetime of history stays
-    // readable: raw days up to 90 days of span, weekly totals to ~18 months, then monthly.
+    // All keeps every datapoint but widens the unit so long histories stay readable, raw
+    // days up to 90 days of span, weekly totals to about 18 months, then monthly
     let unit = "day";
     if (range === null && minDate && maxDate) {
       const spanDays = (new Date(maxDate) - new Date(minDate)) / 86400000 + 1;
@@ -578,7 +556,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const byCatData     = buildByCategoryData(todoStats);
 
   const unitOptions = unitOptionsFrom(todoStats);
-  // A picked unit that no longer exists (plan switch, deletion) falls back to the first.
+  // A picked unit that no longer exists falls back to the first
   const activeUnit = unitOptions.find(u => u.id === unitSel) ?? unitOptions[0] ?? null;
   const unitWin = computeWindow(
     [...new Set(todoStats
@@ -653,8 +631,8 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
     return o;
   })();
 
-  // Units can be fractional too. The y axis names the picked unit, or the minutes each of
-  // them took when the toggle is on "Time each".
+  // Units can be fractional too, and the y axis names the picked unit, or the minutes
+  // each took when the toggle is on Time each
   const unitYLabel = activeUnit
     ? (unitMode === "time" ? `minutes / ${activeUnit.name.toLowerCase()}` : activeUnit.name.toLowerCase())
     : "";
@@ -775,10 +753,9 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   );
 }
 
-// Deck Sessions tab:
+// Deck Sessions tab
 
-// Archive toggle for a scope of stat rows. Reads Unarchive only when every row in
-// scope is already archived, so a mix or none offers Archive first.
+// Reads Unarchive only when every row in scope is already archived
 function ArchiveButton({ rows, onArchive, label = "Archive" }) {
   const allArchived = rows.length > 0 && rows.every(r => r.is_archived);
   return (
@@ -788,36 +765,29 @@ function ArchiveButton({ rows, onArchive, label = "Archive" }) {
   );
 }
 
-// How many days of sessions one page of a deck's table covers.
+// How many days of sessions one page of a deck's table covers
 const WINDOW_DAYS = 14;
 
 function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted, setToast }) {
   const [deckFilter, setDeckFilter]   = useState("all");
   const [expanded, setExpanded]       = useState({});
-  // How many windows back from the newest session each deck card is paged. 0 is the
-  // most recent fortnight.
+  // How many windows back from the newest session each deck card is paged, 0 being the
+  // most recent fortnight
   const [windowBack, setWindowBack] = useState({});
-  // The one session row a click has selected, so the card's foot acts on it alone.
+  // The one session row a click has selected, so the card's foot acts on it alone
   const [selectedRowId, setSelectedRowId] = useState(null);
 
-  // One card per deck, a fortnight of days paged inside it.
-  //
-  // origin_group_id survives the deck being deleted, but it is a plain rowid and
-  // SQLite reissues it to the next deck created, so it identifies a deck only while
-  // that deck is alive. Rows whose deck is gone are bucketed apart by name, otherwise
-  // a dead deck's history lands inside a brand new deck's table. Rows old enough to
-  // predate origin_group_id have nothing but the name to go on either way.
+  // origin_group_id is a plain rowid SQLite reissues, so it identifies a deck only while
+  // that deck is alive, and rows whose deck is gone are bucketed apart by name
   const deckId = r => (r.group_id !== null
     ? `live:${r.origin_group_id}`
     : `dead:${r.origin_group_id ?? "x"}:${r.group_name}`);
 
-  // A deck only counts as archived once every one of its rows is, the same test
-  // ArchiveButton uses to decide whether it reads Archive all or Unarchive all.
+  // A deck only counts as archived once every one of its rows is
   const allArchived = rows => rows.length > 0 && rows.every(r => r.is_archived);
 
-  // Why a deck stopped being live, or null while it still is. Archived outranks
-  // gone because it is the state that decides whether any of this counts toward
-  // your totals, and a deck can easily be both.
+  // Why a deck stopped being live, or null while it still is, and archived outranks gone
+  // since a deck can be both and archived is what decides whether it counts
   const deadState = rows => {
     if (rows.length === 0) return null;
     if (allArchived(rows)) return "archived";
@@ -832,9 +802,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
     byDeck[k].push(r);
   });
 
-  // Decks in the plan that haven't been studied yet have no rows to derive a card
-  // from, so seed them here. They show an empty table until a session opens one, and
-  // drop off entirely if they leave the plan without ever being studied.
+  // Decks in the plan that haven't been studied have no rows to derive a card from, so
+  // seed them here and they drop off if they leave the plan unstudied
   planDecks.forEach(d => {
     const k = `live:${d.id}`;
     if (!byDeck[k]) byDeck[k] = [];
@@ -852,8 +821,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
   const orderedKeys = [...deckKeys]
     .sort((a, b) => (deadState(byDeck[a]) ? 1 : 0) - (deadState(byDeck[b]) ? 1 : 0));
 
-  // Deleting or merging the deck you had filtered to leaves the key pointing at
-  // nothing, which would read as an empty page rather than a cleared filter
+  // Deleting or merging the filtered deck leaves the key pointing at nothing, which
+  // would read as an empty page rather than a cleared filter
   const activeFilter = byDeck[deckFilter] ? deckFilter : "all";
   const visibleKeys = activeFilter === "all" ? orderedKeys : orderedKeys.filter(k => k === activeFilter);
 
@@ -867,8 +836,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
     } catch (e) { logError("catch", e); setToast("Failed to delete session.", "error"); }
   };
 
-  // This page is what decides which rows make up a deck's card, so it hands over their
-  // ids rather than a description the backend would have to group by all over again.
+  // This page decides which rows make up a deck's card, so it hands over their ids rather
+  // than a description the backend would have to group by all over again
   const deleteStats = async (rows) => {
     try {
       await loggedInvoke("delete_group_stats", { ids: rows.map(r => r.id) });
@@ -901,9 +870,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
     <div>
       <div className="st-pills" style={{ marginBottom: 12 }}>
         <button className={`st-pill${activeFilter === "all" ? " active" : ""}`} onClick={() => setDeckFilter("all")}>All</button>
-        {/* Read the name off the same row the deck's card does. Rows are newest
-            first, and a rename or merge only ever updates the live deck, so older
-            rows can still carry a name this deck hasn't gone by in a while. */}
+        {/* Read the name off the same row the deck's card does, since a rename or merge
+            only updates the live deck and older rows can carry a stale name */}
         {orderedKeys.map(id => {
           const dead = deadState(byDeck[id]);
           const isActive = activeFilter === id;
@@ -924,8 +892,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
         const name = deckName(cardId);
         const isOpen = !!expanded[cardId];
 
-        // Rows arrive newest first, so the first one anchors the most recent
-        // fortnight and paging walks backwards from there in whole windows.
+        // Rows arrive newest first, so the first anchors the most recent fortnight and
+        // paging walks backwards from there in whole windows
         const anchor  = deckRows[0]?.date ?? null;
         const oldest  = deckRows[deckRows.length - 1]?.date ?? null;
         const maxBack = anchor ? Math.floor(daysBetween(oldest, anchor) / WINDOW_DAYS) : 0;
@@ -934,21 +902,11 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
         const winStart = winEnd ? addDays(winEnd, -(WINDOW_DAYS - 1)) : null;
         const rows = anchor ? deckRows.filter(r => r.date <= winEnd && r.date >= winStart) : [];
         // Only a row on the current page counts as selected, so paging away drops the
-        // selection and the foot falls back to acting on the whole deck.
+        // selection and the foot falls back to acting on the whole deck
         const selectedRow = rows.find(r => r.id === selectedRowId);
-        // A reset marks the highest line id there was when it happened, so its boundary
-        // sits above the newest row at or below that mark. Anchoring it on that older
-        // row keeps the line in the same place whichever fortnight is on screen, and
-        // draws nothing when the run it ended has been cleared out from under it.
-        //
-        // Repeat resets with no session between them mark the same place, so they land
-        // on one row and the page draws one line. A reset the deck picked up while it
-        // was being studied in another plan does the same here: this plan has no row
-        // between the two marks, so there is nothing to separate.
         const deckOrigin = deckRows[0]?.origin_group_id ?? null;
-        // A reset with nothing studied after it would only ever draw at the very top of
-        // the table, with no run under way to separate from the one it ended, so it stays
-        // hidden until the deck is studied again.
+        // A reset marks the highest line id at the time, so its boundary anchors on the
+        // newest row at or below that mark and draws nothing with no run to separate
         const resetRowIds = new Set(
           deckResets
             .filter(x => deckOrigin !== null && x.origin_group_id === deckOrigin)
@@ -1072,9 +1030,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
               </table>
             )}
 
-            {/* Every deck that has been studied gets the bar, whether or not there is a
-                fortnight to page back to, so the deck's own actions always have a home
-                at the foot of the card. */}
+            {/* Every studied deck gets the bar even with no fortnight to page back to, so
+                the deck's own actions always have a home at the foot of the card */}
             {isOpen && deckRows.length > 0 && (
               <div className="st-window-nav">
                 {selectedRow ? (
@@ -1106,8 +1063,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
   );
 }
 
-// Todos tab:
-// Derived from PlanUtils so the filter pills match every category picker's order.
+// Todos tab
+// Derived from PlanUtils so the filter pills match every category picker's order
 const ALL_CATEGORIES = CATEGORIES.map(c => c.label);
 
 function fmtDayLabel(dateStr) {
@@ -1137,7 +1094,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   const [scopes,    setScopes]    = useState(() => new Set(["all"]));
   const [preset,    setPreset]    = useState("All");
 
-  // All stands alone: picking it clears the rest, picking anything else clears it
+  // All stands alone, picking it clears the rest and picking anything else clears it
   const toggleScope = (key) => setScopes(prev => {
     if (key === "all") return new Set(["all"]);
     const next = new Set(prev);
@@ -1198,8 +1155,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
       timeSpent: r.time_spent_minutes,
       numValue: r.num_value ?? "",
       variantId: r.variant_id ?? null,
-      // Kept lines are tracked by row id, never by name: the snapshot keeps whatever
-      // a deck or resource was called when it was logged, so names repeat and drift.
+      // Kept lines are tracked by row id, never by name, since the snapshot keeps whatever
+      // a deck or resource was called when it was logged and names repeat and drift
       groups: r.groups.map(x => x.row_id),
       resources: r.resources.map(x => x.row_id),
       addGroupIds: [],
@@ -1249,7 +1206,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     return <div className="empty-bubble" style={{ marginTop: 16 }}>No todo history recorded yet.</div>;
   }
 
-  // Consecutive same-date rows become one labeled day section (rows arrive date-sorted)
+  // Consecutive same-date rows become one labeled day section, rows arrive date-sorted
   const days = [];
   visible.forEach(r => {
     if (days.length === 0 || days[days.length - 1].date !== r.date) days.push({ date: r.date, rows: [] });
@@ -1311,9 +1268,6 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
           const isOpen    = !!expanded[r.id];
           const isEditing = editingId === r.id;
           const cats      = parseCategories(r.category);
-          // Time and units ride in the collapsed row, not in here, so an entry can
-          // carry those and still have nothing to open up to.
-          const isBare    = !r.details && r.resources.length === 0 && r.groups.length === 0;
           return (
             <div key={r.id} className="st-todo-row">
               <div className="st-todo-collapsed" onClick={() => toggle(r.id)}>
@@ -1396,16 +1350,9 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       </div>
                     </div>
                   )}
-                  {isBare && (
-                    <div style={{ textAlign: "center", color: "var(--t-text-3)", fontStyle: "italic", padding: "10px 0" }}>
-                      Nothing else recorded for this todo.
-                    </div>
-                  )}
                 </div>
               )}
 
-              {/* The foot of an open todo, holding its actions the way a deck card's
-                  bar holds Archive all and Delete all. */}
               {isOpen && !isEditing && (
                 <div className="st-todo-foot">
                   <button className="st-btn-sm" onClick={() => startEdit(r)}>Edit</button>
@@ -1571,7 +1518,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   );
 }
 
-// Root:
+// Root
 
 // Plans still in play lead, then the disabled and deleted ones together, each group
 // alphabetical, and the page opens on whichever one this puts first
@@ -1633,8 +1580,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       loggedInvoke("get_todo_stats", { planId }),
       loggedInvoke("get_plan_streak",     { planId }),
       loggedInvoke("get_resources",       { planId }),
-      // A deck in the plan that hasn't been studied has no stat rows to be found in,
-      // so its card comes from plan membership instead
+      // A deck in the plan that hasn't been studied has no stat rows, so its card comes
+      // from plan membership instead
       loggedInvoke("get_plan_srs_groups", { planId }),
       loggedInvoke("get_plan_resets",     { planId }),
     ]).then(([gs, ts, si, res, srs, rst]) => {
@@ -1647,9 +1594,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
     }).catch(e => { logError("catch", e); setToast("Failed to load stats.", "error"); });
   };
 
-  // The header speaks for the whole record rather than the plan on screen, so the sum is
-  // taken across every plan at once in the backend. The oldest first record sets the day
-  // count, which is why it keeps climbing after the plan that started it has been put down.
+  // The header speaks for the whole record, so the backend sums across every plan, and the
+  // oldest first record sets the day count even after that plan is put down
   const loadTotals = () => {
     loggedInvoke("get_record_totals")
       .then(t => setTotals({ deckMins: t.deck_mins, todoMins: t.todo_mins, earliest: t.earliest }))
@@ -1697,6 +1643,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const recordDays = totals?.earliest && today ? daysBetween(totals.earliest, today) + 1 : null;
   const retColor = metrics.avgRetention !== null ? retentionColor(metrics.avgRetention) : GRAY;
   const atRisk = streakInfo.streak > 0 && !streakInfo.studied_today;
+
   const planPills = orderPlanPills(activePlans, deletedPlans);
 
   return (
@@ -1716,7 +1663,6 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           )}
         </div>
         <div className="st-body">
-          {/* Plan selector */}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16 }}>
             <div className="st-plan-bar" style={{ flex: 1, marginBottom: 0 }}>
               {planPills.map(p => (
@@ -1737,7 +1683,6 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
             )}
           </div>
 
-          {/* Summary metrics */}
           <div className="st-metrics">
             <MetricCard
               label="Avg. Retention"
@@ -1788,10 +1733,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
             />
           </div>
 
-          {/* Chart panel */}
           <ChartPanel groupStats={groupStats} todoStats={todoStats} today={today} />
 
-          {/* Content tabs */}
           <div className="st-tabs">
             <button className={`st-tab st-tab--decks${contentTab === "decks" ? " active" : ""}`} onClick={() => setContentTab("decks")}>Decks</button>
             <button className={`st-tab st-tab--todos${contentTab === "todos" ? " active" : ""}`} onClick={() => setContentTab("todos")}>Todos</button>

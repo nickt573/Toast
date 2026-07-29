@@ -25,11 +25,11 @@ import "./Notebooks.css";
 const VIEW_NOTEBOOKS = "notebooks";
 const VIEW_PAGES     = "pages";
 
-// Choosing DEFAULT_FONT_SIZE clears the mark instead of setting one, matching the .ProseMirror base size.
+// Choosing the default size clears the mark instead of setting one, matching the base size
 const FONT_SIZES = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32];
 const DEFAULT_FONT_SIZE = 13;
 
-// The mark stores a concrete hex value, so CSS variables can't be used here.
+// The mark stores a concrete hex value, so CSS variables can't be used here
 const FONT_COLORS = [
     { label: "Default",    value: null },
     { label: "Red",        value: "#C0392B" },
@@ -44,7 +44,7 @@ const FONT_COLORS = [
 ];
 
 // A fill belongs to the cell rather than to the text in it, so it stays put while the
-// contents are edited and survives a row or column moving.
+// contents are edited and survives a row or column moving
 const cellFillAttribute = {
     backgroundColor: {
         default: null,
@@ -72,7 +72,7 @@ async function pickFile(extensions) {
 // Matches the backend's ORDER BY name COLLATE NOCASE
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
-// Empty paragraphs don't count. Any other node type does.
+// Empty paragraphs don't count, any other node type does
 function isContentEmpty(json) {
     const hasContent = (node) => {
         if (!node) return false;
@@ -273,7 +273,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
 
 // Audio Recorder
 
-// 16 kHz is plenty for voice and keeps the WAV (and IPC payload) about 3x smaller than the mic's normal rate.
+// 16 kHz is plenty for voice and keeps the WAV and its IPC payload far smaller
 const WAV_RATE = 16000;
 
 function encodeWav(pcm, srcRate) {
@@ -303,7 +303,7 @@ function encodeWav(pcm, srcRate) {
     return new Uint8Array(buf);
 }
 
-// MediaRecorder deliberately not used: WebKitGTK advertises audio/mp4 but emits zero bytes on Linux.
+// MediaRecorder is deliberately not used, WebKitGTK advertises a type but emits zero bytes
 function useAudioRecorder({ audioFile, onAudioChange }) {
     const [recording, setRecording] = useState(false);
     const [paused, setPaused] = useState(false);
@@ -332,7 +332,7 @@ function useAudioRecorder({ audioFile, onAudioChange }) {
             ctxRef.current = ctx;
             const source = ctx.createMediaStreamSource(stream);
             const proc = ctx.createScriptProcessor(4096, 1, 1);
-            // Zero-gain sink keeps the mic from echoing while keeping the processor wired to the destination.
+            // A zero-gain sink keeps the mic from echoing while the processor stays wired
             const sink = ctx.createGain();
             sink.gain.value = 0;
             chunksRef.current = [];
@@ -373,14 +373,14 @@ function useAudioRecorder({ audioFile, onAudioChange }) {
         } catch (e) { logError("save_page_audio", e); }
     }
 
-    // Just clears the reference. Deleting from disk here broke Cancel: the DB kept pointing at a gone file.
-    // Actual cleanup happens in update_page on save and cleanup_orphaned_media on cancel.
+    // Only clears the reference, since deleting from disk here broke Cancel, and the real
+    // cleanup happens on save or when orphaned media is swept
     function deleteAudio() { onAudioChange(null); }
 
     return { recording, paused, startRecording, pauseRecording, resumeRecording, stopRecording, deleteAudio };
 }
 
-// With a clip present, the play button takes the record slot. Re-record by deleting then recording again.
+// With a clip present the play button takes the record slot, so re-recording means deleting first
 function AudioControls({ audioFile, audio }) {
     if (audio.recording) {
         return (
@@ -407,7 +407,7 @@ function AudioControls({ audioFile, audio }) {
     );
 }
 
-// Page Editor (TipTap)
+// Page Editor
 
 export function PageEditor({ content, onChange, editable, audioFile, onAudioChange }) {
     const [linkPrompt, setLinkPrompt] = useState(false);
@@ -426,7 +426,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         const r = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
         setTbScroll((prev) => (prev.l === l && prev.r === r ? prev : { l, r }));
     }, []);
-    // Mouse wheel only sends vertical delta; redirect it horizontal since the toolbar has no vertical overflow.
+    // The wheel only sends a vertical delta, so redirect it since the toolbar scrolls sideways
     const handleTbWheel = useCallback((e) => {
         const el = toolbarRef.current;
         if (!el || el.scrollWidth <= el.clientWidth) return;
@@ -437,8 +437,8 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
 
     const editor = useEditor({
         extensions: [
-            // heading is off: sizing is a numeric font size, not a document level.
-            // Legacy heading nodes are migrated on load (see NotebookUtils).
+            // Heading is off since sizing is a numeric font size, not a document level, and
+            // legacy heading nodes are migrated on load
             StarterKit.configure({ code: false, codeBlock: false, link: false, heading: false }),
             TextStyle,
             Color,
@@ -526,7 +526,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
         (value ? chain.setColor(value) : chain.unsetColor()).run();
     }, [editor]);
 
-    // Fills every cell the selection touches, so dragging across a row paints the row.
+    // Fills every cell the selection touches, so dragging across a row paints the row
     const applyFill = useCallback((value) => {
         setFillPrompt(false);
         editor.chain().focus().setCellAttribute("backgroundColor", value).run();
@@ -568,7 +568,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                             <button className="nb-tb-btn" onClick={closeLinkPrompt}>Cancel</button>
                         </div>
                     )}
-                    {/* Swatches on their own row; the toolbar would clip an anchored popover when scrolled. */}
+                    {/* Swatches on their own row, the toolbar would clip an anchored popover */}
                     {colorPrompt && (
                         <div className="nb-inline-prompt nb-color-prompt">
                             {FONT_COLORS.map(({ label, value }) => (
@@ -674,7 +674,7 @@ function CardCreatorPanel({ setToast }) {
     // Panel can't shrink below this while dragging
     const CREATOR_MIN_PX = 90;
 
-    // The open header doubles as a drag handle: clicks still toggle, drags resize
+    // The open header doubles as a drag handle, clicks still toggle and drags resize
     const startDrag = (e) => {
         if (e.button !== 0 || !open) return;
         const panel = creatorRef.current;
@@ -733,7 +733,7 @@ function CardCreatorPanel({ setToast }) {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>Create a card</span>
                 <span className="t-caret">{open ? "▾" : "▸"}</span>
             </div>
-            {/* Kept mounted while closed so in-progress input survives toggling. */}
+            {/* Kept mounted while closed so in-progress input survives toggling */}
             <div className="nb-card-body">
                 <NewCardForm
                     groupId={deckId}
@@ -768,13 +768,14 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
     );
 }
 
-// Page Viewer / Editor
+// Page viewer and editor
 
 function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, startNewOnOpen }) {
     const [allPages, setAllPages] = useState([]);
     const [query, setQuery] = useState("");
     const [pageIndex, setPageIndex] = useState(0);
-    // After a save, the page may have moved or not existed yet; this holds the id to land on once the list settles.
+    // After a save the page may have moved or not existed yet, so this holds the id to
+    // land on once the list settles
     const [pendingPageId, setPendingPageId] = useState(null);
     const [editing, setEditing] = useState(false);
     const [dateOn, setDateOn] = useState("");
@@ -812,7 +813,8 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         return pages;
     }, [allPages, query, dateOn]);
 
-    // Filter changes start over at page one. Editing must NOT reset the index: that's how you stay on the saved page.
+    // Filter changes start over at page one, and editing must not reset the index or you
+    // wouldn't stay on the saved page
     useEffect(() => { setPageIndex(0); }, [query, dateOn]);
 
     useEffect(() => {
@@ -862,7 +864,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                     }
                 });
                 setAllPages((prev) => [...prev, newPage]);
-                // Clear both filters so the new page can't be filtered out from under us
+                // Clear both filters so the new page can't be filtered out from under you
                 setQuery(""); setDateOn(""); setPendingPageId(newPage.id); setToast("Page created.");
             } else {
                 await loggedInvoke("update_page", {
@@ -884,13 +886,14 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 setToast("Page saved.");
             }
             setEditing(false); setIsNew(false);
-            // Recordings replaced mid-edit stay on disk until now. DB is authoritative so orphans are safe to sweep.
+            // Recordings replaced mid-edit stay on disk until now, and the database is
+            // authoritative so orphans are safe to sweep
             loggedInvoke("cleanup_orphaned_media").catch(e => logError("cleanup_orphaned_media", e));
             return true;
         } catch (e) { logError("catch", e); setToast("Failed to save page.", "error"); return false; }
     }
 
-    // Back autosaves. An entirely empty untitled page is discarded instead of saved.
+    // Back autosaves, and an entirely empty untitled page is discarded instead of saved
     async function handleBack(navigate) {
         if (editing) {
             const draft = liveContentRef.current;
@@ -909,7 +912,8 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         try {
             await loggedInvoke("delete_page", { id: currentPage.id });
             setAllPages((prev) => prev.filter((p) => p.id !== currentPage.id));
-            // Land on the previous page. Deleting the first one leaves index 0, now the page that followed it.
+            // Land on the previous page, and deleting the first leaves index 0, which is
+            // now the page that followed it
             setPageIndex((prev) => Math.max(0, prev - 1));
             setToast("Page deleted.");
         } catch (e) { logError("catch", e); setToast("Failed to delete page.", "error"); }
@@ -1041,7 +1045,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") { e.target.blur(); return; }
                                             if (e.key === "Escape") { e.target.value = pageIndex + 1; e.target.blur(); return; }
-                                            // block e/+/-/. and other non-numeric keys
+                                            // block non-numeric keys
                                             if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
                                         }}
                                         onPaste={(e) => {
@@ -1050,7 +1054,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                         onBlur={(e) => {
                                             const n = parseInt(e.target.value, 10);
                                             if (!isNaN(n)) {
-                                                // out-of-range clamps: too high → last page, below 1 → page 1
+                                                // out-of-range clamps to the last page or the first
                                                 const idx = Math.min(filteredPages.length - 1, Math.max(0, n - 1));
                                                 setPageIndex(idx);
                                                 e.target.value = idx + 1;
@@ -1078,10 +1082,8 @@ export default function Notebooks({ setToast, initialNotebook, onClearInitial, r
     const [activeNotebook, setActiveNotebook] = useState(initialNotebook ?? null);
     const [startNewOnOpen, setStartNewOnOpen] = useState(false);
 
-    // Re-clicking the Notebooks tab comes back here. Compared against the count this
-    // mount started on: the effect runs on mount as well, and the count stays above zero
-    // once anything has been re-clicked, so a notebook opened from a plan would be
-    // closed again the moment it opened.
+    // Re-clicking the Notebooks tab comes back here, compared against the count this mount
+    // started on since the effect runs on mount as well
     const signalAtMount = useRef(homeSignal);
     useEffect(() => {
         if (homeSignal === signalAtMount.current) return;

@@ -2,7 +2,7 @@ use crate::app_utils::togo::{self, CloseBehavior, SlotInfo, ToGoConfig};
 use crate::crud::delete;
 use crate::AppState;
 
-/// Canonical lowercase-hyphenated UUIDv4, matching what the Worker accepts.
+/// Canonical lowercase-hyphenated UUIDv4, matching what the Worker accepts
 fn valid_id(id: &str) -> Result<String, String> {
     uuid::Uuid::parse_str(id.trim())
         .ok()
@@ -55,8 +55,8 @@ pub async fn slot_exists(id: String) -> Result<Option<SlotInfo>, String> {
     togo::slot_info(&id).await
 }
 
-/// Bundles this machine and overwrites its slot. Returns the push time.
-/// `force` skips the cooldown (push-on-close must never be silently dropped).
+/// Bundles this machine and overwrites its slot, returning the push time, and force skips
+/// the cooldown since push-on-close must never be silently dropped
 #[tauri::command]
 pub async fn push_package(
     force: Option<bool>,
@@ -71,7 +71,7 @@ pub async fn push_package(
     }
     let id = cfg.instance_id;
 
-    // Scoped: the guard isn't Send and must not be held across an await.
+    // Scoped because the guard isn't Send and must not be held across an await
     let (_tmp, zip_path) = {
         let conn = state.conn.lock().unwrap();
         let _ = delete::cleanup_orphaned_media(&conn, &app_dir);
@@ -87,7 +87,7 @@ pub async fn push_package(
     Ok(now)
 }
 
-/// Replaces all local data with the package at `id`. Destructive.
+/// Replaces all local data with the package at that id, destructively
 #[tauri::command]
 pub async fn pull_package(id: String, state: tauri::State<'_, AppState>) -> Result<(), String> {
     let id = valid_id(&id)?;
@@ -100,7 +100,7 @@ pub async fn pull_package(id: String, state: tauri::State<'_, AppState>) -> Resu
         togo::restore(&app_dir, &zip_path, &mut conn)?;
     }
 
-    // The pull already succeeded, failing to record it must not fail it.
+    // The pull already succeeded, failing to record it must not fail it
     if let Err(e) = togo::load_config(&app_dir).and_then(|mut cfg| {
         togo::record_pull(&mut cfg, &id);
         togo::save_config(&app_dir, &cfg)
