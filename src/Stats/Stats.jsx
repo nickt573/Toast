@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
-import { ResourceCard, GroupTypeBadge, ArchivedBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
+import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
 import UnitPicker from "../UnitPicker";
 import { resolveUnitPair } from "../unitPair";
@@ -1034,25 +1034,33 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
                 the deck's own actions always have a home at the foot of the card */}
             {isOpen && deckRows.length > 0 && (
               <div className="st-window-nav">
-                {selectedRow ? (
-                  <>
-                    <ArchiveButton rows={[selectedRow]} label="Archive"
-                      onArchive={a => archiveRow(selectedRow.id, a)} />
-                    <ConfirmDelete label="Delete" small onConfirm={() => deleteRow(selectedRow.id)} />
-                  </>
-                ) : (
-                  <>
-                    <ArchiveButton rows={deckRows} label="Archive All"
-                      onArchive={a => archiveStats(deckRows, a)} />
-                    <ConfirmDelete label="Delete All" small onConfirm={() => deleteStats(deckRows)} />
-                  </>
-                )}
+                <span className="st-window-actions">
+                  {selectedRow ? (
+                    <>
+                      <ArchiveButton rows={[selectedRow]} label="Archive"
+                        onArchive={a => archiveRow(selectedRow.id, a)} />
+                      <ConfirmDelete label="Delete" small onConfirm={() => deleteRow(selectedRow.id)} />
+                    </>
+                  ) : (
+                    <>
+                      <ArchiveButton rows={deckRows} label="Archive All"
+                        onArchive={a => archiveStats(deckRows, a)} />
+                      <ConfirmDelete label="Delete All" small onConfirm={() => deleteStats(deckRows)} />
+                    </>
+                  )}
+                </span>
+                {/* Equal tracks flank the pager so it sits dead centre of the card, and the
+                    session count and time hold the same corner they take when it's closed */}
                 <span className="st-window-pager">
                   <button className="st-btn-sm" disabled={back >= maxBack}
                     onClick={() => step(1)} title="Earlier sessions">‹</button>
                   <span className="st-window-label">{fmtShortDay(winStart)} - {fmtShortDay(winEnd)}</span>
                   <button className="st-btn-sm" disabled={back <= 0}
                     onClick={() => step(-1)} title="Later sessions">›</button>
+                </span>
+                <span className="st-deck-meta-right">
+                  <span className="st-meta-pill st-meta-pill--count">{deckRows.length} session{deckRows.length !== 1 ? "s" : ""}</span>
+                  <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
                 </span>
               </div>
             )}
@@ -1270,7 +1278,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
           const cats      = parseCategories(r.category);
           return (
             <div key={r.id} className="st-todo-row">
-              <div className="st-todo-collapsed" onClick={() => toggle(r.id)}>
+              <div className="st-todo-collapsed" onClick={() => { if (isEditing) cancelEdit(); toggle(r.id); }}>
                 <div className="st-todo-line">
                   <span className="st-todo-text">{r.text}</span>
                   <span className="t-caret">{isOpen ? "▾" : "▸"}</span>
@@ -1294,12 +1302,6 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
 
               {isOpen && !isEditing && (
                 <div className="st-todo-expanded">
-                  {r.details && (
-                    <div className="st-todo-section">
-                      <div className="st-todo-section-label">Details</div>
-                      <p className="st-todo-notes"><Linkify text={r.details} /></p>
-                    </div>
-                  )}
                   {cats.length > 0 && (
                     <div className="st-todo-section">
                       <div className="st-todo-section-label">Categories</div>
@@ -1310,44 +1312,32 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       </div>
                     </div>
                   )}
-                  {r.resources.length > 0 && (
+                  {(r.resources.length > 0 || r.groups.length > 0) && (
                     <div className="st-todo-section">
-                      <div className="st-todo-section-label">Resources</div>
-                      <div className="st-resource-cards">
-                        {r.resources.map((res, i) => <ResourceCard key={i} res={res} />)}
+                      <div className="st-todo-section-label">Resources / Decks / Notebooks</div>
+                      <div className="st-item-bars">
+                        {[...r.resources]
+                          .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+                          .map((res, i) => <ResourceCard key={`res-${i}`} res={res} />)}
+                        {/* Decks lead notebooks, each alphabetical, so the order matches a plan's todo */}
+                        {[...r.groups]
+                          .sort((a, b) => (a.group_type === "notebook" ? 1 : 0) - (b.group_type === "notebook" ? 1 : 0)
+                            || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+                          .map(g => {
+                            const live = g.group_id != null ? allGroups.find(x => x.id === g.group_id) : null;
+                            return (
+                              <ItemBar key={`g-${g.row_id}`} name={g.name}
+                                family={g.group_type === "notebook" ? "notebook" : "deck"}
+                                dead={!live} onOpen={live ? () => onOpenDeck(live) : undefined} />
+                            );
+                          })}
                       </div>
                     </div>
                   )}
-                  {r.groups.length > 0 && (
+                  {r.details && (
                     <div className="st-todo-section">
-                      <div className="st-todo-section-label">Decks / Notebooks</div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {r.groups.map((g, i) => {
-                          const live = g.group_id != null ? allGroups.find(x => x.id === g.group_id) : null;
-                          if (!live) {
-                            if (g.group_type) {
-                              const fam = g.group_type === "notebook" ? "pill-plum" : "pill-blue";
-                              return (
-                                <span key={i} className={`pill ${fam} pill-dead`}>
-                                  {g.name}
-                                  <GroupTypeBadge type={g.group_type} />
-                                </span>
-                              );
-                            }
-                            return (
-                              <span key={i} className="pill pill-neutral">{g.name}</span>
-                            );
-                          }
-                          return (
-                            <span key={i}
-                              className={`pill ${live.group_type === "notebook" ? "pill-plum" : "pill-blue"} pill-clickable`}
-                              onClick={() => onOpenDeck(live)}>
-                              {g.name}
-                              <GroupTypeBadge type={live.group_type} />
-                            </span>
-                          );
-                        })}
-                      </div>
+                      <div className="st-todo-section-label">Details</div>
+                      <p className="st-todo-notes"><Linkify text={r.details} /></p>
                     </div>
                   )}
                 </div>
@@ -1357,6 +1347,15 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                 <div className="st-todo-foot">
                   <button className="st-btn-sm" onClick={() => startEdit(r)}>Edit</button>
                   <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
+                  {/* The time and amount hold the same right edge they take when the row is closed */}
+                  <span className="st-todo-meta-right">
+                    {r.unit_label && (
+                      <span className="st-meta-pill st-meta-pill--count st-todo-unit" title={fmtUnit(r.num_value, r.unit_label)}>
+                        {fmtUnit(r.num_value, r.unit_label)}
+                      </span>
+                    )}
+                    <span className="st-meta-pill st-meta-pill--time">{fmtTime(r.time_spent_minutes)}</span>
+                  </span>
                 </div>
               )}
 
@@ -1412,15 +1411,6 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       />
                     </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Details (optional)</div>
-                    <textarea
-                      value={editForm.details}
-                      onChange={e => setEditForm(f => ({ ...f, details: e.target.value }))}
-                      rows={3}
-                      style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
-                    />
-                  </div>
                   {(() => {
                     const keptResources = r.resources.filter(x => editForm.resources.includes(x.row_id));
                     const addableResources = planResources.filter(pr => !keptResources.some(k => k.name === pr.name));
@@ -1457,9 +1447,12 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                     );
                   })()}
                   {(() => {
-                    const keptGroups = r.groups.filter(x => editForm.groups.includes(x.row_id));
+                    // Decks lead notebooks, each alphabetical, matching the read-only view and a plan's todo
+                    const byGroup = (a, b) => (a.group_type === "notebook" ? 1 : 0) - (b.group_type === "notebook" ? 1 : 0)
+                      || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+                    const keptGroups = r.groups.filter(x => editForm.groups.includes(x.row_id)).sort(byGroup);
                     const keptLiveIds = keptGroups.filter(x => x.group_id != null).map(x => x.group_id);
-                    const addableGroups = allGroups.filter(g => !keptLiveIds.includes(g.id));
+                    const addableGroups = allGroups.filter(g => !keptLiveIds.includes(g.id)).sort(byGroup);
                     if (keptGroups.length === 0 && addableGroups.length === 0) return null;
                     return (
                       <div>
@@ -1502,10 +1495,22 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                   <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
                     Resources, decks, and notebooks that have been deleted can be removed here, but they cannot be added back.
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button className="primary" onClick={() => saveEdit(r)}>Save</button>
-                    <button onClick={cancelEdit}>Cancel</button>
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Details (optional)</div>
+                    <textarea
+                      value={editForm.details}
+                      onChange={e => setEditForm(f => ({ ...f, details: e.target.value }))}
+                      rows={3}
+                      style={{ width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13, resize: "vertical", fontFamily: "inherit" }}
+                    />
                   </div>
+                </div>
+              )}
+
+              {isEditing && editForm && (
+                <div className="st-todo-foot">
+                  <button className="primary" onClick={() => saveEdit(r)}>Save</button>
+                  <button onClick={cancelEdit}>Cancel</button>
                 </div>
               )}
             </div>

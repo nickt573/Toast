@@ -138,8 +138,11 @@
 
 /* The foot of a deck card, its actions on the left and the fortnight pager on the right,
    with the band colour as its only edge so the last session row keeps no border */
-.st-window-nav { display: flex; align-items: center; gap: 7px; padding: 7px 14px; }
-.st-window-pager { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; }
+/* Equal 1fr tracks either side of the pager centre it on the card whatever the actions and
+   count on the ends measure */
+.st-window-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 7px; padding: 7px 14px; }
+.st-window-actions { display: inline-flex; align-items: center; gap: 7px; }
+.st-window-pager { display: inline-flex; align-items: center; gap: 7px; justify-self: center; }
 .st-window-label { font-weight: 700; font-size: 12px; color: var(--t-label); }
 
 /* Marks where a reset split the history, which two rows sharing a date would otherwise
@@ -239,8 +242,10 @@
 .st-todo-foot { display: flex; align-items: center; gap: 7px; padding: 7px 14px; background: var(--st-todo-band); }
 /* The body lightens off the muted surface, the same step the table's alt rows take, so
    an open todo reads as paper against the page rather than another tinted panel */
-.st-todo-expanded { padding: 12px 14px 14px; background: color-mix(in srgb, var(--t-surface-2) 45%, var(--t-surface)); border-top: 1px solid var(--st-todo-band); }
-.st-todo-notes { margin: 0; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r); padding: 9px 12px; }
+.st-todo-expanded { padding: 12px 14px; background: color-mix(in srgb, var(--t-surface-2) 45%, var(--t-surface)); border-top: 1px solid var(--st-todo-band); }
+/* The last section drops its gap so the space under it equals the padding above the first */
+.st-todo-expanded > .st-todo-section:last-child { margin-bottom: 0; }
+.st-todo-notes { margin: 0; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-input); padding: 9px 12px; }
 
 .st-pill-tag { display: inline-block; padding: 2px 8px; border-radius: var(--t-r-tab); font-size: 10px; font-weight: 600; user-select: none; }
 

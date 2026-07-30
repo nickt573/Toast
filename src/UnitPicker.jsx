@@ -148,10 +148,11 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
   return (
     <div className="unit-picker" ref={wrapRef}>
       <input
-        type="number" min="0" step="any"
+        type="text" inputMode="decimal"
         value={value}
         autoFocus={autoFocusValue}
-        onChange={e => onChange({ value: e.target.value, variantId })}
+        // Only a positive decimal is allowed through, so letters and signs never land in the field
+        onChange={e => { const v = e.target.value; if (v === "" || /^\d*\.?\d*$/.test(v)) onChange({ value: v, variantId }); }}
         placeholder="0"
         className="unit-picker-value"
       />

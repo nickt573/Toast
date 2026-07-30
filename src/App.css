@@ -799,6 +799,7 @@ textarea { overflow-y: scroll; }
 
 .landing-card,
 .st-resource-card,
+.st-item-bar,
 .hp-todo-row,
 .hp-free-todo-option,
 .hp-free-todo-option:hover,
@@ -837,6 +838,7 @@ textarea { overflow-y: scroll; }
 .hp-deck-row:hover,
 .hp-resources-list .st-resource-card:hover,
 .st-todo-expanded .st-resource-card:hover,
+.st-todo-expanded .st-item-bar:hover,
 .plan-srs-row:hover,
 .plan-resource-row:hover,
 .plan-todo-row:hover { --t-stripe: var(--t-stripe-hi); }
@@ -981,3 +983,16 @@ textarea { overflow-y: scroll; }
 /* Only the nudge off the baseline it shares with the name, the mark itself is t-open-arrow */
 .st-resource-card-url { margin-top: 3px; }
 .st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }
+
+/* One striped bar per linked resource, deck or notebook, the family carried by the stripe
+   so the name reads plainly, with the arrow held just inside the bars */
+/* A touch tighter than the standard list gap, the bars are shorter than a resource card */
+.st-item-bars { display: flex; flex-direction: column; gap: 8px; }
+.st-item-bar { display: flex; align-items: center; gap: 6px; padding: 9px var(--t-stripe-gutter) 9px 12px; }
+/* The name only takes the width it needs so the arrow rides right beside it, not out by the stripes */
+.st-item-bar-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 15px; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-item-bar--resource { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); }
+.st-item-bar--deck     { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); }
+.st-item-bar--notebook { --t-stripe: var(--t-plum-stripe); --t-stripe-hi: var(--t-plum-lt); }
+/* A deck or notebook that has since been deleted keeps its stripe but reads dimmed */
+.st-item-bar--dead .st-item-bar-name { opacity: 0.5; }

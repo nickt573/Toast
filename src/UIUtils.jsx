@@ -153,6 +153,23 @@ export function ResourceCard({ res }) {
   );
 }
 
+// One striped bar for an entry's resources, decks and notebooks, where the family shows in
+// the stripe alone and the arrow appears only while the item is still reachable
+export function ItemBar({ name, family, url, onOpen, dead = false }) {
+  const clickable = !!url || !!onOpen;
+  const open = (e) => {
+    e.stopPropagation();
+    if (url) openUrl(url.startsWith("http") ? url : `https://${url}`);
+    else onOpen?.();
+  };
+  return (
+    <div className={`st-item-bar st-item-bar--${family}${dead ? " st-item-bar--dead" : ""}`}>
+      <span className="st-item-bar-name">{name}</span>
+      {clickable && <span className="t-open-arrow st-item-bar-arrow" onClick={open}>↗</span>}
+    </div>
+  );
+}
+
 // Full-screen blocker for operations that must not be interrupted, sitting under the toast
 // layer so error toasts stay readable
 export function BusyOverlay({ title, note }) {
