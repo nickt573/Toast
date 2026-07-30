@@ -669,8 +669,27 @@ pub fn get_plan_streak(plan_id: i64, conn: &Connection) -> Result<(i64, bool, i6
         }
     }
 
-    let longest = stored_longest.max(streak);
-    if longest > stored_longest {
+    // Recompute the longest run from the active days so unstudying pulls an inflated record down
+    let mut longest = 0i64;
+    for day in &active {
+        let Ok(nd) = chrono::NaiveDate::parse_from_str(day, "%Y-%m-%d") else { continue };
+        let prev_studied = nd.pred_opt().is_some_and(|p| active.contains(&p.to_string()));
+        if prev_studied {
+            continue;
+        }
+        let mut run = 0i64;
+        let mut cur = Some(nd);
+        while let Some(c) = cur {
+            if !active.contains(&c.to_string()) {
+                break;
+            }
+            run += 1;
+            cur = c.succ_opt();
+        }
+        longest = longest.max(run);
+    }
+
+    if longest != stored_longest {
         conn.execute(
             "UPDATE plan SET longest_streak = ?1 WHERE id = ?2",
             rusqlite::params![longest, plan_id],
@@ -709,4 +728,101 @@ pub fn mark_for_review(card_id: i64, conn: &Connection) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod streak_tests {
+    use super::*;
+
+    const TODAY: &str = "2026-07-30";
+
+    fn setup() -> Connection {
+        let tmp = tempfile::tempdir().unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_schema(&conn, tmp.path()).unwrap();
+        conn.execute("INSERT INTO plan (id, name) VALUES (1, 'p')", []).unwrap();
+        conn.execute(r#"INSERT INTO "group" (id, plan_id, name, group_type) VALUES (1, 1, 'd', 'deck')"#, []).unwrap();
+        conn.execute("INSERT INTO app_date (id, date) VALUES (0, ?1)", [TODAY]).unwrap();
+        conn
+    }
+
+    fn studied(conn: &Connection, date: &str) {
+        conn.execute(
+            "INSERT INTO group_stats (group_id, plan_id, group_name, date, num_new) VALUES (1, 1, 'd', ?1, 1)",
+            [date],
+        )
+        .unwrap();
+    }
+
+    fn unstudy(conn: &Connection, date: &str) {
+        conn.execute("DELETE FROM group_stats WHERE date = ?1", [date]).unwrap();
+    }
+
+    fn stored_longest(conn: &Connection) -> i64 {
+        conn.query_row("SELECT longest_streak FROM plan WHERE id = 1", [], |r| r.get(0)).unwrap()
+    }
+
+    // A real earlier run of 3 outlives unstudying today, since its days are still on record
+    #[test]
+    fn longest_keeps_a_real_earlier_run() {
+        let conn = setup();
+        studied(&conn, "2026-01-01");
+        studied(&conn, "2026-01-02");
+        studied(&conn, "2026-01-03");
+        studied(&conn, "2026-07-29");
+        studied(&conn, TODAY);
+
+        let (streak, today, longest) = get_plan_streak(1, &conn).unwrap();
+        assert_eq!((streak, today, longest), (2, true, 3));
+
+        unstudy(&conn, TODAY);
+        let (streak, today, longest) = get_plan_streak(1, &conn).unwrap();
+        assert_eq!((streak, today, longest), (1, false, 3), "the January run still stands");
+    }
+
+    // A 3 that only existed because of today falls back to 2 once today is undone
+    #[test]
+    fn longest_drops_when_today_made_it() {
+        let conn = setup();
+        studied(&conn, "2026-07-28");
+        studied(&conn, "2026-07-29");
+        studied(&conn, TODAY);
+
+        let (streak, _, longest) = get_plan_streak(1, &conn).unwrap();
+        assert_eq!((streak, longest), (3, 3));
+        assert_eq!(stored_longest(&conn), 3);
+
+        unstudy(&conn, TODAY);
+        let (streak, _, longest) = get_plan_streak(1, &conn).unwrap();
+        assert_eq!((streak, longest), (2, 2), "the momentary 3 is squashed");
+        assert_eq!(stored_longest(&conn), 2, "the cache is reconciled down");
+    }
+
+    // The record is the longest run across gaps, not the most recent one
+    #[test]
+    fn longest_is_the_max_run_across_gaps() {
+        let conn = setup();
+        studied(&conn, "2026-03-01");
+        studied(&conn, "2026-03-02");
+        studied(&conn, "2026-03-03");
+        studied(&conn, "2026-03-04");
+        studied(&conn, "2026-06-10");
+        studied(&conn, "2026-06-11");
+
+        let (streak, today, longest) = get_plan_streak(1, &conn).unwrap();
+        assert_eq!((streak, today, longest), (0, false, 4));
+    }
+
+    // Archived days are set aside, so they neither extend a run nor bridge a gap
+    #[test]
+    fn archived_days_do_not_count() {
+        let conn = setup();
+        studied(&conn, "2026-05-01");
+        conn.execute("UPDATE group_stats SET is_archived = TRUE WHERE date = '2026-05-01'", []).unwrap();
+        studied(&conn, "2026-05-02");
+        studied(&conn, "2026-05-03");
+
+        let (_, _, longest) = get_plan_streak(1, &conn).unwrap();
+        assert_eq!(longest, 2, "the archived day is left out of the run");
+    }
 }

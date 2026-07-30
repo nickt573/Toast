@@ -407,7 +407,7 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
             CREATE TABLE IF NOT EXISTS plan (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                longest_streak INTEGER NOT NULL DEFAULT 0, -- high-water mark, bumped as the live streak grows
+                longest_streak INTEGER NOT NULL DEFAULT 0, -- cache of the longest active-day run, recomputed by get_plan_streak
                 is_disabled BOOLEAN NOT NULL DEFAULT FALSE -- hidden from the homepage, greyed on the plan list
             );
 
