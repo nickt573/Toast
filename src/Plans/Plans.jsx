@@ -121,7 +121,8 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
             </div>
             {removing && (
                 <div className="plan-srs-confirm-sub">
-                    Preserve maintains all progress. Reset wipes all progress with the option to
+                    Removing clears which cards are currently due, overdue, or in cram. Preserve keeps
+                    each card's grade and this deck's stats. Reset sends every card back to new, with the option to
                     archive this deck's old stats so they stop counting.
                 </div>
             )}
@@ -173,7 +174,7 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
         try {
             await loggedInvoke("remove_group_from_plan", { groupId, reset });
             if (archivePrevious) await loggedInvoke("archive_deck_stats", { groupId });
-            setToast(reset ? "Deck removed and progress reset." : "Deck removed, progress preserved.");
+            setToast(reset ? "Deck removed and progress reset." : "Deck removed, card progress preserved.");
             await loadData();
         } catch (e) { logError("catch", e); setToast("Failed to remove group.", "error"); }
     }
