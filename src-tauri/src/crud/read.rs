@@ -360,6 +360,24 @@ pub fn get_plan_srs_groups(plan_id: i64, conn: &Connection) -> Result<Vec<(Group
     results.collect()
 }
 
+pub fn get_scheduler(group_id: i64, conn: &Connection) -> Result<Scheduler> {
+    conn.query_row(
+        "SELECT group_id, studied_new, max_new, studied_review, max_review, can_overflow
+         FROM scheduler WHERE group_id = ?1",
+        [group_id],
+        |row| {
+            Ok(Scheduler {
+                group_id: row.get(0)?,
+                studied_new: row.get(1)?,
+                max_new: row.get(2)?,
+                studied_review: row.get(3)?,
+                max_review: row.get(4)?,
+                can_overflow: row.get(5)?,
+            })
+        },
+    )
+}
+
 /// Every group not currently assigned to any plan, available to add to one
 pub fn get_unassigned_groups(conn: &Connection) -> Result<Vec<Group>> {
     let mut stmt = conn.prepare(

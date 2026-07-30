@@ -144,6 +144,7 @@ pub fn run() {
             commands::srs::add_group_to_plan,
             commands::srs::remove_group_from_plan,
             commands::srs::get_plan_srs_groups,
+            commands::srs::get_scheduler,
             commands::srs::update_scheduler,
             commands::srs::pause_all,
             commands::srs::unpause_all,

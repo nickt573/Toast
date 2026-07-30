@@ -239,35 +239,16 @@ pub fn delete_page(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
 }
 
 pub fn remove_group_from_plan(group_id: i64, reset: bool, conn: &mut Connection) -> Result<()> {
-    {
-        let tx = conn.transaction()?;
-
-        // Nothing to sweep up, since joining a plan no longer writes a placeholder row and
-        // every row here came from a session that was actually opened
-        tx.execute("DELETE FROM scheduler WHERE group_id = ?1", [group_id])?;
-        tx.execute(
-            r#"UPDATE "group" SET plan_id = NULL WHERE id = ?1"#,
-            [group_id],
-        )?;
-
-        if reset {
-            tx.execute(
-                r#"UPDATE card SET tier = 0, ease = 0.0, sequence = 0, is_due = FALSE, is_overdue = NULL, is_paused = FALSE, is_cram = FALSE WHERE group_id = ?1"#,
-                [group_id],
-            )?;
-        } else {
-            tx.execute(
-                "UPDATE card SET is_due = FALSE, is_overdue = NULL, is_cram = FALSE WHERE group_id = ?1",
-                [group_id],
-            )?;
-        }
-
-        tx.commit()?;
-    } // tx dropped here, releasing the borrow on conn
-
+    // Reset wipes progress first, while still in-plan, so its marker and refill are unchanged
     if reset {
         reset_deck(group_id, conn)?;
     }
+
+    // Unbind only: scheduler and card flags stay frozen, plan_id now marks it as left
+    conn.execute(
+        r#"UPDATE "group" SET plan_id = NULL WHERE id = ?1"#,
+        [group_id],
+    )?;
 
     Ok(())
 }

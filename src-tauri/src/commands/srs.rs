@@ -32,6 +32,12 @@ pub fn get_plan_srs_groups(
 }
 
 #[tauri::command]
+pub fn get_scheduler(group_id: i64, state: tauri::State<AppState>) -> Result<Scheduler, String> {
+    let conn = state.conn.lock().unwrap();
+    read::get_scheduler(group_id, &conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn update_scheduler(scheduler: Scheduler, state: tauri::State<AppState>) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
     scheduling::update_scheduler(scheduler, &conn).map_err(|e| e.to_string())

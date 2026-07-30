@@ -21,7 +21,10 @@ pub fn update_scheduler(scheduler: Scheduler, conn: &Connection) -> Result<()> {
             scheduler.group_id,
         ],
     )?;
-    let _ = fill_group(scheduler.group_id, conn);
+    // A benched deck stays frozen, only an in-plan deck reschedules
+    if in_plan(scheduler.group_id, conn) {
+        let _ = fill_group(scheduler.group_id, conn);
+    }
     Ok(())
 }
 
@@ -38,7 +41,11 @@ pub fn unpause_all(group_id: i64, conn: &Connection) -> Result<()> {
         "UPDATE card SET is_paused = FALSE WHERE group_id = ?1",
         [group_id],
     )?;
-    fill_group(group_id, conn)
+    // A benched deck stays frozen, only an in-plan deck reschedules
+    if in_plan(group_id, conn) {
+        fill_group(group_id, conn)?;
+    }
+    Ok(())
 }
 
 pub fn get_date(conn: &Connection) -> Result<String> {
@@ -94,8 +101,9 @@ pub fn update_date(conn: &Connection) -> Result<()> {
     conn.execute("UPDATE todo SET is_done = FALSE, is_skipped = FALSE", [])?;
     recalc_disabled(conn)?;
 
+    let today_str = today.to_string();
     for _ in 0..n_days {
-        tick_all(conn)?;
+        tick_all(conn, &today_str)?;
     }
 
     conn.execute(
@@ -106,64 +114,74 @@ pub fn update_date(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-fn tick_all(conn: &Connection) -> Result<()> {
-    // Only decks are SRS-scheduled, legacy notebook schedulers ignored
-    let groups: Vec<(i64, bool)> = {
+fn tick_all(conn: &Connection, today: &str) -> Result<()> {
+    // Only decks in a plan advance, a benched deck stays frozen until it is re-added
+    let groups: Vec<i64> = {
         let mut stmt = conn.prepare(
             r#"
-            SELECT s.group_id, s.can_overflow
+            SELECT s.group_id
             FROM scheduler s
             INNER JOIN "group" g ON g.id = s.group_id
-            WHERE g.group_type = 'deck'
+            INNER JOIN plan p ON p.id = g.plan_id
+            WHERE g.group_type = 'deck' AND p.is_disabled = FALSE
             "#,
         )?;
-        let rows = stmt
-            .query_map([], |row| {
-                Ok((row.get::<_, i64>(0)?, row.get::<_, bool>(1)?))
-            })?
+        let rows = stmt.query_map([], |row| row.get::<_, i64>(0))?
             .filter_map(|r| r.ok())
             .collect();
         rows
     };
 
-    for (group_id, can_overflow) in &groups {
-        // Step 1 decrement all non-paused sequences
-        conn.execute(
-            "UPDATE card SET sequence = sequence - 1 WHERE group_id = ?1 AND is_paused = FALSE",
-            [group_id],
-        )?;
-
-        // Step 2 roll over yesterday's due cards
-        if *can_overflow {
-            // Overflow on, every still-due card becomes overflow
-            conn.execute(
-                "UPDATE card SET is_overdue = TRUE WHERE group_id = ?1 AND is_due = TRUE",
-                [group_id],
-            )?;
-        } else {
-            // Overflow off, unschedule everything so the queue collapses and refills to the
-            // max with no carry-over
-            conn.execute(
-                "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1 AND is_due = TRUE",
-                [group_id],
-            )?;
-        }
-
-        // Step 3 reset study counters
-        conn.execute(
-            "UPDATE scheduler SET studied_new = 0, studied_review = 0 WHERE group_id = ?1",
-            [group_id],
-        )?;
-
-        // A new day clears the cram pool
-        conn.execute(
-            "UPDATE card SET is_cram = FALSE WHERE group_id = ?1",
-            [group_id],
-        )?;
-
-        // Step 4 fill up to max
-        fill_group(*group_id, conn)?;
+    for group_id in &groups {
+        tick_one(*group_id, today, conn)?;
     }
+
+    Ok(())
+}
+
+/// Advance one deck a single day, identical for the daily tick and a re-add that spans a day
+pub fn tick_one(group_id: i64, today: &str, conn: &Connection) -> Result<()> {
+    let can_overflow: bool = conn.query_row(
+        "SELECT can_overflow FROM scheduler WHERE group_id = ?1",
+        [group_id],
+        |r| r.get(0),
+    )?;
+
+    // Step 1 decrement all non-paused sequences
+    conn.execute(
+        "UPDATE card SET sequence = sequence - 1 WHERE group_id = ?1 AND is_paused = FALSE",
+        [group_id],
+    )?;
+
+    // Step 2 roll over yesterday's due cards
+    if can_overflow {
+        // Overflow on, every still-due card becomes overflow
+        conn.execute(
+            "UPDATE card SET is_overdue = TRUE WHERE group_id = ?1 AND is_due = TRUE",
+            [group_id],
+        )?;
+    } else {
+        // Overflow off, unschedule everything so the queue collapses and refills with no carry-over
+        conn.execute(
+            "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1 AND is_due = TRUE",
+            [group_id],
+        )?;
+    }
+
+    // Step 3 reset study counters and stamp the day this deck last advanced
+    conn.execute(
+        "UPDATE scheduler SET studied_new = 0, studied_review = 0, last_synced_date = ?2 WHERE group_id = ?1",
+        rusqlite::params![group_id, today],
+    )?;
+
+    // A new day clears the cram pool
+    conn.execute(
+        "UPDATE card SET is_cram = FALSE WHERE group_id = ?1",
+        [group_id],
+    )?;
+
+    // Step 4 fill up to max
+    fill_group(group_id, conn)?;
 
     Ok(())
 }
@@ -225,7 +243,9 @@ fn fill_track(
     max: i64,
     scheduled: i64,
 ) -> Result<()> {
-    let slots = max - scheduled; // signed, >0 fill, <0 unschedule
+    // Negative slots mean the cap is already exceeded, which only happens when a re-add
+    // hands the deck a lower one, and that path clears the queue first so this only fills
+    let slots = max - scheduled;
 
     if slots > 0 {
         conn.execute(
@@ -250,27 +270,25 @@ fn fill_track(
     Ok(())
 }
 
-/// A scheduler row exists only while the group is in a plan, fill_group errors without one
-/// Check first on anything that may run on an unplanned deck
-fn has_scheduler(group_id: i64, conn: &Connection) -> bool {
+/// Whether the deck is in a plan, which now decides scheduling instead of scheduler existence
+fn in_plan(group_id: i64, conn: &Connection) -> bool {
     conn.query_row(
-        "SELECT COUNT(*) FROM scheduler WHERE group_id = ?1",
+        r#"SELECT plan_id IS NOT NULL FROM "group" WHERE id = ?1"#,
         [group_id],
-        |row| row.get::<_, i64>(0),
+        |row| row.get::<_, bool>(0),
     )
-    .unwrap_or(0)
-        > 0
+    .unwrap_or(false)
 }
 
 pub fn on_item_added(group_id: i64, conn: &Connection) -> Result<()> {
-    if !has_scheduler(group_id, conn) {
+    if !in_plan(group_id, conn) {
         return Ok(());
     }
     fill_group(group_id, conn)
 }
 
 pub fn on_item_removed(group_id: i64, was_due: bool, conn: &Connection) -> Result<()> {
-    if !has_scheduler(group_id, conn) || !was_due {
+    if !in_plan(group_id, conn) || !was_due {
         return Ok(());
     }
 
@@ -291,7 +309,7 @@ pub fn on_pause_changed(
         )?;
     }
 
-    if !has_scheduler(group_id, conn) {
+    if !in_plan(group_id, conn) {
         return Ok(());
     }
 
@@ -526,7 +544,10 @@ pub fn reset_deck(group_id: i64, conn: &Connection) -> Result<()> {
         "UPDATE scheduler SET studied_new = 0, studied_review = 0 WHERE group_id = ?1",
         [group_id],
     )?;
-    let _ = fill_group(group_id, conn);
+    // A benched deck stays frozen, only an in-plan deck reschedules after the wipe
+    if in_plan(group_id, conn) {
+        let _ = fill_group(group_id, conn);
+    }
 
     Ok(())
 }
@@ -542,6 +563,10 @@ pub fn archive_deck_stats(group_id: i64, conn: &Connection) -> Result<()> {
 }
 
 pub fn clamp_group(group_id: i64, conn: &Connection) -> Result<()> {
+    // A benched deck stays frozen
+    if !in_plan(group_id, conn) {
+        return Ok(());
+    }
     // Relative clamp, clear all due non-paused cards then refill to what is left of the max,
     // so total work stays capped
     conn.execute(
@@ -552,6 +577,10 @@ pub fn clamp_group(group_id: i64, conn: &Connection) -> Result<()> {
 }
 
 pub fn max_clamp_group(group_id: i64, conn: &Connection) -> Result<()> {
+    // A benched deck stays frozen
+    if !in_plan(group_id, conn) {
+        return Ok(());
+    }
     // Max clamp, clear all due non-paused cards then refill to the raw max, ignoring today's study count
     conn.execute(
         "UPDATE card SET is_due = FALSE, is_overdue = NULL WHERE group_id = ?1 AND is_paused = FALSE AND is_due = TRUE",
@@ -605,7 +634,7 @@ pub fn prioritize_card(card_id: i64, conn: &Connection) -> Result<()> {
     }
 
     // A queue jump not a forced due, only fills if the quota has a free slot
-    if !has_scheduler(group_id, conn) {
+    if !in_plan(group_id, conn) {
         return Ok(());
     }
     fill_group(group_id, conn)
@@ -824,5 +853,233 @@ mod streak_tests {
 
         let (_, _, longest) = get_plan_streak(1, &conn).unwrap();
         assert_eq!(longest, 2, "the archived day is left out of the run");
+    }
+}
+
+#[cfg(test)]
+mod decouple_tests {
+    use super::*;
+    use crate::crud::create::{add_group_to_plan, create_deck};
+    use crate::crud::delete::remove_group_from_plan;
+    use crate::crud::models::NewScheduler;
+
+    const D1: &str = "2026-07-30";
+    const D2: &str = "2026-07-31";
+
+    fn setup() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        crate::db::init_schema(&conn, &std::path::PathBuf::from("/tmp/toast-decouple-test")).unwrap();
+        conn.execute("INSERT INTO plan (id, name) VALUES (1, 'p')", []).unwrap();
+        conn.execute("INSERT INTO app_date (id, date) VALUES (0, ?1)", [D1]).unwrap();
+        conn
+    }
+
+    fn sched(group: i64) -> NewScheduler {
+        NewScheduler { group_id: group, max_new: 5, max_review: 5, can_overflow: false }
+    }
+
+    fn add_card(conn: &Connection, id: i64, group: i64, tier: i32, sequence: i32, is_due: bool) {
+        conn.execute(
+            "INSERT INTO card (id, group_id, front, back, tier, ease, sequence, is_due, is_overdue)
+             VALUES (?1, ?2, 'f', 'b', ?3, 0.0, ?4, ?5, ?6)",
+            rusqlite::params![id, group, tier, sequence, is_due, if is_due { Some(false) } else { None }],
+        )
+        .unwrap();
+    }
+
+    fn studied_new(conn: &Connection, group: i64) -> i64 {
+        conn.query_row("SELECT studied_new FROM scheduler WHERE group_id = ?1", [group], |r| r.get(0)).unwrap()
+    }
+    fn has_sched(conn: &Connection, group: i64) -> bool {
+        conn.query_row("SELECT COUNT(*) FROM scheduler WHERE group_id = ?1", [group], |r| r.get::<_, i64>(0)).unwrap() > 0
+    }
+    fn seq(conn: &Connection, card: i64) -> i32 {
+        conn.query_row("SELECT sequence FROM card WHERE id = ?1", [card], |r| r.get(0)).unwrap()
+    }
+
+    #[test]
+    fn create_deck_makes_a_scheduler_synced_today() {
+        let conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        assert!(has_sched(&conn, d.id));
+        let ls: Option<String> = conn
+            .query_row("SELECT last_synced_date FROM scheduler WHERE group_id = ?1", [d.id], |r| r.get(0))
+            .unwrap();
+        assert_eq!(ls.as_deref(), Some(D1));
+    }
+
+    #[test]
+    fn same_day_readd_preserves_the_days_count() {
+        let mut conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        add_group_to_plan(d.id, 1, sched(d.id), &mut conn).unwrap();
+        conn.execute("UPDATE scheduler SET studied_new = 3 WHERE group_id = ?1", [d.id]).unwrap();
+
+        remove_group_from_plan(d.id, false, &mut conn).unwrap();
+        assert!(has_sched(&conn, d.id), "scheduler survives removal");
+
+        add_group_to_plan(d.id, 1, sched(d.id), &mut conn).unwrap();
+        assert_eq!(studied_new(&conn, d.id), 3, "same-day re-add keeps the count");
+    }
+
+    #[test]
+    fn cross_day_readd_resets_the_count_and_advances_one_day() {
+        let mut conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        add_card(&conn, 1, d.id, 1, 2, false);
+        add_group_to_plan(d.id, 1, sched(d.id), &mut conn).unwrap();
+        conn.execute("UPDATE scheduler SET studied_new = 3 WHERE group_id = ?1", [d.id]).unwrap();
+        remove_group_from_plan(d.id, false, &mut conn).unwrap();
+
+        conn.execute("UPDATE app_date SET date = ?1 WHERE id = 0", [D2]).unwrap();
+        add_group_to_plan(d.id, 1, sched(d.id), &mut conn).unwrap();
+
+        assert_eq!(studied_new(&conn, d.id), 0, "a new day resets the count");
+        assert_eq!(seq(&conn, 1), 1, "exactly one day advanced, not the whole gap");
+        let ls: Option<String> = conn
+            .query_row("SELECT last_synced_date FROM scheduler WHERE group_id = ?1", [d.id], |r| r.get(0))
+            .unwrap();
+        assert_eq!(ls.as_deref(), Some(D2));
+    }
+
+    #[test]
+    fn the_tick_freezes_a_benched_deck_but_advances_an_in_plan_one() {
+        let mut conn = setup();
+        let benched = create_deck("benched".into(), &conn).unwrap();
+        add_card(&conn, 1, benched.id, 1, 5, false);
+        let live = create_deck("live".into(), &conn).unwrap();
+        add_card(&conn, 2, live.id, 1, 5, false);
+        add_group_to_plan(live.id, 1, sched(live.id), &mut conn).unwrap();
+
+        tick_all(&conn, D2).unwrap();
+
+        assert_eq!(seq(&conn, 1), 5, "benched deck is frozen");
+        assert_eq!(seq(&conn, 2), 4, "in-plan deck advances");
+    }
+
+    #[test]
+    fn preserve_removal_freezes_the_queue() {
+        let mut conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        add_card(&conn, 1, d.id, 1, 0, true);
+        add_group_to_plan(d.id, 1, sched(d.id), &mut conn).unwrap();
+        conn.execute("UPDATE card SET is_due = TRUE, is_overdue = FALSE WHERE id = 1", []).unwrap();
+
+        remove_group_from_plan(d.id, false, &mut conn).unwrap();
+
+        let due: bool = conn.query_row("SELECT is_due FROM card WHERE id = 1", [], |r| r.get(0)).unwrap();
+        assert!(due, "the frozen due card is kept");
+        assert!(has_sched(&conn, d.id), "the scheduler is kept");
+    }
+
+    #[test]
+    fn deleting_a_deck_drops_its_scheduler() {
+        let conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        assert!(has_sched(&conn, d.id));
+        conn.execute(r#"DELETE FROM "group" WHERE id = ?1"#, [d.id]).unwrap();
+        assert!(!has_sched(&conn, d.id), "cascade removes the scheduler");
+    }
+
+    #[test]
+    fn readd_trims_the_queue_to_a_smaller_max() {
+        let mut conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        for id in 10..16 { add_card(&conn, id, d.id, 1, 0, false); }
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 5, can_overflow: false }, &mut conn).unwrap();
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 5, "first add fills to max");
+
+        remove_group_from_plan(d.id, false, &mut conn).unwrap();
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 2, can_overflow: false }, &mut conn).unwrap();
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 2, "same-day re-add trims to the smaller max");
+    }
+
+    #[test]
+    fn readd_grows_the_queue_to_a_larger_max() {
+        let mut conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        for id in 10..16 { add_card(&conn, id, d.id, 1, 0, false); }
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 2, can_overflow: false }, &mut conn).unwrap();
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 2);
+
+        remove_group_from_plan(d.id, false, &mut conn).unwrap();
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 5, can_overflow: false }, &mut conn).unwrap();
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 5, "same-day re-add grows to the larger max");
+    }
+
+    #[test]
+    fn readd_keeps_overflow_on_top_of_the_clamped_due() {
+        let mut conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 2, can_overflow: true }, &mut conn).unwrap();
+        // Three carried-over overflow cards plus four fresh non-overflow due cards
+        conn.execute(
+            r#"INSERT INTO card (id, group_id, front, back, tier, ease, sequence, is_due, is_overdue) VALUES
+               (10, ?1, 'f', 'b', 1, 0.0, 0, TRUE, TRUE), (11, ?1, 'f', 'b', 1, 0.0, 0, TRUE, TRUE),
+               (12, ?1, 'f', 'b', 1, 0.0, 0, TRUE, TRUE),
+               (20, ?1, 'f', 'b', 1, 0.0, 0, TRUE, FALSE), (21, ?1, 'f', 'b', 1, 0.0, 0, TRUE, FALSE),
+               (22, ?1, 'f', 'b', 1, 0.0, 0, TRUE, FALSE), (23, ?1, 'f', 'b', 1, 0.0, 0, TRUE, FALSE)"#,
+            [d.id],
+        ).unwrap();
+        remove_group_from_plan(d.id, false, &mut conn).unwrap();
+
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 2, can_overflow: true }, &mut conn).unwrap();
+
+        let overflow: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM card WHERE group_id = ?1 AND is_overdue = TRUE", [d.id], |r| r.get(0)).unwrap();
+        let non_overflow_due: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM card WHERE group_id = ?1 AND is_due = TRUE AND is_overdue = FALSE", [d.id], |r| r.get(0)).unwrap();
+        assert_eq!(overflow, 3, "the overflow pile is left on top");
+        assert_eq!(non_overflow_due, 2, "the non-overflow due is clamped to the max");
+    }
+
+    #[test]
+    fn readd_with_overflow_off_drops_the_frozen_pile() {
+        let mut conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 2, can_overflow: true }, &mut conn).unwrap();
+        conn.execute(
+            r#"INSERT INTO card (id, group_id, front, back, tier, ease, sequence, is_due, is_overdue) VALUES
+               (10, ?1, 'f', 'b', 1, 0.0, 0, TRUE, TRUE), (11, ?1, 'f', 'b', 1, 0.0, 0, TRUE, TRUE),
+               (20, ?1, 'f', 'b', 1, 0.0, 0, TRUE, FALSE), (21, ?1, 'f', 'b', 1, 0.0, 0, TRUE, FALSE)"#,
+            [d.id],
+        ).unwrap();
+        remove_group_from_plan(d.id, false, &mut conn).unwrap();
+
+        add_group_to_plan(d.id, 1, NewScheduler { group_id: d.id, max_new: 0, max_review: 2, can_overflow: false }, &mut conn).unwrap();
+
+        let overflow: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM card WHERE group_id = ?1 AND is_overdue = TRUE", [d.id], |r| r.get(0)).unwrap();
+        assert_eq!(overflow, 0, "unchecking the box discards the pile, same as a tick would");
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 2, "the queue refills to the max");
+    }
+
+    #[test]
+    fn benched_clamps_and_scheduler_edits_never_schedule() {
+        let conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        add_card(&conn, 1, d.id, 1, 0, false);
+
+        clamp_group(d.id, &conn).unwrap();
+        max_clamp_group(d.id, &conn).unwrap();
+        update_scheduler(
+            Scheduler { group_id: d.id, studied_new: 0, max_new: 5, studied_review: 0, max_review: 5, can_overflow: false },
+            &conn,
+        ).unwrap();
+
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 0, "a benched deck stays frozen");
+    }
+
+    #[test]
+    fn benched_unpause_and_reset_never_schedule() {
+        let conn = setup();
+        let d = create_deck("d".into(), &conn).unwrap();
+        add_card(&conn, 1, d.id, 1, 0, false);
+
+        unpause_all(d.id, &conn).unwrap();
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 0, "benched unpause does not schedule");
+
+        reset_deck(d.id, &conn).unwrap();
+        assert_eq!(count_due_items(&d.id, &conn).unwrap().1, 0, "benched reset does not schedule");
     }
 }

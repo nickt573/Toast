@@ -121,9 +121,9 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
             </div>
             {removing && (
                 <div className="plan-srs-confirm-sub">
-                    Removing clears which cards are currently due, overdue, or in cram. Preserve keeps
-                    each card's grade and this deck's stats. Reset sends every card back to new, with the option to
-                    archive this deck's old stats so they stop counting.
+                    Preserve unlinks the deck and freezes it exactly as-is, so re-adding resumes right where it
+                    left off. Reset sends every card back to new, with the option to archive this deck's old stats
+                    so they stop counting.
                 </div>
             )}
         </div>
@@ -142,6 +142,17 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
     const [adding, setAdding] = useState(false);
 
     useEffect(() => { loadData(); }, [planId]);
+
+    // Preload the overflow box from the deck's frozen scheduler so the user sees what it had before
+    useEffect(() => {
+        if (!adding || !selectedGroupId) return;
+        (async () => {
+            try {
+                const sched = await loggedInvoke("get_scheduler", { groupId: selectedGroupId });
+                setCanOverflow(sched.can_overflow);
+            } catch (e) { logError("catch", e); }
+        })();
+    }, [adding, selectedGroupId]);
 
     async function loadData() {
         try {

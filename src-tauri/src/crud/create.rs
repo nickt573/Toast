@@ -67,6 +67,16 @@ pub fn create_todo(todo: NewTodo, conn: &mut Connection) -> Result<Todo> {
     })
 }
 
+// Every deck owns a scheduler from birth so plan_id alone marks plan membership
+fn create_deck_scheduler(group_id: i64, conn: &Connection) -> Result<()> {
+    conn.execute(
+        r#"INSERT INTO scheduler (group_id, max_new, max_review, can_overflow, last_synced_date)
+           VALUES (?1, 20, 50, FALSE, (SELECT date FROM app_date WHERE id = 0))"#,
+        [group_id],
+    )?;
+    Ok(())
+}
+
 pub fn create_deck(name: String, conn: &Connection) -> Result<Group> {
     conn.execute(
         r#"
@@ -80,6 +90,7 @@ pub fn create_deck(name: String, conn: &Connection) -> Result<Group> {
     )?;
 
     let id = conn.last_insert_rowid();
+    create_deck_scheduler(id, conn)?;
 
     Ok(Group {
         id,
@@ -116,6 +127,7 @@ pub fn merge_decks(
         rusqlite::params![new_name],
     )?;
     let new_deck_id = tx.last_insert_rowid();
+    create_deck_scheduler(new_deck_id, &tx)?;
 
     tx.execute(
         "UPDATE card SET group_id = ?1 WHERE group_id = ?2 OR group_id = ?3",
@@ -260,6 +272,7 @@ pub fn duplicate_deck(
         rusqlite::params![new_name],
     )?;
     let new_deck_id = tx.last_insert_rowid();
+    create_deck_scheduler(new_deck_id, &tx)?;
 
     let cards: Vec<DupCardRow> = {
         let mut stmt = tx.prepare(
@@ -649,6 +662,8 @@ pub fn add_group_to_plan(
     scheduler: NewScheduler,
     conn: &mut Connection,
 ) -> Result<Scheduler> {
+    let today = crate::crud::scheduling::get_date(conn)?;
+
     let tx = conn.transaction()?;
 
     tx.execute(
@@ -656,13 +671,13 @@ pub fn add_group_to_plan(
         rusqlite::params![plan_id, group_id],
     )?;
 
+    // Write submitted settings onto the frozen scheduler, keeping studied and the sync date
     tx.execute(
         r#"
-        INSERT INTO scheduler (
-            group_id, studied_new, max_new,
-            studied_review, max_review, can_overflow
-        )
-        VALUES (?1, 0, ?2, 0, ?3, ?4)
+        INSERT INTO scheduler (group_id, max_new, max_review, can_overflow, last_synced_date)
+        VALUES (?1, ?2, ?3, ?4, (SELECT date FROM app_date WHERE id = 0))
+        ON CONFLICT(group_id) DO UPDATE SET
+            max_new = ?2, max_review = ?3, can_overflow = ?4
         "#,
         rusqlite::params![
             group_id,
@@ -672,19 +687,51 @@ pub fn add_group_to_plan(
         ],
     )?;
 
+    let last_synced: Option<String> = tx.query_row(
+        "SELECT last_synced_date FROM scheduler WHERE group_id = ?1",
+        [group_id],
+        |r| r.get(0),
+    )?;
+
+    // A day passed while benched: advance one to resume with content, else keep today's count
+    let spans_day = last_synced.as_deref().map_or(true, |d| d < today.as_str());
+    if spans_day {
+        crate::crud::scheduling::tick_one(group_id, &today, &tx)?;
+    } else if scheduler.can_overflow {
+        // Same day with overflow kept on: refit only the non-overflow due to this plan's max,
+        // leaving the carried pile on top
+        tx.execute(
+            "UPDATE card SET is_due = FALSE, is_overdue = NULL
+             WHERE group_id = ?1 AND is_paused = FALSE AND is_due = TRUE AND is_overdue = FALSE",
+            [group_id],
+        )?;
+        fill_group(group_id, &tx)?;
+    } else {
+        // Same day with overflow off: the old pile goes too, matching what a tick would do
+        tx.execute(
+            "UPDATE card SET is_due = FALSE, is_overdue = NULL
+             WHERE group_id = ?1 AND is_paused = FALSE AND is_due = TRUE",
+            [group_id],
+        )?;
+        fill_group(group_id, &tx)?;
+    }
+
+    let result = tx.query_row(
+        "SELECT group_id, studied_new, max_new, studied_review, max_review, can_overflow
+         FROM scheduler WHERE group_id = ?1",
+        [group_id],
+        |r| Ok(Scheduler {
+            group_id: r.get(0)?,
+            studied_new: r.get(1)?,
+            max_new: r.get(2)?,
+            studied_review: r.get(3)?,
+            max_review: r.get(4)?,
+            can_overflow: r.get(5)?,
+        }),
+    )?;
+
     tx.commit()?;
-
-    // No stat row from joining plan, only after first session
-    let _ = fill_group(group_id, conn);
-
-    Ok(Scheduler {
-        group_id,
-        studied_new: 0,
-        max_new: scheduler.max_new,
-        studied_review: 0,
-        max_review: scheduler.max_review,
-        can_overflow: scheduler.can_overflow,
-    })
+    Ok(result)
 }
 
 pub fn create_resource(resource: NewResource, conn: &Connection) -> Result<Resource> {

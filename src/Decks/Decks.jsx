@@ -1295,24 +1295,24 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                         <td><div className="dk-cell-clamp">{back}</div></td>
                         <td>
                           <div className="dk-due-cell">
-                            {(card.sequence < PRIORITY_CEIL || card.is_cram) && (
+                            {(card.sequence < PRIORITY_CEIL || (card.is_cram && deck.plan_id)) && (
                               <span className="dk-due-marks dk-due-marks--ghost" aria-hidden="true">
                                 {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star">★</span>}
-                                {card.is_cram && <span className="dk-cram-mark">↻</span>}
+                                {card.is_cram && deck.plan_id && <span className="dk-cram-mark">↻</span>}
                               </span>
                             )}
                             <span>
                               {card.sequence > 0
                                 ? `${card.sequence}d`
-                                : card.is_due
+                                : card.is_due && deck.plan_id
                                   ? <span className={card.is_overdue === true ? "dk-overdue" : undefined}
                                       title={card.is_overdue === true ? "Carried over from an earlier day" : undefined}>Today</span>
                                   : "ASAP"}
                             </span>
-                            {(card.sequence < PRIORITY_CEIL || card.is_cram) && (
+                            {(card.sequence < PRIORITY_CEIL || (card.is_cram && deck.plan_id)) && (
                               <span className="dk-due-marks">
                                 {card.sequence < PRIORITY_CEIL && <span className="dk-priority-star" title="Prioritized">★</span>}
-                                {card.is_cram && <span className="dk-cram-mark" title="Cram">↻</span>}
+                                {card.is_cram && deck.plan_id && <span className="dk-cram-mark" title="Cram">↻</span>}
                               </span>
                             )}
                           </div>

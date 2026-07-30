@@ -394,6 +394,20 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     // Added after the plan rebuild above, which only carries id and name across
     add_column_if_missing(conn, "plan", "longest_streak", "INTEGER NOT NULL DEFAULT 0")?;
     add_column_if_missing(conn, "plan", "is_disabled", "BOOLEAN NOT NULL DEFAULT FALSE")?;
+
+    // Backfill a scheduler for any deck predating per-deck schedulers, synced as of today
+    add_column_if_missing(conn, "scheduler", "last_synced_date", "TEXT")?;
+    let today = chrono::Local::now().date_naive().to_string();
+    conn.execute(
+        r#"INSERT INTO scheduler (group_id, max_new, max_review, can_overflow, last_synced_date)
+           SELECT id, 20, 50, FALSE, ?1 FROM "group"
+           WHERE group_type = 'deck' AND id NOT IN (SELECT group_id FROM scheduler)"#,
+        [&today],
+    )?;
+    conn.execute(
+        "UPDATE scheduler SET last_synced_date = ?1 WHERE last_synced_date IS NULL",
+        [&today],
+    )?;
     Ok(())
 }
 
@@ -456,6 +470,8 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 max_review INTEGER NOT NULL,
 
                 can_overflow BOOLEAN NOT NULL DEFAULT FALSE, -- ex) 10/20 --> 20/20 (F) or 30/20 (T)
+
+                last_synced_date TEXT, -- last day this deck's schedule advanced, drives freeze catch-up on re-add
 
                 FOREIGN KEY(group_id)
                     REFERENCES "group"(id)
