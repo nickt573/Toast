@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
-import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
+import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
 import UnitPicker from "../UnitPicker";
 import { resolveUnitPair } from "../unitPair";
@@ -931,7 +931,13 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
           <div key={cardId} className="st-deck-card">
             <div className="st-deck-header" onClick={() => toggle(cardId)} style={{ cursor: "pointer" }}>
               <div className="st-deck-line">
-                <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                  {(isGone || isArchived) && (
+                    <span style={{ display: "inline-flex", gap: 3 }}>
+                      {isGone && <DeckStateBadge state={wasMerged ? "merged" : "deleted"} />}
+                      {isArchived && <DeckStateBadge state="archived" />}
+                    </span>
+                  )}
                   <span className="st-deck-name">{name}</span>
                 </span>
                 <span className="t-caret">{isOpen ? "▾" : "▸"}</span>
@@ -943,12 +949,6 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
                 <span className="st-meta-pill st-meta-pill--demote">−{totalD}</span>
                 {avgRet !== null && <span className={`st-meta-pill ${retentionPillClass(avgRet)}`}>{Math.round(avgRet * 100)}% ret.</span>}
                 <span className="st-deck-meta-right">
-                  {isGone && (wasMerged
-                    ? <span className="st-badge st-badge-merged">Merged</span>
-                    : <span className="st-badge st-badge-deleted">Deleted</span>)}
-                  {isArchived && (
-                    <span className="st-badge st-badge-archived" title="Every session in this deck is archived, so none of it counts toward your totals">Archived</span>
-                  )}
                   <span className="st-meta-pill st-meta-pill--count">{deckRows.length} session{deckRows.length !== 1 ? "s" : ""}</span>
                   <span className="st-meta-pill st-meta-pill--time">{fmtTime(totalTime)}</span>
                 </span>
@@ -1643,8 +1643,11 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   }, [selectedPlanId]);
 
   const planDeleted = deletedPlans.some(p => p.id === selectedPlanId);
+  const planDisabled = activePlans.some(p => p.id === selectedPlanId && p.is_disabled);
+  // A disabled plan can't be studied, so it reads like a deleted one: no live streak
+  const planDormant = planDeleted || planDisabled;
   const metrics = computeMetrics(counted(groupStats), todoStats);
-  const totalDays = totalPlanDays(groupStats, todoStats, today, planDeleted);
+  const totalDays = totalPlanDays(groupStats, todoStats, today, planDormant);
   const recordDays = totals?.earliest && today ? daysBetween(totals.earliest, today) + 1 : null;
   const retColor = metrics.avgRetention !== null ? retentionColor(metrics.avgRetention) : GRAY;
   const atRisk = streakInfo.streak > 0 && !streakInfo.studied_today;
@@ -1709,9 +1712,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               value={metrics.avgDailyStudy !== null ? fmtTime(Math.round(metrics.avgDailyStudy)) : "-"}
               color={metrics.avgDailyStudy !== null ? "var(--t-time)" : GRAY}
             />
-            {/* A deleted plan can't be studied again, so its current streak is
-                always zero and only the longest says anything */}
-            {planDeleted ? (
+            {/* A dormant plan can't be studied, so only the longest streak says anything */}
+            {planDormant ? (
               <MetricCard
                 label="Longest Streak"
                 value={`${streakInfo.longest}d`}

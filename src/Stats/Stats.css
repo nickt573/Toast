@@ -123,12 +123,9 @@
 
 /* Badges take a fixed min-width so one and two digit values align across rows */
 .st-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; padding: 2px 7px; border-radius: var(--t-r-btn); font-size: 11px; font-weight: 600; }
-.st-badge-deleted { border: none; color: var(--t-accent-fg); background: var(--t-red-2); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; }
 /* Lighter than the muted surface it used to take, since a card has no border now and an
    alt row landing last would sit against the page and lose its bottom edge */
 .st-row-alt { background: color-mix(in srgb, var(--t-surface-2) 45%, var(--t-surface)); }
-.st-badge-merged { border: none; color: var(--t-accent-fg); background: var(--t-plum); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; min-width: 0; }
-.st-badge-archived { border: none; color: var(--t-accent-fg); background: var(--t-text-3); font-weight: 600; font-size: 10px; padding: 2px 7px; border-radius: var(--t-r-tab); flex-shrink: 0; min-width: 0; }
 
 /* The archived mark hangs off the left edge of the date rather than sitting in the flow,
    so the date never moves for it, which means the cell has to stop clipping */

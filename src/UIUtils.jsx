@@ -72,6 +72,7 @@ const DISC_GLYPHS = {
   A: "M4.002 10.006 6.276 3.994H7.726L9.998 10.006H8.571L8.191 8.889H5.809L5.429 10.006ZM6.164 7.817H7.829L6.993 5.375Z",
   D: "M4.319 10.006V3.994H6.235Q7.004 3.994 7.637 4.155Q8.27 4.316 8.728 4.671Q9.185 5.026 9.433 5.598Q9.681 6.17 9.681 6.998Q9.681 7.84 9.431 8.417Q9.18 8.994 8.717 9.344Q8.254 9.694 7.627 9.85Q6.999 10.006 6.235 10.006ZM5.633 8.9H6.254Q6.699 8.9 7.079 8.822Q7.458 8.744 7.737 8.541Q8.015 8.338 8.171 7.964Q8.327 7.59 8.327 6.998Q8.327 6.408 8.171 6.031Q8.015 5.654 7.733 5.448Q7.451 5.242 7.075 5.163Q6.699 5.085 6.254 5.085H5.633Z",
   N: "M4.313 10.006V3.994H6.017L8.417 8.433V3.994H9.687V10.006H7.984L5.583 5.562V10.006Z",
+  M: "M3.68 10.006V3.994H5.683L7.0 8.418L8.331 3.994H10.32V10.006H9.036V5.205L7.547 10.006H6.44L4.957 5.205V10.006Z",
 };
 
 // How far the letters sit off dead centre, in the same units the paths are drawn in, where
@@ -104,6 +105,23 @@ export function GroupTypeBadge({ type }) {
 // The archived marker on a session row
 export function ArchivedBadge() {
   return <LetterDisc letter="A" fill="var(--t-text-3)" />;
+}
+
+const DECK_STATE = {
+  merged:   { letter: "M", fill: "var(--t-plum)",   title: "Merged into another deck" },
+  deleted:  { letter: "D", fill: "var(--t-red-2)",  title: "Deck deleted" },
+  archived: { letter: "A", fill: "var(--t-text-3)", title: "Every session in this deck is archived, so none of it counts toward your totals" },
+};
+
+// The state of a whole deck's stats, shown as a colored disc beside its name
+export function DeckStateBadge({ state }) {
+  const s = DECK_STATE[state];
+  if (!s) return null;
+  return (
+    <span title={s.title} style={{ display: "inline-flex", flexShrink: 0 }}>
+      <LetterDisc letter={s.letter} fill={s.fill} />
+    </span>
+  );
 }
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
