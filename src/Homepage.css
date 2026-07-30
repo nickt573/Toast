@@ -381,8 +381,15 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   cursor: pointer;
 }
 .hp-deck-row--empty { cursor: default !important; --t-stripe: var(--t-green-bdr); --t-stripe-hi: var(--t-green); }
+/* A greyed blue, and bar and border share it so the hover swap to --t-stripe-hi is a no-op */
+.hp-deck-row--idle { cursor: default !important; --t-idle: color-mix(in srgb, var(--t-blue-lt) 32%, #d8dce0); --t-stripe: var(--t-idle); --t-stripe-hi: var(--t-idle); opacity: 0.6; }
+.hp-deck-row--idle .hp-deck-name { color: color-mix(in srgb, var(--t-blue) 55%, #777); font-weight: 600; }
 .hp-deck-name { flex: 1; font-weight: 700; font-size: 17px; color: var(--t-title); }
 .hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
+.hp-studied-today { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.hp-studied-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
+.hp-studied-today .hp-deck-new, .hp-studied-today .hp-deck-review { font-size: 12px; min-width: 0; }
+
 .hp-deck-counts { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .hp-deck-new, .hp-deck-review, .hp-deck-cram { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 92px; box-sizing: border-box; }
 

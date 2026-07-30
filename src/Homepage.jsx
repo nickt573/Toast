@@ -829,6 +829,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
     const [allGroups, setAllGroups] = useState([]);
     const [extraTodos, setExtraTodos] = useState([]);
     const [showResources, setShowResources] = useState(false);
+    const [studiedToday, setStudiedToday] = useState({ newCards: 0, reviews: 0 });
+    const [studiedDeckIds, setStudiedDeckIds] = useState(() => new Set());
 
     function navigateFromPlan(group, origin) {
         onNavigateToGroup(group, {
@@ -856,14 +858,26 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
 
     async function loadData() {
         try {
-            const [t, srs, r, g, stats, today] = await Promise.all([
+            const [t, srs, r, g, stats, gStats, today] = await Promise.all([
                 loggedInvoke("get_todos", { planId: plan.id }),
                 loggedInvoke("get_plan_srs_groups", { planId: plan.id }),
                 loggedInvoke("get_resources", { planId: plan.id }),
                 loggedInvoke("get_groups"),
                 loggedInvoke("get_todo_stats", { planId: plan.id }),
+                loggedInvoke("get_group_stats", { planId: plan.id }),
                 loggedInvoke("get_current_date"),
             ]);
+            // Today's gradings, archived rows left out to match what the streak counts
+            const todayRows = gStats.filter(s => s.date === today && !s.is_archived);
+            setStudiedToday({
+                newCards: todayRows.reduce((n, s) => n + s.num_new, 0),
+                reviews: todayRows.reduce((n, s) => n + s.num_promote + s.num_demote, 0),
+            });
+            // Decks with real gradings logged today, so a checked-off deck means work done, not just nothing due
+            setStudiedDeckIds(new Set(
+                todayRows.filter(s => s.group_id != null && s.num_new + s.num_promote + s.num_demote > 0)
+                    .map(s => s.group_id)
+            ));
             // Skipped todos are disabled but stay visible, greyed out
             const enabled = t.filter(todo => !todo.is_disabled || todo.is_skipped);
             setTodos(enabled);
@@ -979,7 +993,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         <span className="hp-section-label hp-section-label--todos" style={{ marginBottom: 0, flex: 1 }}>Todos</span>
                         <button onClick={() => { pauseStudyTimer(plan.id); setShowFreeTodo(true); }} style={{ fontSize: 11 }}>Log Extra</button>
                     </div>
-                    {todos.every(todo => todo.is_skipped) && (
+                    {todos.length === 0 && (
                         <div className="empty-bubble">No todos today.</div>
                     )}
                     {todos.map(todo => {
@@ -1072,23 +1086,34 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
 
                 {/* Study */}
                 <div className="hp-section-panel">
-                    <span className="hp-section-label hp-section-label--decks">Decks</span>
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                        <span className="hp-section-label hp-section-label--decks" style={{ marginBottom: 0, flex: 1 }}>Decks</span>
+                        {(srsGroups.length > 0 || studiedToday.newCards > 0 || studiedToday.reviews > 0) && (
+                            <span className="hp-studied-today">
+                                <span className="hp-studied-label">Studied today</span>
+                                <span className="hp-deck-new">New {studiedToday.newCards}</span>
+                                <span className="hp-deck-review">Review {studiedToday.reviews}</span>
+                            </span>
+                        )}
+                    </div>
                     {srsGroups.length === 0 && (
                         <div className="empty-bubble">No decks linked for study.</div>
                     )}
                     {srsGroups.map(([group]) => {
                         const counts = dueCounts[group.id] || { newDue: 0, reviewDue: 0, cramDue: 0 };
                         const { newDue, reviewDue, cramDue } = counts;
-                        const isEmpty = newDue === 0 && reviewDue === 0 && cramDue === 0;
+                        const hasDue = newDue > 0 || reviewDue > 0 || cramDue > 0;
+                        // Nothing due and nothing studied today reads as idle, not a green completion
+                        const doneToday = studiedDeckIds.has(group.id);
                         return (
                             <div
                                 key={group.id}
-                                onClick={() => !isEmpty && onStartSession(group)}
-                                className={`hp-deck-row${isEmpty ? " hp-deck-row--empty" : ""}`}
+                                onClick={() => hasDue && onStartSession(group)}
+                                className={`hp-deck-row${!hasDue && doneToday ? " hp-deck-row--empty" : ""}${!hasDue && !doneToday ? " hp-deck-row--idle" : ""}`}
                             >
-                                {isEmpty && <span className="hp-deck-check">✓</span>}
+                                {!hasDue && doneToday && <span className="hp-deck-check">✓</span>}
                                 <span className="hp-deck-name">{group.name}</span>
-                                {!isEmpty &&
+                                {hasDue &&
                                     <span className="hp-deck-counts">
                                         {/* Stacked and dimmed at zero the way the session header
                                             does it, so none ever slides into another's place */}
