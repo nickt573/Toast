@@ -272,6 +272,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-section-label--todos { color: var(--t-yellow); }
 .hp-section-label--decks { color: var(--t-blue); }
+.hp-section-label--extra { color: var(--t-green); }
 
 /* Todo rows, yellow striped bars */
 .hp-todo-row {

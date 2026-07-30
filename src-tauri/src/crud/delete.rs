@@ -433,7 +433,20 @@ pub fn delete_group_stats(ids: &[i64], conn: &Connection) -> Result<()> {
 }
 
 pub fn delete_todo_stat(id: i64, conn: &Connection) -> Result<()> {
+    // Deleting today's stat unchecks the todo it came from
+    let row: Option<(Option<i64>, String)> = conn
+        .query_row(
+            "SELECT todo_id, date FROM todo_stats WHERE id = ?1",
+            [id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
     conn.execute("DELETE FROM todo_stats WHERE id = ?1", [id])?;
+    if let Some((Some(todo_id), date)) = row {
+        if date == get_date(conn)? {
+            conn.execute("UPDATE todo SET is_done = FALSE WHERE id = ?1", [todo_id])?;
+        }
+    }
     Ok(())
 }
 

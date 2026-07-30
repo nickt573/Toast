@@ -47,6 +47,17 @@ export function maskToCategories(mask) {
     return result;
 }
 
+// Rebuilds a mask from a stat's stored category labels, aliasing the retired "Other"
+export function categoryStringToMask(catStr) {
+    if (!catStr) return 0;
+    const names = catStr.split(",").map(s => s.trim());
+    let mask = 0;
+    for (const { label, bit } of CATEGORIES) {
+        if (names.includes(label) || (bit === 64 && names.includes("Other"))) mask |= bit;
+    }
+    return mask;
+}
+
 // Shared components, where both pickers render the picker pill control from App.css
 
 export function FrequencyPicker({ frequency, onChange }) {

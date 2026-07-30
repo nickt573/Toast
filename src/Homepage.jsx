@@ -5,7 +5,7 @@ import { getVersion } from "@tauri-apps/api/app";
 
 import { CardFace, renderAnkiHtml, stripAudioTags } from "./Decks/CardFace";
 import { ResourceCard, GroupTypeBadge, Tip } from "./UIUtils";
-import { computeCategory, maskToCategories, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
+import { computeCategory, maskToCategories, categoryStringToMask, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
 import UnitPicker from "./UnitPicker";
 import { resolveUnitPair } from "./unitPair";
 import "./Homepage.css";
@@ -827,6 +827,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
     const [showFreeTodo, setShowFreeTodo] = useState(false);
     const [planResources, setPlanResources] = useState([]);
     const [allGroups, setAllGroups] = useState([]);
+    const [extraTodos, setExtraTodos] = useState([]);
     const [showResources, setShowResources] = useState(false);
 
     function navigateFromPlan(group, origin) {
@@ -855,11 +856,13 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
 
     async function loadData() {
         try {
-            const [t, srs, r, g] = await Promise.all([
+            const [t, srs, r, g, stats, today] = await Promise.all([
                 loggedInvoke("get_todos", { planId: plan.id }),
                 loggedInvoke("get_plan_srs_groups", { planId: plan.id }),
                 loggedInvoke("get_resources", { planId: plan.id }),
                 loggedInvoke("get_groups"),
+                loggedInvoke("get_todo_stats", { planId: plan.id }),
+                loggedInvoke("get_current_date"),
             ]);
             // Skipped todos are disabled but stay visible, greyed out
             const enabled = t.filter(todo => !todo.is_disabled || todo.is_skipped);
@@ -868,6 +871,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             setSrsGroups(srs.filter(([group]) => group.group_type === "deck"));
             setPlanResources(r);
             setAllGroups(g);
+            // Free-logged activities for today, shown checked off in their own section
+            setExtraTodos(stats.filter(s => s.todo_id == null && s.date === today));
 
             const links = {};
             await Promise.all(enabled.map(async (todo) => {
@@ -886,6 +891,12 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             await loggedInvoke("set_todo_skipped", { todoId: todo.id, skipped: !todo.is_skipped });
             await loadData();
         } catch (e) { logError("catch", e); setToast("Failed to skip todo.", "error"); }
+    }
+
+    async function handleUncheckExtra(stat) {
+        setExtraTodos(prev => prev.filter(s => s.id !== stat.id));
+        try { await loggedInvoke("delete_todo_stat", { id: stat.id }); }
+        catch (e) { logError("catch", e); setToast("Failed to remove extra activity.", "error"); await loadData(); }
     }
 
     async function handleTodoCheck(todo) {
@@ -945,6 +956,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             setShowFreeTodo(false);
             resetStudyTimer(plan.id);
             setToast("Done!");
+            await loadData();
         } catch (e) {
             logError("catch", e);
             const future = String(e).includes("future");
@@ -1011,6 +1023,52 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         );
                     })}
                 </div>
+
+                {/* Extra Todos */}
+                {extraTodos.length > 0 && (
+                    <div className="hp-section-panel">
+                        <span className="hp-section-label hp-section-label--extra">Extra Todos</span>
+                        {extraTodos.map(ex => {
+                            const resources = [...ex.resources].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+                            const groups = [...ex.groups].sort((a, b) =>
+                                (a.group_type === "notebook" ? 1 : 0) - (b.group_type === "notebook" ? 1 : 0)
+                                || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+                            return (
+                                <div key={ex.id} className="hp-todo-row done">
+                                    <div style={{ overflow: "hidden" }}>
+                                        <input type="checkbox" checked
+                                            onChange={() => handleUncheckExtra(ex)}
+                                            style={{ float: "left", marginRight: 10, marginTop: 3, cursor: "pointer" }} />
+                                        <div className="hp-todo-text done">{ex.text}</div>
+                                    </div>
+                                    <div className="todo-section">
+                                        <div className="todo-section-label">Categories</div>
+                                        <div className="todo-section-pills">
+                                            <CategoryPills mask={categoryStringToMask(ex.category)} />
+                                        </div>
+                                    </div>
+                                    {(resources.length > 0 || groups.length > 0) && (
+                                        <div className="todo-section">
+                                            <div className="todo-section-label">Resources / Decks / Notebooks</div>
+                                            <div className="todo-section-pills">
+                                                {resources.map(r => (
+                                                    <ResourcePill key={`r-${r.row_id}`} resource={r} />
+                                                ))}
+                                                {groups.map(g => {
+                                                    const live = g.group_id != null ? allGroups.find(x => x.id === g.group_id) : null;
+                                                    return (
+                                                        <GroupPill key={`g-${g.row_id}`} group={g}
+                                                            onClick={live ? () => navigateFromPlan(live) : undefined} />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Study */}
                 <div className="hp-section-panel">
