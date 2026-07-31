@@ -701,6 +701,7 @@ textarea { overflow-y: scroll; }
      keeps room below rather than butting the popup's edge */
   margin-bottom: 14px;
 }
+.unit-picker-search { width: 100%; box-sizing: border-box; margin-bottom: 6px; font-size: 12px; padding: 4px 8px; }
 .unit-picker-list { display: flex; flex-direction: column; gap: 2px; max-height: 210px; overflow-y: auto; }
 .unit-picker-hint { font-size: 12px; color: var(--t-text-3); font-style: italic; padding: 6px 8px; }
 /* Rows never compress, since the No unit line kept collapsing when the list filled up, and

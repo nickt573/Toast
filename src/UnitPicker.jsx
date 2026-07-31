@@ -17,6 +17,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
   const [merging, setMerging] = useState(false);
   const [mergeSel, setMergeSel] = useState([]); // group ids to merge in pick order, first is main
   const [pendingDel, setPendingDel] = useState(null); // the delete awaiting confirmation
+  const [search, setSearch] = useState(""); // filters the list by any of a unit's names
   const [err, setErr] = useState("");
   const wrapRef = useRef(null);
 
@@ -33,7 +34,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const closeMenu = () => { setOpen(false); setView("list"); setErr(""); setAddName(""); setNameEdits({}); setMerging(false); setMergeSel([]); };
+  const closeMenu = () => { setOpen(false); setView("list"); setErr(""); setAddName(""); setNameEdits({}); setMerging(false); setMergeSel([]); setSearch(""); };
   const backToList = () => { setView("list"); setErr(""); setAddName(""); setNameEdits({}); setPendingDel(null); };
   // Editing a unit is done rather than saved or discarded, so leaving only checks for blanks
   const finishEdit = () => {
@@ -45,6 +46,10 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
   const startMerge = () => { setMerging(true); setMergeSel([]); setErr(""); };
   const cancelMerge = () => { setMerging(false); setMergeSel([]); };
   const toggleMerge = (groupId) => setMergeSel(sel => sel.includes(groupId) ? sel.filter(g => g !== groupId) : [...sel, groupId]);
+
+  // The list matches on every name a unit has, main or alternate, though only the main shows
+  const q = search.trim().toLowerCase();
+  const shownUnits = q ? units.filter(u => u.variants.some(v => v.name.toLowerCase().includes(q))) : units;
 
   const selUnit = units.find(u => u.variants.some(v => v.id === variantId)) || null;
   const selVariant = selUnit ? selUnit.variants.find(v => v.id === variantId) : null;
@@ -177,8 +182,12 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
         <div className="unit-picker-menu">
           {view === "list" && (
             <>
+              {units.length > 0 && (
+                <input type="text" className="unit-picker-search" placeholder="Search units" value={search}
+                  onChange={e => setSearch(e.target.value)} />
+              )}
               <div className="unit-picker-list">
-                {!merging && (
+                {!merging && !q && (
                   <div className="unit-picker-row">
                     <button type="button" className={`unit-picker-opt${variantId === null ? " active" : ""}`}
                       onClick={() => { onChange({ value, variantId: null }); closeMenu(); }}>
@@ -186,7 +195,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
                     </button>
                   </div>
                 )}
-                {units.map(u => {
+                {shownUnits.map(u => {
                   const mi = mergeSel.indexOf(u.id);
                   const selected = merging ? mi >= 0 : (selUnit && selUnit.id === u.id);
                   return (
@@ -204,6 +213,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
                   );
                 })}
                 {units.length === 0 && <div className="unit-picker-hint">No units yet.</div>}
+                {units.length > 0 && shownUnits.length === 0 && <div className="unit-picker-hint">No units match.</div>}
               </div>
               {err && <div className="unit-picker-err">{err}</div>}
               {merging ? (
