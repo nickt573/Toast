@@ -325,27 +325,6 @@ function buildByCategoryData(todoStats) {
   };
 }
 
-// One unit per bucket over the window, every spelling counted as one by unit_group_id,
-// where total sums the amount done and time divides time spent by amount
-function buildByUnitData(todoStats, groupId, mode, unit = "day", win = null) {
-  const byDate = {};
-  todoStats.forEach(r => {
-    if (r.unit_group_id !== groupId || r.num_value == null) return;
-    const key = bucketKey(r.date, unit);
-    if (!byDate[key]) byDate[key] = { amount: 0, minutes: 0 };
-    byDate[key].amount += r.num_value;
-    byDate[key].minutes += r.time_spent_minutes;
-  });
-  const dates = windowBuckets(byDate, unit, win);
-  const at = d => byDate[d] ?? { amount: 0, minutes: 0 };
-  const data = dates.map(d => {
-    const b = at(d);
-    if (mode === "time") return b.amount > 0 ? Math.round((b.minutes / b.amount) * 10) / 10 : 0;
-    return Math.round(b.amount * 100) / 100;
-  });
-  return { labels: dates, datasets: [{ label: mode === "time" ? "Minutes each" : "Amount", data, backgroundColor: YELLOW_BG }] };
-}
-
 // The distinct units that appear in a plan's logged todos, keyed by group and labelled
 // with the group's main spelling, so units created but never logged stay out
 function unitOptionsFrom(todoStats) {
@@ -358,15 +337,39 @@ function unitOptionsFrom(todoStats) {
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
-const UNIT_MODES = [
-  { key: "total", label: "Total" },
-  { key: "time",  label: "Time" },
-];
-
 // Shared chart options
 
-// Caps how many date labels render as history grows, the bars themselves are unaffected
-const DATE_TICKS = { autoSkip: true, maxTicksLimit: 12, maxRotation: 30, font: { size: 10 } };
+// A day bucket is one date, a week or month bucket spans a range, given as its two ISO ends
+function bucketSpan(key, unit) {
+  if (unit === "week") return [key, addDays(key, 6)];
+  if (unit === "month") {
+    const [y, m] = key.split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    return [`${key}-01`, `${key}-${String(last).padStart(2, "0")}`];
+  }
+  return [key, null];
+}
+
+// The whole span on one line, for a tooltip title
+function fmtBucketTip(key, unit) {
+  const [start, end] = bucketSpan(key, unit);
+  return end ? `${start} - ${end}` : start;
+}
+
+// Caps how many date labels render as history grows, the bars themselves are unaffected, and
+// a range bucket stacks its two ends over a dash so the ISO dates aren't squeezed
+function dateTicks(unit) {
+  return {
+    autoSkip: true, maxTicksLimit: 12, maxRotation: unit === "day" ? 30 : 0, font: { size: 10 },
+    callback(value) {
+      const [start, end] = bucketSpan(this.getLabelForValue(value), unit);
+      return end ? [`${start} -`, end] : start;
+    },
+  };
+}
+
+// A tooltip title that names the bucket's full span, shared by every date chart
+const dateTip = (unit) => ({ callbacks: { title: (items) => fmtBucketTip(items[0].label, unit) } });
 
 // Wraps a label onto word-boundary lines, only truncates past the line limit
 function wrapTickLabel(label, width = 14, maxLines = 2) {
@@ -405,10 +408,10 @@ const DECK_TICKS = {
 const PAIRED_AXIS_W = 46;
 const pairedAxis = (scale) => { scale.width = PAIRED_AXIS_W; };
 
-const barOpts = (stacked = false, yLabel = "", xTicks = null, pairedY = false) => ({
+const barOpts = (stacked = false, yLabel = "", xTicks = null, pairedY = false, tipUnit = null) => ({
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
+  plugins: { legend: { display: false }, ...(tipUnit ? { tooltip: dateTip(tipUnit) } : {}) },
   scales: {
     x: { stacked, grid: { display: false }, ...(xTicks ? { ticks: xTicks } : {}) },
     y: {
@@ -422,18 +425,18 @@ const barOpts = (stacked = false, yLabel = "", xTicks = null, pairedY = false) =
   },
 });
 
-const lineOpts = {
+const lineOpts = (unit) => ({
   responsive: true,
   maintainAspectRatio: false,
   layout: { padding: { top: 10 } },
-  plugins: { legend: { display: false } },
+  plugins: { legend: { display: false }, tooltip: dateTip(unit) },
   scales: {
     // A line starts hard against the left edge while a bar sits mid-slot, so offset gives
     // the line the same slots and a day lands under its own bars
-    x: { offset: true, grid: { display: false, offset: true }, ticks: DATE_TICKS },
+    x: { offset: true, grid: { display: false, offset: true }, ticks: dateTicks(unit) },
     y: { beginAtZero: true, max: 100, afterFit: pairedAxis, ticks: { callback: v => v + "%", font: { size: 10 } } },
   },
-};
+});
 
 // Sitting in the bars' slots leaves the line short of both edges, so this carries the
 // first and last rate out flat, drawing nothing there so no dot can be hovered
@@ -505,8 +508,6 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const [range,  setRange]  = useState(30);
   const [offset, setOffset] = useState(0);
   const [retMode, setRetMode] = useState("daily");
-  const [unitSel, setUnitSel] = useState(null);
-  const [unitMode, setUnitMode] = useState("total");
 
   const groupStats = counted(allGroupStats);
 
@@ -555,18 +556,6 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const byDeckData    = buildByDeckData(groupStats);
   const byCatData     = buildByCategoryData(todoStats);
 
-  const unitOptions = unitOptionsFrom(todoStats);
-  // A picked unit that no longer exists falls back to the first
-  const activeUnit = unitOptions.find(u => u.id === unitSel) ?? unitOptions[0] ?? null;
-  const unitWin = computeWindow(
-    [...new Set(todoStats
-      .filter(r => activeUnit && r.unit_group_id === activeUnit.id && r.num_value != null)
-      .map(r => r.date))].sort(),
-  );
-  const byUnitData = activeUnit
-    ? buildByUnitData(todoStats.filter(inWindow(unitWin)), activeUnit.id, unitMode, unitWin.unit, unitWin)
-    : { labels: [], datasets: [] };
-
   const canGoNewer = offset > 0;
 
   const tabs = [
@@ -574,7 +563,6 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
     { key: "bycards", label: "By Cards" },
     { key: "bydeck",  label: "By Deck" },
     { key: "bycat",   label: "By Category" },
-    { key: "byunit",  label: "By Unit" },
   ];
 
   const legend = (
@@ -626,18 +614,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
 
   // Hours are fractional, drop the whole-number tick step
   const timeOpts = (() => {
-    const o = barOpts(true, "hours", DATE_TICKS);
-    delete o.scales.y.ticks.stepSize;
-    return o;
-  })();
-
-  // Units can be fractional too, and the y axis names the picked unit, or the minutes
-  // each took when the toggle is on Time each
-  const unitYLabel = activeUnit
-    ? (unitMode === "time" ? `minutes / ${activeUnit.name.toLowerCase()}` : activeUnit.name.toLowerCase())
-    : "";
-  const unitOpts = (() => {
-    const o = barOpts(false, unitYLabel, DATE_TICKS);
+    const o = barOpts(true, "hours", dateTicks(timeWin.unit), false, timeWin.unit);
     delete o.scales.y.ticks.stepSize;
     return o;
   })();
@@ -679,7 +656,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
                 ? <div className="empty-bubble">No study recorded in this period.</div>
                 : <>
                     <div style={{ height: 200 }}>
-                      <Bar data={barData} options={barOpts(true, "cards", DATE_TICKS, true)} />
+                      <Bar data={barData} options={barOpts(true, "cards", dateTicks(overWin.unit), true, overWin.unit)} />
                     </div>
                     {hasRetention && (
                       <div style={{ marginTop: 14 }}>
@@ -695,7 +672,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
                           </div>
                         </div>
                         <div style={{ height: 150 }}>
-                          <Line data={lineData} options={lineOpts} plugins={[stretchRetention]} />
+                          <Line data={lineData} options={lineOpts(overWin.unit)} plugins={[stretchRetention]} />
                         </div>
                       </div>
                     )}
@@ -720,35 +697,6 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
             </div>
       )}
 
-      {tab === "byunit" && (
-        unitOptions.length === 0
-          ? <div className="empty-bubble">No units logged yet.</div>
-          : <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 11, color: "var(--t-text-3)" }}>Unit</span>
-                <select
-                  value={activeUnit?.id ?? ""}
-                  onChange={e => setUnitSel(Number(e.target.value))}
-                  style={{ fontSize: 12, padding: "3px 8px", border: "1px solid var(--t-border)" }}>
-                  {unitOptions.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-                <div className="st-pills" style={{ marginLeft: "auto" }}>
-                  {UNIT_MODES.map(m => (
-                    <button key={m.key} className={`st-pill${unitMode === m.key ? " active" : ""}`} onClick={() => setUnitMode(m.key)}>
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {rangeControls(unitWin)}
-              {byUnitData.labels.length === 0
-                ? <div className="empty-bubble">No amounts recorded in this period.</div>
-                : <div style={{ height: 200 }}>
-                    <Bar data={byUnitData} options={unitOpts} />
-                  </div>
-              }
-            </div>
-      )}
     </div>
   );
 }
