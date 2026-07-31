@@ -148,3 +148,12 @@ pub fn get_card_last_seen_dates(
     let conn = state.conn.lock().unwrap();
     read::get_card_last_seen_dates(deck_id, &conn).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn get_card_retention_rates(
+    deck_id: i64,
+    state: tauri::State<AppState>,
+) -> Result<Vec<(i64, f64)>, String> {
+    let conn = state.conn.lock().unwrap();
+    read::get_card_retention_rates(deck_id, &conn).map_err(|e| e.to_string())
+}

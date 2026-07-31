@@ -135,6 +135,7 @@ pub fn run() {
             commands::cards::grade_cram,
             commands::cards::get_card_grade_log,
             commands::cards::get_card_last_seen_dates,
+            commands::cards::get_card_retention_rates,
             commands::pages::create_page,
             commands::pages::get_pages,
             commands::pages::update_page,

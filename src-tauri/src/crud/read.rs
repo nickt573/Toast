@@ -221,6 +221,23 @@ pub fn get_card_last_seen_dates(deck_id: i64, conn: &Connection) -> Result<Vec<(
     .collect()
 }
 
+/// Review retention per card, as correct reviews over total reviews. Only cards with at
+/// least one review event appear, so a card never reviewed has no rate and reads as N/A
+pub fn get_card_retention_rates(deck_id: i64, conn: &Connection) -> Result<Vec<(i64, f64)>> {
+    conn.prepare(
+        r#"
+        SELECT card.id,
+            CAST(SUM(CASE WHEN cgl.grade >= 2 THEN 1 ELSE 0 END) AS REAL) / COUNT(*) AS rate
+        FROM card
+        JOIN card_grade_log cgl ON card.id = cgl.card_id
+        WHERE card.group_id = ?1 AND cgl.old_tier != 0
+        GROUP BY card.id
+        "#,
+    )?
+    .query_map([deck_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+    .collect()
+}
+
 /// The card count for every deck, including decks with no cards
 pub fn get_deck_card_counts(conn: &Connection) -> Result<Vec<(i64, i64)>> {
     conn.prepare(

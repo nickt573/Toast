@@ -583,7 +583,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
   const markForReview = async () => {
     try {
       const updated = await loggedInvoke("mark_for_review", { cardId: form.id });
-      setToast("Card marked for review.");
+      setToast("Card marked for study.");
       onRescheduled(updated);
     } catch (e) { logError("catch", e); setToast("Failed to mark card for review.", "error"); }
   };
@@ -599,11 +599,14 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
   const handlePaneScroll = (e) => { scrollTopRef.current = e.currentTarget.scrollTop; };
 
   const cardLogSummary = cardLog.length > 0 ? (() => {
-    const total = cardLog.length;
     const retentionTotal = cardLog.filter(e => e.old_tier != 0).length;
     const correct = cardLog.filter(e => (e.grade >= 2 && e.old_tier != 0)).length;
     const isReview = cardLog.some(e => e.old_tier != 0);
     const retention = Math.round((correct / retentionTotal) * 100);
+    // A card's whole tier-0 life counts as one sighting per day no matter how many times
+    // it comes back that day, while every review at tier 1 and up counts on its own
+    const newDays = new Set(cardLog.filter(e => e.old_tier == 0).map(e => e.graded_at)).size;
+    const total = newDays + retentionTotal;
     const last = cardLog[0]?.graded_at;
     return (
       <div className="dk-card-log">
@@ -942,10 +945,11 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
   const [dateSince, setDateSince] = useState("");
   const [today, setToday] = useState(null);
   const [lastSeenMap, setLastSeenMap] = useState({});
+  const [retentionMap, setRetentionMap] = useState({});
   // Bumped when a deck action wipes grade logs, so the editor refetches
   const [logVersion, setLogVersion] = useState(0);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   // Dragged panel height remembered while this deck view is open, null meaning the default
   const [creatorHeight, setCreatorHeight] = useState(null);
   const tablePaneRef = useRef(null);
@@ -1025,6 +1029,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     loggedInvoke("get_card_last_seen_dates", { deckId: deck.id })
       .then(pairs => setLastSeenMap(Object.fromEntries(pairs)))
       .catch(e => logError("catch", e));
+    loggedInvoke("get_card_retention_rates", { deckId: deck.id })
+      .then(pairs => setRetentionMap(Object.fromEntries(pairs)))
+      .catch(e => logError("catch", e));
   }, [deck.id]);
 
   const planName = deck.plan_id ? (plans.find((p) => p.id === deck.plan_id)?.name ?? null) : null;
@@ -1064,6 +1071,8 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
       // A reset wipes the grade logs, so the last-seen filter and editor log reload too
       const pairs = await loggedInvoke("get_card_last_seen_dates", { deckId: deck.id });
       setLastSeenMap(Object.fromEntries(pairs));
+      const rates = await loggedInvoke("get_card_retention_rates", { deckId: deck.id });
+      setRetentionMap(Object.fromEntries(rates));
       setLogVersion((v) => v + 1);
       setToast(archivePrevious ? "Deck progress reset and old stats archived." : "Deck progress reset.");
       setConfirmReset(false);
@@ -1111,18 +1120,26 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
     if (dateSince) result = result.filter(c => lastSeenMap[c.id] && lastSeenMap[c.id] >= dateSince);
 
     if (sort === "sequence") result = [...result].sort((a, b) => sortDir === "asc" ? a.sequence - b.sequence : b.sequence - a.sequence);
+    // Retention doubles as a filter, dropping any card with no rate so the list is only ever
+    // cards that actually have a retention to compare
+    else if (sort === "retention") {
+      result = result.filter(c => retentionMap[c.id] != null);
+      result = [...result].sort((a, b) => sortDir === "asc"
+        ? retentionMap[a.id] - retentionMap[b.id]
+        : retentionMap[b.id] - retentionMap[a.id]);
+    }
     // otherwise trust the backend ordering, which keeps the merged-deck zipper order
     else if (sortDir === "desc") result = [...result].reverse();
 
     return result;
-  }, [cards, search, scopeMain, scopeSupport, filter, dateSince, lastSeenMap, sort, sortDir, deck.plan_id]);
+  }, [cards, search, scopeMain, scopeSupport, filter, dateSince, lastSeenMap, retentionMap, sort, sortDir, deck.plan_id]);
 
   // Clicking the active sort again flips the direction
   const pickSort = (key) => {
     if (sort === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSort(key); setSortDir("asc"); }
   };
-  const sortArrow = (key) => sort === key ? (sortDir === "asc" ? " ▴" : " ▾") : "";
+  const sortArrow = (key) => sort === key ? (sortDir === "asc" ? " ↑" : " ↓") : "";
 
   // Only rows near the viewport render, with spacer rows holding the scroll height
   useLayoutEffect(() => {
@@ -1191,7 +1208,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
         <div className="dk-table-pane" ref={tablePaneRef}>
           <div className="dk-table-search">
             <div className="dk-search-row">
-              <input type="text" placeholder="Search cards..." value={search} onChange={(e) => setSearch(e.target.value)}
+              <input type="text" className="dk-search-input" placeholder="Search cards..." value={search} onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Escape") setSearch(""); }} />
               <div className="dk-search-scope">
                 <button className={`dk-scope-btn${scopeMain ? " active" : ""}`}
@@ -1201,23 +1218,23 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
               </div>
             </div>
             <div className="dk-sort-filter-row">
+              <button className={`dk-filter-toggle${filtersOpen || filter !== "all" ? " active" : ""}`}
+                onClick={() => setFiltersOpen(o => !o)} title="Filters">{filtersOpen ? "▾" : "▸"}</button>
               <div className="dk-sort-seg">
-                <button className={sort === "id" ? "active" : ""} onClick={() => pickSort("id")}>Created Date{sortArrow("id")}</button>
-                <button className={sort === "sequence" ? "active" : ""} onClick={() => pickSort("sequence")}>Due Date{sortArrow("sequence")}</button>
+                <button className={sort === "id" ? "active" : ""} onClick={() => pickSort("id")}>Created{sortArrow("id")}</button>
+                <button className={sort === "sequence" ? "active" : ""} onClick={() => pickSort("sequence")}>Due{sortArrow("sequence")}</button>
+                <button className={sort === "retention" ? "active" : ""} onClick={() => pickSort("retention")}>Retention{sortArrow("retention")}</button>
               </div>
-              <button className={`dk-filter-toggle${filtersOpen || filter !== "all" ? " active" : ""}`} onClick={() => setFiltersOpen(o => !o)}>
-                Filters {filtersOpen ? "▾" : "▸"}
-              </button>
               {today && (
                 <div className="dk-date-filter">
-                  <span>Last seen:</span>
+                  <span>Seen after:</span>
                   <input type="date" value={dateSince} onChange={e => setDateSince(e.target.value)} />
                   {dateSince && <button className="dk-date-clear" title="Clear" onClick={() => setDateSince("")}>×</button>}
                 </div>
               )}
             </div>
             {filtersOpen && (
-              <div className="dk-filter-bar">
+            <div className="dk-filter-bar">
                 {[
                   { key: "all",     label: "All"      },
                   { key: "due",     label: "Due" },
@@ -1245,7 +1262,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
                     {f.label}
                   </button>
                 ))}
-              </div>
+            </div>
             )}
           </div>
 
@@ -1254,9 +1271,11 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
               <div className="dk-table-empty">
                 {(filter === "due" || filter === "overdue" || filter === "cram") && !deck.plan_id
                   ? "This deck isn't linked to a plan."
-                  : search || filter !== "all" || dateSince
-                    ? "No cards match your filters."
-                    : "No cards yet, create some below!"}
+                  : sort === "retention"
+                    ? "No cards have been reviewed enough to have a review retention."
+                    : search || filter !== "all" || dateSince
+                      ? "No cards match your filters."
+                      : "No cards yet, create some below!"}
               </div>
             </div>
           ) : (
