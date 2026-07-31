@@ -209,6 +209,7 @@ pub struct StatResource {
     /// todo_stat_resource's rowid, the only stable way to point at one line since the
     /// snapshot outlives the resource
     pub row_id: i64,
+    pub resource_id: Option<i64>,
     pub name: String,
     pub url: Option<String>,
     pub resource_type: Option<String>,

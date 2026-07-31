@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
@@ -1030,17 +1030,110 @@ function fmtDayLabel(dateStr) {
   });
 }
 
+const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
 const SEARCH_SCOPES = [
   { key: "all",       label: "All" },
   { key: "description", label: "Description" },
   { key: "details",   label: "Details" },
-  { key: "unit",      label: "Unit" },
-  { key: "resources", label: "Resources" },
-  { key: "groups",    label: "Decks / Notebooks" },
 ];
 
+function tagValue(kind, live, key) { return `${kind}:${live ? "live" : "dead"}:${key}`; }
+
+function matchTag(r, value) {
+  const [kind, life, ...rest] = value.split(":");
+  const key = rest.join(":");
+  if (kind === "resource") {
+    return r.resources.some(res => life === "live"
+      ? String(res.resource_id) === key
+      : res.resource_id == null && res.name === key);
+  }
+  return r.groups.some(g =>
+    g.group_type === kind &&
+    (life === "live" ? String(g.group_id) === key : g.group_id == null && g.name === key));
+}
+
+function buildTagSections(todoStats, allGroups, planResources) {
+  const byName = (a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" });
+  const liveGroups = (type) => allGroups.filter(g => g.group_type === type)
+    .map(g => ({ value: tagValue(type, true, String(g.id)), label: g.name, dead: false }))
+    .sort(byName);
+  const deadGroups = (type) => {
+    const seen = new Map();
+    todoStats.forEach(r => r.groups.forEach(g => {
+      if (g.group_type === type && g.group_id == null && !seen.has(g.name)) {
+        seen.set(g.name, { value: tagValue(type, false, g.name), label: g.name, dead: true });
+      }
+    }));
+    return [...seen.values()].sort(byName);
+  };
+  const liveResources = planResources
+    .map(pr => ({ value: tagValue("resource", true, String(pr.id)), label: pr.name, dead: false }))
+    .sort(byName);
+  const deadResources = (() => {
+    const seen = new Map();
+    todoStats.forEach(r => r.resources.forEach(res => {
+      if (res.resource_id == null && !seen.has(res.name)) {
+        seen.set(res.name, { value: tagValue("resource", false, res.name), label: res.name, dead: true });
+      }
+    }));
+    return [...seen.values()].sort(byName);
+  })();
+  return [
+    { kind: "resource", title: "Resources", items: [...liveResources, ...deadResources] },
+    { kind: "deck",     title: "Decks",     items: [...liveGroups("deck"), ...deadGroups("deck")] },
+    { kind: "notebook", title: "Notebooks", items: [...liveGroups("notebook"), ...deadGroups("notebook")] },
+  ].filter(s => s.items.length > 0);
+}
+
+function FilterDropdown({ label, active, groups, value, onSelect, className }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  const close = () => { setOpen(false); setSearch(""); };
+
+  const q = search.trim().toLowerCase();
+  const shownGroups = groups
+    .map(g => ({ ...g, items: q ? g.items.filter(it => it.value !== "all" && it.label.toLowerCase().includes(q)) : g.items }))
+    .filter(g => g.items.length > 0);
+  const total = groups.reduce((n, g) => n + g.items.filter(it => it.value !== "all").length, 0);
+
+  return (
+    <div className={`st-dd${className ? " " + className : ""}`} ref={ref}>
+      <button className={`st-dd-btn${active ? " active" : ""}`} onClick={() => open ? close() : setOpen(true)}>
+        <span className="st-dd-label">{label}</span>
+        <span className="st-dd-caret">▾</span>
+      </button>
+      {open && (
+        <div className="st-dd-menu">
+          {total > 1 && (
+            <input className="st-dd-search" placeholder="Search" value={search} onChange={e => setSearch(e.target.value)} />
+          )}
+          {shownGroups.map((g, gi) => (
+            <div key={gi} className="st-dd-group">
+              {g.title && <div className="st-dd-head">{g.title}</div>}
+              {g.items.map(it => (
+                <button key={it.value}
+                  className={`st-dd-opt${it.dead ? " dead" : ""}${value === it.value ? " active" : ""}`}
+                  onClick={() => { onSelect(it.value); close(); }}>{it.label}</button>
+              ))}
+            </div>
+          ))}
+          {shownGroups.length === 0 && <div className="st-dd-hint">No matches.</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResources, onOpenDeck }) {
-  const [catFilter, setCatFilter] = useState("all");
+  const [catFilter, setCatFilter] = useState(() => new Set(["all"]));
   const [expanded,  setExpanded]  = useState({});
   const [dateFrom,  setDateFrom]  = useState("");
   const [dateTo,    setDateTo]    = useState("");
@@ -1049,9 +1142,16 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   const [search,    setSearch]    = useState("");
   const [scopes,    setScopes]    = useState(() => new Set(["all"]));
   const [preset,    setPreset]    = useState("All");
+  const [unitFilter, setUnitFilter] = useState("all");
+  const [minutes,   setMinutes]   = useState("");
+  const [minutesOp, setMinutesOp] = useState(">=");
+  const [tagFilter, setTagFilter] = useState(null);
+  const [dayFilter, setDayFilter] = useState(() => new Set(["all"]));
+
+  const unitOptions = unitOptionsFrom(todoStats);
 
   // All stands alone, picking it clears the rest and picking anything else clears it
-  const toggleScope = (key) => setScopes(prev => {
+  const toggleIn = (setter) => (key) => setter(prev => {
     if (key === "all") return new Set(["all"]);
     const next = new Set(prev);
     next.delete("all");
@@ -1059,6 +1159,9 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     else next.add(key);
     return next.size === 0 ? new Set(["all"]) : next;
   });
+  const toggleScope = toggleIn(setScopes);
+  const toggleCat   = toggleIn(setCatFilter);
+  const toggleDay   = toggleIn(setDayFilter);
 
   const applyPreset = (label, days) => {
     setPreset(label);
@@ -1075,7 +1178,15 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   let visible = todoStats;
   if (dateFrom) visible = visible.filter(r => r.date >= dateFrom);
   if (dateTo)   visible = visible.filter(r => r.date <= dateTo);
-  if (catFilter !== "all") visible = visible.filter(r => parseCategories(r.category).includes(catFilter));
+  if (!catFilter.has("all")) visible = visible.filter(r => parseCategories(r.category).some(c => catFilter.has(c)));
+  if (!dayFilter.has("all")) visible = visible.filter(r => dayFilter.has(WEEKDAY_LABELS[new Date(r.date + "T00:00:00").getDay()]));
+  if (unitFilter !== "all") visible = visible.filter(r => r.unit_group_id === unitFilter);
+  if (tagFilter) visible = visible.filter(r => matchTag(r, tagFilter));
+
+  const minutesNum = minutes === "" ? null : parseInt(minutes, 10);
+  if (minutesNum !== null && !Number.isNaN(minutesNum)) {
+    visible = visible.filter(r => minutesOp === ">=" ? r.time_spent_minutes >= minutesNum : r.time_spent_minutes <= minutesNum);
+  }
 
   const query = search.trim().toLowerCase();
   if (query) {
@@ -1083,11 +1194,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     const inScope = key => scopes.has("all") || scopes.has(key);
     visible = visible.filter(r =>
       (inScope("description") && has(r.text)) ||
-      (inScope("unit") && (has(r.unit_label) || has(r.unit_name))) ||
-      (inScope("details") && has(r.details)) ||
-      // Resources match on name and description only, never the type or link
-      (inScope("resources") && r.resources.some(res => has(res.name) || has(res.notes))) ||
-      (inScope("groups") && r.groups.some(g => has(g.name)))
+      (inScope("details") && has(r.details))
     );
   }
 
@@ -1169,49 +1276,126 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     days[days.length - 1].rows.push(r);
   });
 
+  // Any deviation from the untouched defaults counts as filtering, which is when the running
+  // tally appears against the full history
+  const filtersActive = !!(dateFrom || dateTo || !catFilter.has("all") || !dayFilter.has("all") || query || unitFilter !== "all" || minutes !== "" || tagFilter);
+
   return (
     <div>
-      {/* Grid so the search bar and the date pair share a column and end at the same edge */}
-      <div style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: "8px 6px", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <input type="date" value={dateFrom} onChange={editDate(setDateFrom)}
-            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)" }} />
-          <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>-</span>
-          <input type="date" value={dateTo} onChange={editDate(setDateTo)}
-            style={{ fontSize: 12, padding: "2px 4px", border: "1px solid var(--t-border)" }} />
+      <div className="st-filters">
+        {/* Each control group wears a quiet label the way a todo's Categories and Resources
+            sections do. The panel is one grid, the wide date and search fields share the
+            first column, the two dropdowns stack in the middle column so the rows line up,
+            and the category pills take the full-width bottom row */}
+        <div className="st-field">
+          <div className="st-field-label">Date range</div>
+          <div className="st-field-row">
+            <input type="date" className="st-input" value={dateFrom} onChange={editDate(setDateFrom)} />
+            <span className="st-affix">-</span>
+            <input type="date" className="st-input" value={dateTo} onChange={editDate(setDateTo)} />
+            <div className="st-pills">
+              {[{ label: "All", days: null }, { label: "7d", days: 7 }, { label: "30d", days: 30 }, { label: "90d", days: 90 }].map(({ label, days }) => (
+                <button key={label} className={`st-pill${preset === label ? " active" : ""}`} onClick={() => applyPreset(label, days)}>{label}</button>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="st-pills">
-          {[{ label: "All", days: null }, { label: "7d", days: 7 }, { label: "30d", days: 30 }, { label: "90d", days: 90 }].map(({ label, days }) => (
-            <button key={label} className={`st-pill${preset === label ? " active" : ""}`} onClick={() => applyPreset(label, days)}>{label}</button>
-          ))}
+        <div className="st-field">
+          <div className="st-field-label">Unit</div>
+          <div className="st-field-row">
+            <FilterDropdown
+              label={unitFilter === "all" ? "All" : (unitOptions.find(u => u.id === unitFilter)?.name ?? "All")}
+              active={unitFilter !== "all"}
+              value={unitFilter === "all" ? "all" : String(unitFilter)}
+              groups={[{ items: [{ value: "all", label: "All units" }, ...unitOptions.map(u => ({ value: String(u.id), label: u.name }))] }]}
+              onSelect={v => setUnitFilter(v === "all" ? "all" : Number(v))} />
+          </div>
         </div>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search todo history"
-          size={1}
-          style={{ fontSize: 12, padding: "3px 8px", border: "1px solid var(--t-border)", width: "100%" }}
-        />
-        <div className="st-pills">
-          {SEARCH_SCOPES.map(s => (
-            <button key={s.key} className={`st-pill${scopes.has(s.key) ? " active" : ""}`} onClick={() => toggleScope(s.key)}>
-              {s.label}
-            </button>
-          ))}
+        <div className="st-field">
+          <div className="st-field-label">Study time</div>
+          <div className="st-field-row">
+            <div className="st-pills">
+              <button className={`st-pill${minutesOp === ">=" ? " active" : ""}`} onClick={() => setMinutesOp(">=")}>≥</button>
+              <button className={`st-pill${minutesOp === "<=" ? " active" : ""}`} onClick={() => setMinutesOp("<=")}>≤</button>
+            </div>
+            <input
+              className="st-input st-input--minutes"
+              value={minutes}
+              onChange={e => { const v = e.target.value; if (v === "" || /^\d+$/.test(v)) setMinutes(v); }}
+              placeholder="0"
+              inputMode="numeric"
+            />
+            <span className="st-affix">min</span>
+          </div>
         </div>
-      </div>
-      <div className="st-pills" style={{ marginBottom: 12 }}>
-        <button className={`st-pill${catFilter === "all" ? " active" : ""}`} onClick={() => setCatFilter("all")}>All</button>
-        {ALL_CATEGORIES.map(c => {
-          const active = catFilter === c;
-          const col = CATEGORY_COLORS[c] || GRAY;
-          return (
-            <button key={c} className="st-pill" onClick={() => setCatFilter(c)}
-              style={active ? { background: col, borderColor: col, color: "var(--t-btn-fg)" } : {}}>
-              {c}
-            </button>
-          );
-        })}
+        <div className="st-field">
+          <div className="st-field-label">Search</div>
+          <div className="st-field-row">
+            <input
+              className="st-search-input"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search todo history"
+              size={1}
+            />
+            <div className="st-pills">
+              {SEARCH_SCOPES.map(s => (
+                <button key={s.key} className={`st-pill${scopes.has(s.key) ? " active" : ""}`} onClick={() => toggleScope(s.key)}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="st-field">
+          <div className="st-field-label">Resource / Deck / Notebook</div>
+          <div className="st-field-row">
+            {(() => {
+              const sections = buildTagSections(todoStats, allGroups, planResources);
+              const selected = tagFilter ? sections.flatMap(s => s.items).find(it => it.value === tagFilter) : null;
+              return (
+                <FilterDropdown
+                  label={selected ? selected.label : "All"}
+                  active={!!tagFilter}
+                  value={tagFilter ?? "all"}
+                  groups={[{ items: [{ value: "all", label: "All" }] }, ...sections.map(s => ({ title: s.title, items: s.items }))]}
+                  onSelect={v => setTagFilter(v === "all" ? null : v)} />
+              );
+            })()}
+          </div>
+        </div>
+        <div className="st-field">
+          <div className="st-field-label">Day of week</div>
+          <div className="st-field-row">
+            <div className="st-pills st-pills--tight">
+              <button className={`st-pill${dayFilter.has("all") ? " active" : ""}`} onClick={() => toggleDay("all")}>All</button>
+              {WEEKDAY_LABELS.map(d => (
+                <button key={d} className={`st-pill${dayFilter.has(d) ? " active" : ""}`} onClick={() => toggleDay(d)}>{d}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="st-field st-field--cats">
+          <div className="st-field-label">Categories</div>
+          <div className="st-field-row">
+            <div className="st-pills">
+              <button className={`st-pill${catFilter.has("all") ? " active" : ""}`} onClick={() => toggleCat("all")}>All</button>
+              {ALL_CATEGORIES.map(c => {
+                const active = catFilter.has(c);
+                const col = CATEGORY_COLORS[c] || GRAY;
+                return (
+                  <button key={c} className="st-pill" onClick={() => toggleCat(c)}
+                    style={active ? { background: col, borderColor: col, color: "var(--t-btn-fg)" } : {}}>
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+            <span className={`st-count-box${filtersActive ? "" : " off"}`} title="Matching todos out of all completed todos">
+              {visible.length}/{todoStats.length}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="st-todo-list">
@@ -1276,7 +1460,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                             return (
                               <ItemBar key={`g-${g.row_id}`} name={g.name}
                                 family={g.group_type === "notebook" ? "notebook" : "deck"}
-                                dead={!live} onOpen={live ? () => onOpenDeck(live) : undefined} />
+                                onOpen={live ? () => onOpenDeck(live) : undefined} />
                             );
                           })}
                       </div>

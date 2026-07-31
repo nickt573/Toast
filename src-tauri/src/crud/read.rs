@@ -673,7 +673,7 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
     let mut stat_resources: HashMap<i64, Vec<StatResource>> = HashMap::new();
     conn.prepare(
         r#"
-        SELECT tsr.stat_id, tsr.rowid,
+        SELECT tsr.stat_id, tsr.rowid, tsr.resource_id,
                COALESCE(r.name, tsr.resource_name),
                COALESCE(r.url, tsr.resource_url),
                COALESCE(r."type", tsr.resource_type),
@@ -688,10 +688,11 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
             row.get::<_, i64>(0)?,
             StatResource {
                 row_id: row.get::<_, i64>(1)?,
-                name: row.get::<_, String>(2)?,
-                url: row.get::<_, Option<String>>(3)?,
-                resource_type: row.get::<_, Option<String>>(4)?,
-                notes: row.get::<_, Option<String>>(5)?,
+                resource_id: row.get::<_, Option<i64>>(2)?,
+                name: row.get::<_, String>(3)?,
+                url: row.get::<_, Option<String>>(4)?,
+                resource_type: row.get::<_, Option<String>>(5)?,
+                notes: row.get::<_, Option<String>>(6)?,
             },
         ))
     })?
