@@ -35,7 +35,13 @@
   --t-label:         #6B5458;   /* every label that oversees something, table heads, form labels, the words above a todo's categories and resources, matching the secondary text ink */
   --t-placeholder:   #C0AAAE;
   --t-title:         #4B2F1E;   /* the name of a thing, header bar titles and the name on a plan or deck card, kept separate from --t-text so body ink can move without dragging the names along */
-  --t-title-size:    22px;
+  --t-title-size:    27px;
+  /* Each page's header title takes a deepened version of its own band hue so the ink belongs to the band instead of clashing with it, shared by a family's list and detail headers so the two never drift apart */
+  --hdr-title-plan:     color-mix(in srgb, var(--t-accent) 40%, #3a2410);
+  --hdr-title-deck:     color-mix(in srgb, var(--t-blue-bdr) 34%, #16202e);
+  --hdr-title-notebook: color-mix(in srgb, var(--t-plum-bdr) 34%, #211628);
+  --hdr-title-stat:     color-mix(in srgb, #DD8A34 38%, #2a1403);
+  --hdr-title-togo:     color-mix(in srgb, #9AA0A3 46%, #23292c);
 
   /* Plans and primary accent, wheat caramel */
   --t-accent:        #C99A63;
@@ -77,7 +83,7 @@
 
   /* Notebooks plum */
   --t-plum:          #8A6A96;
-  --t-plum-lt:       #B49CBD;   /* the plum lightened, for a notebook card's stripes and border */
+  --t-plum-lt:       #A98AB5;   /* the plum lightened, for a notebook card's stripes and border on hover */
   --t-plum-bdr:      #C8B4D2;
   /* Swap during a study session, a lighter plum so it is nobody's grade and reads apart from the notebook tab wearing the full plum */
   --t-swap:          #A98BB4;
@@ -610,28 +616,37 @@ textarea { overflow-y: scroll; }
 
 /* Plans containers */
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
+.plans-scroll { flex: 1; overflow-y: scroll; padding: 4px var(--t-page-pad) var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
 /* Unified landing pages for Plans, Decks and Notebooks, solid family bands, each taking
    the shade its content boxes rest their bars in so no divider line is needed */
 /* The bar casts onto the page, so it has to stay in front since the body paints after it */
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 5; box-shadow: var(--t-shadow-hdr); }
-.landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 64%, #fff); --hdr-btn: var(--t-accent-h); background: var(--hdr-band); }
-.landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); background: var(--hdr-band); }
-.landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); background: var(--hdr-band); }
-.landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; flex: 1; color: var(--t-title); }
+.landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 64%, #fff); --hdr-btn: var(--t-accent-h); --hdr-title: var(--hdr-title-plan); background: var(--hdr-band); }
+.landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); --hdr-title: var(--hdr-title-deck); background: var(--hdr-band); }
+.landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); --hdr-title: var(--hdr-title-notebook); background: var(--hdr-band); }
+.landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; flex: 1; color: var(--hdr-title, var(--t-title)); }
+/* Inside a single plan the name reads in the plain near-black, not the themed header ink the landing title takes */
+.landing-hdr--detail h2 { color: var(--t-title); }
 /* What the page is holding right now, told quietly at the right of every header bar so
    it reads the same on the ones with buttons and the ones without */
 .hdr-context { margin-left: auto; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: var(--t-text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-/* Action buttons in a landing header take the family colour, direct children only so
-   the popup's own Create and Cancel keep their own styling */
-.landing-hdr > button:not(.quiet):not(.primary):not(.danger) { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); }
-.landing-hdr > button:not(.quiet):not(.primary):not(.danger):hover { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); filter: brightness(0.92); }
+/* Every button sitting in a header bar wears the family + colour, the round create button, Back,
+   and the deck actions trigger alike, so the whole bar reads in one accent, primary and danger
+   keep their own semantic ink */
+.landing-hdr > button:not(.primary):not(.danger),
+.dk-cards-header > button:not(.primary):not(.danger):not(.dk-cards-plan),
+.dk-cards-header > div > button,
+.nb-pages-header > button:not(.primary):not(.danger) { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); box-shadow: none; }
+.landing-hdr > button:not(.primary):not(.danger):hover,
+.dk-cards-header > button:not(.primary):not(.danger):not(.dk-cards-plan):hover,
+.dk-cards-header > div > button:hover,
+.nb-pages-header > button:not(.primary):not(.danger):hover { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); filter: brightness(0.92); }
 /* The scrolling list of cards a landing page is made of, shared by plans, decks and
    notebooks rather than each keeping a copy */
 .landing-body,
 .dk-list,
-.nb-list { flex: 1; overflow-y: scroll; padding: 10px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: var(--t-list-gap); }
+.nb-list { flex: 1; overflow-y: scroll; padding: 16px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
 
 /* The round add button in a landing header opens a small create popup, taking its family
@@ -781,7 +796,7 @@ textarea { overflow-y: scroll; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 22px var(--t-stripe-gutter) 22px 24px;
+  padding: 10px var(--t-stripe-gutter) 16px 24px;
   cursor: pointer;
 }
 
@@ -876,7 +891,7 @@ textarea { overflow-y: scroll; }
 .landing-card--notebook { --t-stripe: var(--t-plum-stripe);   --t-stripe-hi: var(--t-plum-lt); }
 .landing-card-body { flex: 1; min-width: 0; }
 .landing-card-body > input { width: 100%; box-sizing: border-box; }
-.landing-card-name { font-family: var(--t-font-head); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
+.landing-card-name { font-family: var(--t-font-head); font-size: 24px; font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
 .landing-card-meta { font-size: 11px; color: var(--t-text-3); margin-top: 2px; }
 .landing-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
@@ -906,7 +921,9 @@ textarea { overflow-y: scroll; }
 .landing-stat--plan      { --stat-c: var(--t-accent); }
 
 /* Todo row subsections, labeled like todo stats entries */
-.todo-section { margin-top: 8px; }
+.todo-section { margin-top: 3px; }
+/* Categories sits tight under the todo name, the sections after it keep the wider gap */
+.todo-section ~ .todo-section { margin-top: 8px; }
 .todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
 .todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
@@ -914,7 +931,7 @@ textarea { overflow-y: scroll; }
 .plan-builder-cols { display: flex; flex-direction: column; gap: 26px; }
 .plan-col-main { min-width: 0; }
 .plan-col-side { min-width: 0; padding-top: 22px; border-top: var(--t-bw) solid var(--t-border-2); }
-.plan-col-label { font-family: var(--t-font-head); font-size: 18px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 10px; }
+.plan-col-label { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 10px; }
 .plan-col-label--toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 7px; }
 .plan-col-label--todos     { color: var(--t-yellow); }
 .plan-col-label--resources { color: var(--t-clay); }
@@ -979,8 +996,8 @@ textarea { overflow-y: scroll; }
 .st-resource-cards { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .st-resource-card { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 7px var(--t-stripe-gutter) 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-title); }
-.st-resource-card-type { font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
+.st-resource-card-name { font-weight: 600; font-size: 21px; color: var(--t-title); }
+.st-resource-card-type { align-self: center; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
 /* Only the nudge off the baseline it shares with the name, the mark itself is t-open-arrow */
 .st-resource-card-url { margin-top: 3px; }
 .st-resource-card-notes { font-size: 12px; color: var(--t-text-2); margin-top: 4px; white-space: pre-wrap; line-height: 1.5; }
@@ -991,7 +1008,7 @@ textarea { overflow-y: scroll; }
 .st-item-bars { display: flex; flex-direction: column; gap: 8px; }
 .st-item-bar { display: flex; align-items: center; gap: 6px; padding: 9px var(--t-stripe-gutter) 9px 12px; }
 /* The name only takes the width it needs so the arrow rides right beside it, not out by the stripes */
-.st-item-bar-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 15px; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-item-bar-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 19px; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-item-bar--resource { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); }
 .st-item-bar--deck     { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); }
 .st-item-bar--notebook { --t-stripe: var(--t-plum-stripe); --t-stripe-hi: var(--t-plum-lt); }

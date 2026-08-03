@@ -245,7 +245,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
                                             <span>{(pageCounts[nb.id] ?? 0) === 1 ? "page" : "pages"}</span>
                                         </span>
                                         <span className="landing-stat-divider" />
-                                        <button style={{ alignSelf: "center" }} onClick={(e) => { e.stopPropagation(); onOpenNotebook(nb, true); }}>+ New Page</button>
+                                        <button className="nb-newpage-btn" style={{ alignSelf: "center" }} onClick={(e) => { e.stopPropagation(); onOpenNotebook(nb, true); }}>+ New Page</button>
                                     </div>
                                 </>
                             )}

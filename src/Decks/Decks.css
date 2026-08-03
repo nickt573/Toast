@@ -2,7 +2,7 @@
 .dk-root { display: flex; flex-direction: column; height: 100%; }
 
 /* The deck list is styled with the other landing lists in App.css */
-.dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-title); }
+.dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 700; font-size: 24px; letter-spacing: -0.01em; color: var(--t-title); }
 .dk-deck-name-input { width: 100%; }
 .dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 
@@ -39,9 +39,13 @@
 .dk-merge-row select { flex: 1; }
 
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
-.dk-cards-header { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); flex-shrink: 0; background: var(--hdr-band); position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
-.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; color: var(--t-title); }
+.dk-cards-header { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); flex-shrink: 0; background: var(--hdr-band); position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
+.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--t-title); }
+/* The plan a deck belongs to, a clickable badge that jumps to that plan, kept the plan caramel rather than the header's deck blue */
 .dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
+.dk-cards-plan:hover { background: var(--t-accent); border: none; color: var(--t-accent-fg); filter: brightness(0.94); }
+/* The subtle open mark resources wear, a faded small glyph in the pill's own ink */
+.dk-cards-plan-arrow { opacity: 0.55; margin-left: 2px; font-size: 9px; }
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
 .dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); -webkit-user-select: none; user-select: none; }
@@ -200,7 +204,7 @@
 .dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-label); }
 
-.dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
+.dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border-radius: var(--t-r); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
 /* Square so hover highlights sit flush inside the menu container, whose own radius clips
    the outer corners */
 .dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }

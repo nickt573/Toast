@@ -2,7 +2,7 @@
 .nb-root { display: flex; flex-direction: column; height: 100%; }
 
 /* .nb-list is styled with the other landing lists in App.css */
-.nb-notebook-name { font-family: var(--t-font-head); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; color: var(--t-title); }
+.nb-notebook-name { font-family: var(--t-font-head); font-weight: 700; font-size: 24px; letter-spacing: -0.01em; color: var(--t-title); }
 .nb-notebook-name-input { flex: 1; }
 /* Merge panel extends the landing header so the two read as one band */
 /* The panel is the bottom of the header stack while it is open, so the shadow is its
@@ -15,9 +15,12 @@
 .nb-merge-row select { flex: 1; }
 
 .nb-pages-root { display: flex; flex-direction: column; height: 100%; }
-.nb-pages-header { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
+.nb-pages-header { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 .nb-pages-header:has(+ .nb-search) { box-shadow: none; }
-.nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; flex: 1; color: var(--t-title); }
+.nb-pages-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; flex: 1; color: var(--t-title); }
+/* The quick New Page button on a notebook card wears the family plum like the header buttons */
+.nb-newpage-btn { background: var(--t-plum); border-color: var(--t-plum); color: var(--t-accent-fg); }
+.nb-newpage-btn:hover { background: var(--t-plum); border-color: var(--t-plum); color: var(--t-accent-fg); filter: brightness(0.92); }
 
 /* Search bar extends the page header so the two read as one band */
 .nb-search {
