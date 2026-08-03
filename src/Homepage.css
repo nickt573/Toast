@@ -630,7 +630,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-similar-content img { max-height: 140px !important; }
 .hp-similar-face-front { font-size: 14px; font-weight: 600; color: var(--t-text); }
 .hp-similar-face-back  { font-size: 13px; color: var(--t-text); }
-.hp-similar-divider { border-top: 1px solid var(--t-border); margin: 10px 0; }
+.hp-similar-divider { border-top: 1px solid var(--t-espresso-lt); margin: 10px 0; }
 /* Notebook fallback, for the deprecated SRS notebooks */
 .hp-similar-front { font-weight: 500; font-size: 13px; color: var(--t-text); margin-bottom: 4px; text-align: center; }
 .hp-similar-back  { font-size: 13px; color: var(--t-text-2); text-align: center; }
