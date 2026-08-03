@@ -10,12 +10,12 @@ export const HELP_PAGES = [
     {
         tab: "plans",
         title: "Plans",
-        body: "A plan is one subject or goal, like a language or a class. Fill it with todos that repeat on the days you pick, each with categories describing the language skills it targets (like reading or listening). Link your decks to a plan for daily SRS review, and add outside resources like books and websites. You can also tag a todo with the decks, notebooks, and resources it uses, so they're always one click away.",
+        body: "A plan is one subject or goal, like a language or a class. Fill it with todos that repeat on the days you pick, each with categories describing the language skills it targets, like reading or listening. Link your decks to a plan for daily SRS review, and add your outside learning resources like textbooks, websites, and apps. You can also tag a todo with the decks, notebooks, and resources it uses, so they're always one click away.",
     },
     {
         tab: "decks",
         title: "Decks",
-        body: "Decks hold your flashcards. Make your own cards with images and audio, or import your favorite Anki decks. Link a deck to a plan and set how many new cards and reviews you want per day. Adaptive ease makes sure the cards you find hard come back sooner than the cards you find easy.",
+        body: "Decks hold your flashcards. Make your own cards with images and audio, or import your favorite Anki decks. Link a deck to a plan and set how many new cards and reviews you want per day. Adaptive ease makes sure the cards you frequently get wrong come back sooner than the cards you find easy.",
     },
     {
         tab: "notebooks",
@@ -30,12 +30,12 @@ export const HELP_PAGES = [
     {
         tab: "togo",
         title: "Toast to Go",
-        body: "Toast to Go carries your data between computers. Push a copy when you leave one machine, then pull it down on another using your key. You can save the keys you pull from often, and choose whether Toast offers to push whenever you close the app. Keep in mind that you cannot pull packages with a different version number or with a date from the future.",
+        body: "Toast to Go carries your data between computers. Push a copy when you leave one machine, then pull it down on another using your key. You can save the keys you pull from often, and choose whether Toast offers to push whenever you close the app. Keep in mind that you cannot pull packages with a newer version number or with a date from the future.",
     },
     {
         tab: "home",
         title: "Home",
-        body: 'The Home page brings it all together. Each day your plans show how many todos and cards are due, and opening one lets you check todos off, study your decks, and time your sessions. Anything extra you did can be logged too. Toast intentionally only checks for a new day on each startup, so click the "Refresh Date" button to update the date mid session (if applicable). Happy studying!',
+        body: 'The Home page brings it all together. Each day your plans show how many todos and cards are due, and opening one lets you check todos off, study your decks, and time your sessions. Anything extra you did can be logged too. Toast intentionally only checks for a new day on each startup, so click the "Refresh Date" button to update the date mid session if applicable. Happy studying!',
     },
 ];
 
