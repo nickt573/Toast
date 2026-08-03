@@ -303,7 +303,7 @@ export default function ToGo({ setToast }) {
                     <MaskedId id={r.id} onCopied={copied} />
                     <span className="togo-meta">pulled {timeAgo(r.pulled_at)}</span>
                     <button className="danger togo-btn-sm" onClick={() => pull(r.id)} disabled={!!busy}>
-                      Pull
+                      {busy === "Pulling…" ? busy : "Pull"}
                     </button>
                     <button
                       className="togo-icon-btn"
