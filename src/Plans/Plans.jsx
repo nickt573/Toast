@@ -650,7 +650,7 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
 
 // Plans
 
-export default function Plans({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, homeSignal }) {
+export default function Plans({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, returnTo, onReturnToOrigin, homeSignal }) {
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState("");
@@ -793,8 +793,12 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     if (editingPlan) {
         return (
             <div className="plans-root">
-                <div className="landing-hdr landing-hdr--plan">
-                    <button className="quiet" onClick={() => { setEditingPlan(null); setPlanResources([]); loadSummaries(); }}>← Back</button>
+                <div className="landing-hdr landing-hdr--plan landing-hdr--detail">
+                    {returnTo ? (
+                        <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
+                    ) : (
+                        <button className="quiet" onClick={() => { setEditingPlan(null); setPlanResources([]); loadSummaries(); }}>← Back</button>
+                    )}
                     <h2>{editingPlan.name}</h2>
                 </div>
                 <div className="plans-scroll">

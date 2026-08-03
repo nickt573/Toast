@@ -79,11 +79,20 @@ export default function App() {
     }
   }
 
+  // Opening a plan directly, the mirror of navigateToGroup, so a deck can jump to the plan it
+  // belongs to and the plan's Back button can walk back to that deck
+  function navigateToPlan(plan, origin) {
+    if (origin) setReturnTo(origin);
+    setPlansReturnContext({ plan });
+    setMenu("plans");
+  }
+
   function returnToOrigin() {
     if (!returnTo) return;
     if (returnTo.homeContext)  setHomeReturnContext(returnTo.homeContext);
     if (returnTo.plansContext) setPlansReturnContext(returnTo.plansContext);
     if (returnTo.statsContext) setStatsReturnContext(returnTo.statsContext);
+    if (returnTo.decksContext) setInitialDeck(returnTo.decksContext.deck);
     setMenu(returnTo.menu);
     setReturnTo(null);
   }
@@ -225,6 +234,8 @@ export default function App() {
           onNavigateToGroup={navigateToGroup}
           returnContext={plansReturnContext}
           onConsumeReturnContext={() => setPlansReturnContext(null)}
+          returnTo={returnTo}
+          onReturnToOrigin={returnToOrigin}
           homeSignal={homeSignal}
         />
       );
@@ -235,6 +246,7 @@ export default function App() {
           setToast={showToast}
           initialDeck={initialDeck}
           onClearInitial={() => setInitialDeck(null)}
+          onNavigateToPlan={navigateToPlan}
           returnTo={returnTo}
           onReturnToOrigin={returnToOrigin}
           homeSignal={homeSignal}

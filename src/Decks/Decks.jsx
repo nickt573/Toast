@@ -930,7 +930,7 @@ function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearch
 
 // Card View
 
-function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
+function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNavigateToPlan }) {
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
@@ -1186,7 +1186,13 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
           <button className="quiet" onClick={onBack}>← Back</button>
         )}
         <h2>{deck.name}</h2>
-        {planName && <span className="dk-cards-plan">{planName}</span>}
+        {planName && (
+          <button className="dk-cards-plan" title={`Go to ${planName}`}
+            onClick={() => onNavigateToPlan?.({ id: deck.plan_id, name: planName },
+              { menu: "decks", label: deck.name, decksContext: { deck } })}>
+            {planName}<span className="dk-cards-plan-arrow">↗</span>
+          </button>
+        )}
         <span className="hdr-context">{cards.length.toLocaleString()} card{cards.length !== 1 ? "s" : ""}</span>
         <DeckActions onPauseAll={pauseAll} onUnpauseAll={unpauseAll}
           onAllSearchable={() => setAllSearchable(true)} onAllNotSearchable={() => setAllSearchable(false)}
@@ -1374,7 +1380,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin }) {
 
 // Root
 
-export default function Decks({ setToast, initialDeck, onClearInitial, returnTo, onReturnToOrigin, homeSignal }) {
+export default function Decks({ setToast, initialDeck, onClearInitial, onNavigateToPlan, returnTo, onReturnToOrigin, homeSignal }) {
   const [view, setView] = useState(initialDeck ? VIEW_CARDS : VIEW_DECKS);
   const [activeDeck, setActiveDeck] = useState(initialDeck ?? null);
 
@@ -1402,6 +1408,7 @@ export default function Decks({ setToast, initialDeck, onClearInitial, returnTo,
           onBack={goBack}
           returnTo={returnTo}
           onReturnToOrigin={onReturnToOrigin}
+          onNavigateToPlan={onNavigateToPlan}
         />
       )}
     </div>
