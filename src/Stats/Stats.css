@@ -18,8 +18,8 @@
 /* A real orange rather than the peach it used to mix, but muted, so it sits at the same
    strength as the bands on the other pages */
 .st-header { --hdr-band: color-mix(in srgb, #DD8A34 52%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
-.st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--t-title); }
-.st-body { flex: 1; overflow-y: scroll; padding: 20px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
+.st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--hdr-title-stat); }
+.st-body { flex: 1; overflow-y: scroll; padding: 15px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
 .st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
 
@@ -56,7 +56,7 @@
 /* The todo history filters, a panel of labelled fields. Each field is a quiet label over its
    controls, the same shape a todo's Categories and Resources sections wear, so the eye lands
    on a group at a time rather than a wall of pills and inputs */
-.st-filters { margin: 0 0 16px; padding: 14px 16px; background: var(--t-surface-4); border: 1px solid var(--t-border); border-radius: var(--t-r); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px 18px; align-items: end; }
+.st-filters { margin: 0 0 16px; padding: 14px 16px; background: color-mix(in srgb, #DD8A34 45%, #fff); border: 1px solid var(--t-border); border-radius: var(--t-r); box-shadow: var(--t-shadow-card); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px 18px; align-items: end; }
 .st-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .st-field-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); white-space: nowrap; }
 .st-field-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -65,17 +65,24 @@
 /* Every control in the panel shares one height so each row reads as a single line */
 .st-input, .st-search-input { height: 26px; box-sizing: border-box; padding: 0 8px; font-size: 12px; border: 1px solid var(--t-border-2); border-radius: var(--t-r-input); background: var(--t-surface); }
 .st-input--minutes { width: 64px; }
-.st-search-input { flex: 1 1 180px; min-width: 140px; }
+/* Native date inputs sit at a wide intrinsic size and won't shrink, so the date range wraps
+   while the flexible search row on the same column stays on one line. Let them flex down. */
+.st-input[type="date"] { flex: 1 1 82px; max-width: 130px; padding: 0 3px; }
+.st-search-input { flex: 1 1 110px; min-width: 110px; }
+/* Date range and Search share a column. Both the date boxes and the search box grow to fill
+   the column, so the leftover space is soaked up by the boxes rather than inflating the gaps.
+   That leaves the last date box to the All button at the same base gap the search box keeps to
+   its scope pills, and the presets end level with those pills at the column's right edge */
 .st-affix { font-size: 12px; color: var(--t-text-3); }
 .st-filters .st-pill { height: 26px; display: inline-flex; align-items: center; }
 
 .st-dd { position: relative; flex-shrink: 0; }
-/* Both dropdowns fill their column, so Unit and the tag picker sit flush above each other */
-.st-field .st-dd { width: 100%; min-width: 120px; }
+/* Fixed width so a long selected name truncates instead of resizing the box */
+.st-field .st-dd { width: 175px; }
 .st-dd-btn { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; height: 26px; box-sizing: border-box; padding: 0 10px; font-size: 12px; font-weight: 400; border: 1px solid var(--t-border-2); border-radius: var(--t-r-input); background: var(--t-surface); color: var(--t-text-3); box-shadow: none; }
 .st-dd-btn:hover { background: var(--t-surface); border-color: var(--t-accent-bdr); color: var(--t-text-3); box-shadow: none; }
 .st-dd-btn.active, .st-dd-btn.active:hover { color: var(--t-text); }
-.st-dd-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-dd-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-dd-caret { color: var(--t-text-3); font-size: 10px; flex-shrink: 0; }
 .st-dd-menu { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; min-width: 220px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px; background: var(--t-surface); border-radius: var(--t-r); box-shadow: 0 4px 16px rgba(0,0,0,0.16); }
 .st-dd-search { width: 100%; box-sizing: border-box; margin-bottom: 6px; font-size: 12px; padding: 4px 8px; }
@@ -91,12 +98,14 @@
 .st-dd-opt.dead:hover, .st-dd-opt.dead:active, .st-dd-opt.dead.active { color: var(--t-text-3); }
 /* The gold running tally, pinned to the right end so the category line reaches the far edge,
    always present so its space is held, only dimmed when no filter is on */
-.st-count-box { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; height: 26px; box-sizing: border-box; padding: 0 10px; border-radius: var(--t-r-btn); background: var(--t-yellow); border: 1px solid var(--t-yellow); color: #3a2b06; font-size: 12px; font-weight: 700; user-select: none; }
-.st-count-box.off { opacity: 0.4; }
+.st-count-box { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 26px; box-sizing: border-box; padding: 0 10px; border-radius: var(--t-r-btn); background: var(--t-stat); border: 1px solid var(--t-stat); color: var(--t-accent-fg); font-size: 12px; font-weight: 600; white-space: nowrap; user-select: none; }
+.st-count-box.off { opacity: 0.5; }
+/* Capped so a long unit name can't push the chip onto a new line */
+.st-count-unit { display: inline-block; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
 .st-pills { display: flex; gap: 5px; flex-wrap: wrap; }
 /* The day of week pills lose some side padding so all eight fit on one line */
-.st-pills--tight .st-pill { padding: 0 8px; }
+.st-pills--tight .st-pill { padding: 0 6px; }
 /* Stats pills rest on what is the app button's hover mauve and hover deeper still, kept
    local so ordinary buttons elsewhere stay where they are */
 .st-pill { --st-pill: var(--t-btn-h); --st-pill-h: #64414C; padding: 3px 12px; border-radius: var(--t-r-btn); border: 1px solid var(--st-pill); background: var(--st-pill); font-size: 12px; cursor: pointer; color: var(--t-btn-fg); font-family: inherit; font-weight: 600; transition: background var(--t-ease); user-select: none; }
@@ -292,8 +301,8 @@
 /* Expanded todo, where the shared resource card styles live in App.css */
 .st-todo-section { margin-bottom: 10px; }
 /* Resource names stay compact inside the expanded todo, the 15px size is for full-width lists */
-.st-todo-expanded .st-resource-card-name { font-size: 13px; }
-.st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
+.st-todo-expanded .st-resource-card-name { font-size: 17px; }
+.st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; line-height: 1; color: var(--t-label); margin-bottom: 5px; }
 .st-todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
 .st-btn-sm { padding: 3px 8px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-btn-fg); box-shadow: none; }

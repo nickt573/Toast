@@ -325,15 +325,16 @@ function buildByCategoryData(todoStats) {
   };
 }
 
-// The distinct units that appear in a plan's logged todos, keyed by group and labelled
-// with the group's main spelling, so units created but never logged stay out
-function unitOptionsFrom(todoStats) {
+// The distinct units in a plan's logged todos, labelled with the main spelling. Each carries
+// the group's alternate spellings so a search on one surfaces the main
+function unitOptionsFrom(todoStats, allUnits = []) {
+  const altsByGroup = new Map(allUnits.map(u => [u.id, u.variants.map(v => v.name.toLowerCase())]));
   const seen = new Map();
   todoStats.forEach(r => {
     if (r.unit_group_id != null && r.unit_name && !seen.has(r.unit_group_id)) seen.set(r.unit_group_id, r.unit_name);
   });
   return [...seen.entries()]
-    .map(([id, name]) => ({ id, name }))
+    .map(([id, name]) => ({ id, name, alt: altsByGroup.get(id) ?? [name.toLowerCase()] }))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
@@ -614,7 +615,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
 
   // Hours are fractional, drop the whole-number tick step
   const timeOpts = (() => {
-    const o = barOpts(true, "hours", dateTicks(timeWin.unit), false, timeWin.unit);
+    const o = barOpts(true, "Hours", dateTicks(timeWin.unit), false, timeWin.unit);
     delete o.scales.y.ticks.stepSize;
     return o;
   })();
@@ -656,7 +657,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
                 ? <div className="empty-bubble">No study recorded in this period.</div>
                 : <>
                     <div style={{ height: 200 }}>
-                      <Bar data={barData} options={barOpts(true, "cards", dateTicks(overWin.unit), true, overWin.unit)} />
+                      <Bar data={barData} options={barOpts(true, "Cards", dateTicks(overWin.unit), true, overWin.unit)} />
                     </div>
                     {hasRetention && (
                       <div style={{ marginTop: 14 }}>
@@ -685,7 +686,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
         byDeckData.labels.length === 0
           ? <div className="empty-bubble">No deck study data yet.</div>
           : <div style={{ height: 220 }}>
-              <Bar data={byDeckData} options={barOpts(false, "cards", DECK_TICKS)} />
+              <Bar data={byDeckData} options={barOpts(false, "Cards", DECK_TICKS)} />
             </div>
       )}
 
@@ -693,7 +694,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
         byCatData.labels.length === 0
           ? <div className="empty-bubble">No todo data yet.</div>
           : <div style={{ height: 220 }}>
-              <Bar data={byCatData} options={barOpts(false, "hours")} />
+              <Bar data={byCatData} options={barOpts(false, "Hours")} />
             </div>
       )}
 
@@ -1030,7 +1031,7 @@ function fmtDayLabel(dateStr) {
   });
 }
 
-const WEEKDAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const SEARCH_SCOPES = [
   { key: "all",       label: "All" },
@@ -1099,8 +1100,10 @@ function FilterDropdown({ label, active, groups, value, onSelect, className }) {
   const close = () => { setOpen(false); setSearch(""); };
 
   const q = search.trim().toLowerCase();
+  // Match the label or any alternate spelling it carries
+  const matches = (it) => it.label.toLowerCase().includes(q) || (it.alt ?? []).some(a => a.includes(q));
   const shownGroups = groups
-    .map(g => ({ ...g, items: q ? g.items.filter(it => it.value !== "all" && it.label.toLowerCase().includes(q)) : g.items }))
+    .map(g => ({ ...g, items: q ? g.items.filter(it => it.value !== "all" && matches(it)) : g.items }))
     .filter(g => g.items.length > 0);
   const total = groups.reduce((n, g) => n + g.items.filter(it => it.value !== "all").length, 0);
 
@@ -1132,7 +1135,7 @@ function FilterDropdown({ label, active, groups, value, onSelect, className }) {
   );
 }
 
-function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResources, onOpenDeck }) {
+function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResources, allUnits, onOpenDeck }) {
   const [catFilter, setCatFilter] = useState(() => new Set(["all"]));
   const [expanded,  setExpanded]  = useState({});
   const [dateFrom,  setDateFrom]  = useState("");
@@ -1148,7 +1151,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   const [tagFilter, setTagFilter] = useState(null);
   const [dayFilter, setDayFilter] = useState(() => new Set(["all"]));
 
-  const unitOptions = unitOptionsFrom(todoStats);
+  const unitOptions = unitOptionsFrom(todoStats, allUnits);
 
   // All stands alone, picking it clears the rest and picking anything else clears it
   const toggleIn = (setter) => (key) => setter(prev => {
@@ -1280,6 +1283,12 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   // tally appears against the full history
   const filtersActive = !!(dateFrom || dateTo || !catFilter.has("all") || !dayFilter.has("all") || query || unitFilter !== "all" || minutes !== "" || tagFilter);
 
+  // The tally also carries the matching todos' total time, and the picked unit's summed amount
+  const visibleMinutes = visible.reduce((s, r) => s + r.time_spent_minutes, 0);
+  const unitName = unitFilter === "all" ? null : (unitOptions.find(u => u.id === unitFilter)?.name ?? null);
+  const unitSum = unitName ? visible.reduce((s, r) => s + (r.num_value ?? 0), 0) : null;
+  const visibleUnits = unitSum === null ? null : (Number.isInteger(unitSum) ? unitSum : Math.round(unitSum * 100) / 100);
+
   return (
     <div>
       <div className="st-filters">
@@ -1307,7 +1316,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
               label={unitFilter === "all" ? "All" : (unitOptions.find(u => u.id === unitFilter)?.name ?? "All")}
               active={unitFilter !== "all"}
               value={unitFilter === "all" ? "all" : String(unitFilter)}
-              groups={[{ items: [{ value: "all", label: "All units" }, ...unitOptions.map(u => ({ value: String(u.id), label: u.name }))] }]}
+              groups={[{ items: [{ value: "all", label: "All units" }, ...unitOptions.map(u => ({ value: String(u.id), label: u.name, alt: u.alt }))] }]}
               onSelect={v => setUnitFilter(v === "all" ? "all" : Number(v))} />
           </div>
         </div>
@@ -1391,8 +1400,17 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                 );
               })}
             </div>
-            <span className={`st-count-box${filtersActive ? "" : " off"}`} title="Matching todos out of all completed todos">
-              {visible.length}/{todoStats.length}
+            <span className={`st-count-box${filtersActive ? "" : " off"}`} title="Matching todos out of all completed todos, with their total study time">
+              {visible.length}/{todoStats.length} <span className="st-count-label">todos</span>
+              <span className="st-count-sep">·</span>
+              {fmtTime(visibleMinutes)}
+              {unitName && (
+                <>
+                  <span className="st-count-sep">·</span>
+                  {visibleUnits.toLocaleString()}{" "}
+                  <span className="st-count-unit" title={unitName}>({unitName})</span>
+                </>
+              )}
             </span>
           </div>
         </div>
@@ -1682,6 +1700,9 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [planDecks,      setPlanDecks]     = useState([]);
   const [planResources,  setPlanResources] = useState([]);
   const [totals,         setTotals]        = useState(null);
+  // Units are global, so the todo filter's spelling search can reach every alternate name a
+  // unit carries, not only the ones that happen to appear in this plan's logged rows
+  const [allUnits,       setAllUnits]      = useState([]);
 
   useEffect(() => {
     loggedInvoke("get_current_date").then(setToday).catch(e => logError("catch", e));
@@ -1689,11 +1710,13 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       loggedInvoke("get_plans"),
       loggedInvoke("get_deleted_plan_ids"),
       loggedInvoke("get_groups"),
-    ]).then(([ps, deleted, gs]) => {
+      loggedInvoke("get_units"),
+    ]).then(([ps, deleted, gs, units]) => {
       const dp = deleted.map(([id, name]) => ({ id, name }));
       setActivePlans(ps);
       setDeletedPlans(dp);
       setAllGroups(gs);
+      setAllUnits(units);
       loadTotals();
       const firstId = returnContext?.selectedPlanId ?? orderPlanPills(ps, dp)[0]?.id ?? null;
       setSelectedPlanId(firstId);
@@ -1897,6 +1920,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               setToast={setToast}
               allGroups={allGroups}
               planResources={planResources}
+              allUnits={allUnits}
               onOpenDeck={openDeck}
             />
           )}
