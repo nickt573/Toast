@@ -831,6 +831,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
     const [showResources, setShowResources] = useState(false);
     const [studiedToday, setStudiedToday] = useState({ newCards: 0, reviews: 0 });
     const [studiedDeckIds, setStudiedDeckIds] = useState(() => new Set());
+    const [streakInfo, setStreakInfo] = useState(null);
 
     function navigateFromPlan(group, origin) {
         onNavigateToGroup(group, {
@@ -858,7 +859,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
 
     async function loadData() {
         try {
-            const [t, srs, r, g, stats, gStats, today] = await Promise.all([
+            const [t, srs, r, g, stats, gStats, today, streak] = await Promise.all([
                 loggedInvoke("get_todos", { planId: plan.id }),
                 loggedInvoke("get_plan_srs_groups", { planId: plan.id }),
                 loggedInvoke("get_resources", { planId: plan.id }),
@@ -866,7 +867,9 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                 loggedInvoke("get_todo_stats", { planId: plan.id }),
                 loggedInvoke("get_group_stats", { planId: plan.id }),
                 loggedInvoke("get_current_date"),
+                loggedInvoke("get_plan_streak", { planId: plan.id }),
             ]);
+            setStreakInfo(streak);
             // Today's gradings, archived rows left out to match what the streak counts
             const todayRows = gStats.filter(s => s.date === today && !s.is_archived);
             setStudiedToday({
@@ -978,20 +981,31 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         }
     }
 
+    const atRisk = streakInfo && streakInfo.streak > 0 && !streakInfo.studied_today;
+
     return (
         <div className="hp-root">
             <div className="hp-plan-page">
                 <div className="hp-plan-back">
                     <button className="quiet" onClick={onBack}>← Back</button>
+                    <span className="hp-plan-back-streak">
+                        {streakInfo?.streak > 0 && (
+                            <span className={`hp-streak-chip${atRisk ? " at-risk" : ""}`}>
+                                {streakInfo.streak}d streak{atRisk ? " !" : ""}
+                            </span>
+                        )}
+                    </span>
                     <h2>{plan.name}</h2>
-                    <StudyTimer planId={plan.id} />
                 </div>
 
+                <div className="hp-panel-group">
                 {/* Todos */}
                 <div className="hp-section-panel">
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                         <span className="hp-section-label hp-section-label--todos" style={{ marginBottom: 0, flex: 1 }}>Todos</span>
-                        <button onClick={() => { pauseStudyTimer(plan.id); setShowFreeTodo(true); }} style={{ fontSize: 11 }}>Log Extra</button>
+                        <StudyTimer planId={plan.id} />
+                        <button className="hp-extra-add" title="Log extra activity"
+                            onClick={() => { pauseStudyTimer(plan.id); setShowFreeTodo(true); }}>+</button>
                     </div>
                     {todos.length === 0 && (
                         <div className="empty-bubble">No todos today.</div>
@@ -1000,19 +1014,20 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         const links = todoLinks[todo.id] ?? { groups: [], resources: [] };
                         return (
                             <div key={todo.id} className={`hp-todo-row${todo.is_done ? " done" : ""}${todo.is_skipped ? " skipped" : ""}`}>
-                                <div style={{ overflow: "hidden" }}>
+                                <div className="hp-todo-head">
                                     <input type="checkbox" checked={todo.is_done}
                                         disabled={todo.is_skipped}
                                         onChange={() => handleTodoCheck(todo)}
-                                        style={{ float: "left", marginRight: 10, marginTop: 3, cursor: todo.is_skipped ? "default" : "pointer" }} />
+                                        className="hp-todo-check"
+                                        style={{ cursor: todo.is_skipped ? "default" : "pointer" }} />
+                                    <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
+                                        {todo.text}
+                                    </div>
                                     {!todo.is_done && (
                                         <button className="hp-todo-skip" onClick={() => handleTodoSkip(todo)}>
                                             {todo.is_skipped ? "Unskip" : "Skip"}
                                         </button>
                                     )}
-                                    <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
-                                        {todo.text}
-                                    </div>
                                 </div>
                                 <div className="todo-section">
                                     <div className="todo-section-label">Categories</div>
@@ -1036,12 +1051,11 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                             </div>
                         );
                     })}
-                </div>
 
-                {/* Extra Todos */}
-                {extraTodos.length > 0 && (
-                    <div className="hp-section-panel">
-                        <span className="hp-section-label hp-section-label--extra">Extra Todos</span>
+                    {/* Extra Todos share the Todos panel, set apart by spacing above rather than a divider */}
+                    {extraTodos.length > 0 && (
+                        <>
+                        <span className="hp-section-label hp-section-label--extra hp-section-label--extra-inline">Extra Todos</span>
                         {extraTodos.map(ex => {
                             const resources = [...ex.resources].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
                             const groups = [...ex.groups].sort((a, b) =>
@@ -1049,10 +1063,11 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
                             return (
                                 <div key={ex.id} className="hp-todo-row done">
-                                    <div style={{ overflow: "hidden" }}>
+                                    <div className="hp-todo-head">
                                         <input type="checkbox" checked
                                             onChange={() => handleUncheckExtra(ex)}
-                                            style={{ float: "left", marginRight: 10, marginTop: 3, cursor: "pointer" }} />
+                                            className="hp-todo-check"
+                                            style={{ cursor: "pointer" }} />
                                         <div className="hp-todo-text done">{ex.text}</div>
                                     </div>
                                     <div className="todo-section">
@@ -1081,8 +1096,9 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 </div>
                             );
                         })}
-                    </div>
-                )}
+                        </>
+                    )}
+                </div>
 
                 {/* Study */}
                 <div className="hp-section-panel">
@@ -1125,6 +1141,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                             </div>
                         );
                     })}
+                </div>
                 </div>
 
                 {/* Resources, collapsed by default */}

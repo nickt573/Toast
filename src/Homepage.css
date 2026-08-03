@@ -47,7 +47,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 28px;
+  margin-bottom: 16px;
 }
 .hp-refresh-day { flex-shrink: 0; margin-top: 4px; }
 /* Golden when a refresh would actually advance the app day */
@@ -109,7 +109,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-plan-card {
   /* The plan card wears a lighter caramel and forest than the rest of the app, kept here
      so the shared colours those two lighten from stay where they are */
-  --hp-plan-gold:  color-mix(in srgb, var(--t-accent) 66%, #fff);
+  --hp-plan-gold:  color-mix(in srgb, var(--t-accent) 76%, #fff);
   --hp-plan-green: color-mix(in srgb, var(--t-green-h) 66%, #fff);
   --t-stripe: var(--t-border-2);
   --t-stripe-hi: var(--t-border-3);
@@ -166,7 +166,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-plan-name {
   font-family: var(--t-font-head);
-  font-size: 21px;
+  font-size: 25px;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
@@ -213,14 +213,72 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   margin: 0 auto;
 }
 
+/* Its own card again, a clean plate lifted off the page by its shadow */
 .hp-plan-back {
+  margin-bottom: 12px;
+  padding: 16px 22px 18px;
+  border-radius: var(--t-r);
+  background: var(--t-surface);
+  box-shadow: var(--t-shadow-lg);
+}
+/* Back stays pinned to the left where it always sat, filled plan gold like the Plans page. It
+   floats so a long name wraps to a new line before it would reach the button, then runs the
+   full width below it */
+.hp-plan-back .quiet {
+  float: left;
+  background: var(--t-accent-h);
+  border-color: var(--t-accent-h);
+  color: var(--t-accent-fg);
+  box-shadow: none;
+}
+.hp-plan-back .quiet:hover {
+  background: var(--t-accent-h);
+  border-color: var(--t-accent-h);
+  color: var(--t-accent-fg);
+  filter: brightness(0.92);
+}
+/* The streak lives in the right corner, filling what used to be an empty reserve. It floats so
+   it balances the back button and keeps a short name centred, and holds a minimum width so the
+   name stays put on a plan with no streak yet */
+.hp-plan-back-streak {
+  float: right;
+  min-width: 66px;
+  min-height: 34px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
+  justify-content: flex-end;
 }
-/* Free-floating back and title headers name where you are, so they take the title ink and size */
-.hp-plan-back h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 800; letter-spacing: -0.02em; color: var(--t-title); }
+/* Same chip as the dashboard, scaled up to hold its own next to the 28px name */
+.hp-plan-back-streak .hp-streak-chip {
+  font-size: 13px;
+  padding: 5px 12px;
+  margin-top: 0;
+}
+.hp-plan-back h2 {
+  margin: 0;
+  text-align: center;
+  font-family: var(--t-font-head);
+  font-size: 28px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--t-title);
+}
+/* Clears the floated back button and right reserve so the panel wraps its full height */
+.hp-plan-back::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+/* Round yellow add button that logs extra activity, matching the create buttons elsewhere and the Todos family colour */
+.hp-extra-add {
+  flex: none;
+  width: 28px; height: 28px; padding: 0 0 3.2px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 22px; line-height: 0; font-weight: 400;
+  background: var(--t-yellow); border-color: var(--t-yellow); color: var(--t-accent-fg);
+}
+.hp-extra-add:hover { background: var(--t-yellow); border-color: var(--t-yellow); color: var(--t-accent-fg); filter: brightness(0.92); }
 
 /* Study timer, a small paper chip */
 .hp-timer {
@@ -229,7 +287,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   align-items: center;
   gap: 6px;
   background: var(--t-surface);
-  border: 1px solid var(--t-border-2);
+  border: none;
   border-radius: var(--t-r-btn);
   padding: 4px 5px 4px 8px;
 }
@@ -253,18 +311,23 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-timer-btn--clear { background: var(--t-red); border-color: var(--t-red); color: var(--t-accent-fg); }
 .hp-timer-btn--clear:hover { background: var(--t-red-h); border-color: var(--t-red-h); color: var(--t-accent-fg); }
 
-.hp-section-panel {
+/* The sections share one card now, so the chrome lives on the group and each panel just
+   holds its content with a gap keeping them apart */
+.hp-panel-group {
   background: var(--t-surface);
-  border: none;
   border-radius: var(--t-r);
   padding: 14px 20px;
   margin-bottom: 16px;
   box-shadow: var(--t-shadow-sm);
 }
+.hp-section-panel {
+  padding: 0;
+}
+.hp-section-panel + .hp-section-panel { margin-top: 28px; }
 .hp-section-label {
   display: block;
   font-family: var(--t-font-head);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--t-accent);
@@ -273,6 +336,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-section-label--todos { color: var(--t-yellow); }
 .hp-section-label--decks { color: var(--t-blue); }
 .hp-section-label--extra { color: var(--t-green); }
+/* Extra Todos ride in the Todos panel, so the header just needs breathing room above its own rows */
+.hp-section-label--extra-inline { margin-top: 22px; }
 
 /* Todo rows, yellow striped bars */
 .hp-todo-row {
@@ -284,6 +349,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   margin-bottom: var(--t-list-gap);
 }
 .hp-todo-row:last-child { margin-bottom: 0; }
+/* Checkbox, name and skip button share one line, centred against each other */
+.hp-todo-head { display: flex; align-items: center; gap: 10px; }
+.hp-todo-check { flex-shrink: 0; margin: 0; }
 
 /* Prescreen todo list, no inner scroll so the whole popup scrolls instead */
 /* Half-height option rows, so they keep the tighter gap the standard lists moved off of */
@@ -312,6 +380,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 /* Global button styling is nowrap, so clamp long todo names against overflowing the popup */
 .hp-free-todo-text {
+  font-size: 17px;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -342,12 +411,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* Deeper than --t-accent so it stands off the yellow todo row, and lifted above the dimmed
    text, which is its own stacking context and would eat the click */
 .hp-todo-skip {
-  position: relative;
-  z-index: 1;
-  float: right;
+  flex-shrink: 0;
   font-size: 11px;
   padding: 2px 10px;
-  margin-left: 10px;
   background: var(--t-accent-h);
   border-color: var(--t-accent-h);
   color: var(--t-accent-fg);
@@ -360,9 +426,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 
 .hp-todo-text {
+  flex: 1;
+  min-width: 0;
   font-weight: 700;
   color: var(--t-title);
-  font-size: 17px;
+  font-size: 21px;
+  line-height: 1.25;
 }
 .hp-todo-text.done {
   text-decoration: line-through;
@@ -384,7 +453,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* A greyed blue, and bar and border share it so the hover swap to --t-stripe-hi is a no-op */
 .hp-deck-row--idle { cursor: default !important; --t-idle: color-mix(in srgb, var(--t-blue-lt) 32%, #d8dce0); --t-stripe: var(--t-idle); --t-stripe-hi: var(--t-idle); opacity: 0.6; }
 .hp-deck-row--idle .hp-deck-name { color: color-mix(in srgb, var(--t-blue) 55%, #777); font-weight: 600; }
-.hp-deck-name { flex: 1; font-weight: 700; font-size: 17px; color: var(--t-title); }
+.hp-deck-name { flex: 1; font-weight: 700; font-size: 21px; color: var(--t-title); }
 .hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
 .hp-studied-today { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
 .hp-studied-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
@@ -602,7 +671,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   align-items: center;
   gap: 7px;
   font-family: var(--t-font-head);
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--t-clay);
