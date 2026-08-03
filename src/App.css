@@ -996,7 +996,7 @@ textarea { overflow-y: scroll; }
 .st-resource-cards { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 .st-resource-card { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 7px var(--t-stripe-gutter) 7px 11px; }
 .st-resource-card-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.st-resource-card-name { font-weight: 600; font-size: 21px; color: var(--t-title); }
+.st-resource-card-name { font-weight: 600; font-size: 17px; color: var(--t-title); }
 .st-resource-card-type { align-self: center; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; color: var(--t-accent-fg); background: var(--t-clay); border: none; border-radius: var(--t-r-tab); padding: 1px 7px; user-select: none; }
 /* Only the nudge off the baseline it shares with the name, the mark itself is t-open-arrow */
 .st-resource-card-url { margin-top: 3px; }
@@ -1008,7 +1008,7 @@ textarea { overflow-y: scroll; }
 .st-item-bars { display: flex; flex-direction: column; gap: 8px; }
 .st-item-bar { display: flex; align-items: center; gap: 6px; padding: 9px var(--t-stripe-gutter) 9px 12px; }
 /* The name only takes the width it needs so the arrow rides right beside it, not out by the stripes */
-.st-item-bar-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 19px; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-item-bar-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 15px; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-item-bar--resource { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); }
 .st-item-bar--deck     { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); }
 .st-item-bar--notebook { --t-stripe: var(--t-plum-stripe); --t-stripe-hi: var(--t-plum-lt); }
