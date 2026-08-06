@@ -298,6 +298,10 @@ fn migrate_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
     migrate_media_paths(conn, app_dir)?;
     // v1.5.0 skip a todo for today only, cleared on rollover and frequency change
     add_column_if_missing(conn, "todo", "is_skipped", "BOOLEAN NOT NULL DEFAULT FALSE")?;
+    // Optional page a notebook link points at, so a logged todo can jump to one page rather
+    // than the notebook's first. ALTER can't carry the page FK, so the page-delete path nulls
+    // this by hand for migrated databases
+    add_column_if_missing(conn, "todo_stat_group", "page_id", "INTEGER")?;
     add_column_if_missing(
         conn,
         "group_stats",
@@ -649,6 +653,7 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
                 group_id INTEGER,
                 group_name TEXT NOT NULL, -- flexible until id null
                 group_type TEXT,          -- snapshot, kept after group deletion
+                page_id INTEGER,          -- optional page in a notebook link, nulled if the page goes
 
                 FOREIGN KEY(stat_id)
                     REFERENCES todo_stats(id)
@@ -656,6 +661,10 @@ pub fn init_schema(conn: &Connection, app_dir: &Path) -> rusqlite::Result<()> {
 
                 FOREIGN KEY(group_id)
                     REFERENCES "group"(id)
+                    ON DELETE SET NULL,
+
+                FOREIGN KEY(page_id)
+                    REFERENCES page(id)
                     ON DELETE SET NULL
             );
 

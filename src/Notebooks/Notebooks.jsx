@@ -770,13 +770,16 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
 
 // Page viewer and editor
 
-function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, startNewOnOpen }) {
+function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, startNewOnOpen, initialPageId }) {
     const [allPages, setAllPages] = useState([]);
     const [query, setQuery] = useState("");
     const [pageIndex, setPageIndex] = useState(0);
     // After a save the page may have moved or not existed yet, so this holds the id to
     // land on once the list settles
     const [pendingPageId, setPendingPageId] = useState(null);
+    // When opened on a specific page, the list loads at index 0 first, so hold the content
+    // back until we've landed on the wanted page rather than flashing the first one
+    const [awaitingInitial, setAwaitingInitial] = useState(!!initialPageId);
     const [editing, setEditing] = useState(false);
     const [dateOn, setDateOn] = useState("");
     const [today,  setToday] = useState(null);
@@ -793,6 +796,10 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
     }, [notebook.id]);
 
     useEffect(() => { if (startNewOnOpen) startNew(); }, []);
+
+    // Opened from a tagged todo, land on that page once the list loads. A page since deleted
+    // just isn't found, so it stays on the first, which is the wanted fallback
+    useEffect(() => { if (initialPageId) setPendingPageId(initialPageId); }, []);
 
     async function loadPages() {
         try {
@@ -823,11 +830,12 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
 
     // Runs after the reset above, so landing on a saved page wins over the filter reset
     useEffect(() => {
-        if (pendingPageId === null) return;
+        if (pendingPageId === null || allPages.length === 0) return;
         const idx = filteredPages.findIndex(p => p.id === pendingPageId);
         if (idx !== -1) setPageIndex(idx);
         setPendingPageId(null);
-    }, [filteredPages, pendingPageId]);
+        setAwaitingInitial(false);
+    }, [filteredPages, allPages.length, pendingPageId]);
 
     const currentPage = filteredPages[pageIndex] ?? null;
 
@@ -994,7 +1002,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                     </>
                 ) : (
                     <>
-                        {allPages.length === 0 ? (
+                        {awaitingInitial ? null : allPages.length === 0 ? (
                             <div className="nb-page-empty">No pages yet, create one above!</div>
                         ) : filteredPages.length === 0 ? (
                             <div className="nb-no-match">No pages match your filters.</div>
@@ -1029,7 +1037,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                 />
                             </>
                         ) : null}
-                        {filteredPages.length > 0 && (
+                        {!awaitingInitial && filteredPages.length > 0 && (
                             <div className="nb-page-nav">
                                 <button onClick={() => setPageIndex((i) => i === 0 ? filteredPages.length - 1 : i - 1)}>{"‹"}</button>
                                 <span className="nb-page-nav-indicator">
@@ -1077,7 +1085,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
 
 // Root
 
-export default function Notebooks({ setToast, initialNotebook, onClearInitial, returnTo, onReturnToOrigin, homeSignal }) {
+export default function Notebooks({ setToast, initialNotebook, initialPageId, onClearInitial, returnTo, onReturnToOrigin, homeSignal }) {
     const [view, setView] = useState(initialNotebook ? VIEW_PAGES : VIEW_NOTEBOOKS);
     const [activeNotebook, setActiveNotebook] = useState(initialNotebook ?? null);
     const [startNewOnOpen, setStartNewOnOpen] = useState(false);
@@ -1110,6 +1118,7 @@ export default function Notebooks({ setToast, initialNotebook, onClearInitial, r
                         returnTo={returnTo}
                         onReturnToOrigin={onReturnToOrigin}
                         startNewOnOpen={startNewOnOpen}
+                        initialPageId={activeNotebook.id === initialNotebook?.id ? initialPageId : null}
                     />
                 )}
             </div>

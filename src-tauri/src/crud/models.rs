@@ -223,6 +223,11 @@ pub struct TodoStatGroup {
     pub group_id: Option<i64>,
     pub name: String,
     pub group_type: Option<String>,
+    /// A tagged page inside a notebook link, still present only while the page exists
+    pub page_id: Option<i64>,
+    /// The tagged page's 1-based position in the notebook, recomputed live so an earlier
+    /// deletion renumbers it, None once the page or notebook is gone
+    pub page_number: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]

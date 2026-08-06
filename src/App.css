@@ -676,6 +676,11 @@ textarea { overflow-y: scroll; }
 /* Amount and unit chooser, shared by the todo loggers and the stat editor, with arrows to
    step through a unit's other names, and the bare buttons reset the default mauve fill */
 .unit-picker { position: relative; display: flex; gap: 6px; align-items: stretch; }
+/* The page tag menu is drawn on the body and pinned under its trigger, so the clipping card it
+   lives in can never cut it off. Top and left come from the trigger's on-screen spot */
+/* Above the todo popup overlay (100) since the menu is portaled to the body, below the busy
+   overlay and toasts */
+.unit-picker-menu.page-tag-menu { position: fixed; top: auto; right: auto; left: auto; margin-bottom: 0; z-index: 200; }
 .unit-picker-value { flex: 1; min-width: 0; }
 .unit-picker-control { display: flex; align-items: stretch; gap: 1px; }
 .unit-picker-arrow {
@@ -1008,9 +1013,21 @@ textarea { overflow-y: scroll; }
 .st-item-bars { display: flex; flex-direction: column; gap: 8px; }
 .st-item-bar { display: flex; align-items: center; gap: 6px; padding: 9px var(--t-stripe-gutter) 9px 12px; }
 /* The name only takes the width it needs so the arrow rides right beside it, not out by the stripes */
-.st-item-bar-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 15px; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-item-bar-name { flex: 0 1 auto; min-width: 0; font-weight: 600; font-size: 18px; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-item-bar--resource { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); }
 .st-item-bar--deck     { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); }
 .st-item-bar--notebook { --t-stripe: var(--t-plum-stripe); --t-stripe-hi: var(--t-plum-lt); }
 /* A deck or notebook that has since been deleted keeps its stripe but reads dimmed */
 .st-item-bar--dead .st-item-bar-name { opacity: 0.5; }
+
+/* A tagged notebook page shown beside its name, a plum tab badge in the rounded-top flat-bottom
+   convention, riding just before the arrow. On a plum pill it lifts to the lighter plum to read */
+.nbtag-badge {
+  flex-shrink: 0;
+  font-size: 10px; font-weight: 600; line-height: 1.4;
+  padding: 2px 8px; border-radius: var(--t-r-tab);
+  background: var(--t-plum); color: var(--t-accent-fg);
+}
+.pill .nbtag-badge { background: var(--t-plum-lt); }
+
+/* The page picker reuses the unit picker's chip and menu, so its classes live there */

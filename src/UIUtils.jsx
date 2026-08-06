@@ -1,5 +1,7 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { loggedInvoke, logError } from "./logger";
 
 export function Tip({ text }) {
   const [visible, setVisible] = useState(false);
@@ -172,8 +174,9 @@ export function ResourceCard({ res }) {
 }
 
 // One striped bar for an entry's resources, decks and notebooks, where the family shows in
-// the stripe alone and the arrow appears only while the item is still reachable
-export function ItemBar({ name, family, url, onOpen, dead = false }) {
+// the stripe alone and the arrow appears only while the item is still reachable. A tagged
+// notebook page rides along as a small number, and the arrow then opens straight to it
+export function ItemBar({ name, family, url, onOpen, pageNumber = null, dead = false }) {
   const clickable = !!url || !!onOpen;
   const open = (e) => {
     e.stopPropagation();
@@ -183,7 +186,126 @@ export function ItemBar({ name, family, url, onOpen, dead = false }) {
   return (
     <div className={`st-item-bar st-item-bar--${family}${dead ? " st-item-bar--dead" : ""}`}>
       <span className="st-item-bar-name">{name}</span>
+      {pageNumber != null && <span className="nbtag-badge">p.{pageNumber}</span>}
       {clickable && <span className="t-open-arrow st-item-bar-arrow" onClick={open}>↗</span>}
+    </div>
+  );
+}
+
+// The lowest a portaled picker menu may open, just under the app's top nav. A menu whose trigger
+// has scrolled up behind the bar returns null so the caller drops it rather than let it ride over
+// the nav, and it opens again once the trigger scrolls back into view
+function navClipTop() {
+  const nav = document.querySelector(".app-nav");
+  return nav ? nav.getBoundingClientRect().bottom : 0;
+}
+
+// Picker for tagging one page of a notebook on a logged todo, shared by the three logging
+// flows. Pages are numbered by the same order the notebook shows them, so the number a user
+// picks is the number they see. Empty page_id means no tag
+export function NotebookPageTag({ notebookId, pageId, onChange }) {
+  const [pages, setPages] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [pos, setPos] = useState(null);
+  const wrapRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    let alive = true;
+    loggedInvoke("get_pages", { notebookId })
+      .then(rows => { if (alive) setPages(rows); })
+      .catch(e => logError("get_pages", e));
+    return () => { alive = false; };
+  }, [notebookId]);
+
+  // Pin the menu just under the trigger's on-screen spot. The 264 matches the menu width, so it
+  // shifts left when the trigger sits too near the right edge to open flush
+  const place = () => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const r = wrap.getBoundingClientRect();
+    const top = r.bottom + 6;
+    if (top < navClipTop()) { setPos(null); return; }
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - 264 - 8));
+    setPos({ top, left });
+  };
+
+  useLayoutEffect(() => { if (open) place(); }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      if (wrapRef.current && wrapRef.current.contains(e.target)) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    // Freeze the page behind the menu while it is open, so an open menu can never travel up into
+    // a header as its trigger scrolls. Scrolling inside the menu's own list still passes through
+    const blockScroll = (e) => {
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      e.preventDefault();
+    };
+    // A scroll that slips past the block anyway re-pins the menu to its trigger instead of
+    // leaving it stranded
+    const onScroll = (e) => {
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      place();
+    };
+    document.addEventListener("mousedown", onDoc);
+    window.addEventListener("wheel", blockScroll, { passive: false, capture: true });
+    window.addEventListener("touchmove", blockScroll, { passive: false, capture: true });
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", place);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      window.removeEventListener("wheel", blockScroll, { capture: true });
+      window.removeEventListener("touchmove", blockScroll, { capture: true });
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
+  const idx = pages.findIndex(p => p.id === pageId);
+  const current = idx !== -1 ? pages[idx] : null;
+  const q = query.trim().toLowerCase();
+  const filtered = q ? pages.filter(p => (p.title || "").toLowerCase().includes(q)) : pages;
+
+  return (
+    <div className="unit-picker page-tag-picker" ref={wrapRef}>
+      <div className="unit-picker-control">
+        <button type="button" className={`unit-picker-select${current ? " has-unit" : ""}`}
+          onClick={() => setOpen(o => !o)}>
+          <span className="unit-picker-select-label">
+            {current ? `p.${idx + 1} ${current.title || "Untitled"}` : "Tag a page"}
+          </span>
+          {current
+            ? <span className="unit-picker-clear" title="Clear page"
+                onClick={(e) => { e.stopPropagation(); onChange(null); }}>×</span>
+            : <span className="unit-picker-caret">▾</span>}
+        </button>
+      </div>
+
+      {open && pos && createPortal(
+        <div className="unit-picker-menu page-tag-menu" ref={menuRef} style={{ top: pos.top, left: pos.left }}>
+          {pages.length > 8 && (
+            <input type="text" className="unit-picker-search" autoFocus placeholder="Find a page"
+              value={query} onChange={e => setQuery(e.target.value)} />
+          )}
+          <div className="unit-picker-list">
+            {filtered.length === 0 && <div className="unit-picker-hint">No pages</div>}
+            {filtered.map(p => (
+              <div key={p.id} className={`unit-picker-row${p.id === pageId ? " active" : ""}`}>
+                <button type="button" className={`unit-picker-opt${p.id === pageId ? " active" : ""}`}
+                  onClick={() => { onChange(p.id); setOpen(false); setQuery(""); }}>
+                  <span className="unit-picker-count">p.{pages.indexOf(p) + 1}</span>
+                  <span className="unit-picker-optname">{p.title || "Untitled"}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>,
+        document.body)}
     </div>
   );
 }

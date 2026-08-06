@@ -648,9 +648,16 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
     let mut stat_groups: HashMap<i64, Vec<TodoStatGroup>> = HashMap::new();
     conn.prepare(
         r#"
-        SELECT tsg.stat_id, tsg.rowid, tsg.group_id, COALESCE(g.name, tsg.group_name), COALESCE(g.group_type, tsg.group_type)
+        SELECT tsg.stat_id, tsg.rowid, tsg.group_id, COALESCE(g.name, tsg.group_name), COALESCE(g.group_type, tsg.group_type),
+               tp.id,
+               CASE WHEN tp.id IS NULL THEN NULL ELSE
+                 (SELECT COUNT(*) FROM page p2 WHERE p2.group_id = tp.group_id
+                    AND (p2.created_date < tp.created_date
+                         OR (p2.created_date = tp.created_date AND p2.id <= tp.id)))
+               END
         FROM todo_stat_group tsg
         LEFT JOIN "group" g ON g.id = tsg.group_id
+        LEFT JOIN page tp ON tp.id = tsg.page_id AND tp.group_id = tsg.group_id
         WHERE tsg.stat_id IN (SELECT id FROM todo_stats WHERE plan_id = ?1)
         "#,
     )?
@@ -662,6 +669,8 @@ pub fn get_todo_stats(plan_id: i64, conn: &Connection) -> Result<Vec<TodoStat>> 
                 group_id: row.get::<_, Option<i64>>(2)?,
                 name: row.get::<_, String>(3)?,
                 group_type: row.get::<_, Option<String>>(4)?,
+                page_id: row.get::<_, Option<i64>>(5)?,
+                page_number: row.get::<_, Option<i64>>(6)?,
             },
         ))
     })?

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
-import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip } from "../UIUtils";
+import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip, NotebookPageTag } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
 import UnitPicker from "../UnitPicker";
 import { resolveUnitPair } from "../unitPair";
@@ -1227,6 +1227,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
       resources: r.resources.map(x => x.row_id),
       addGroupIds: [],
       addResourceIds: [],
+      // Tagged page per notebook, keyed by group id since a notebook links a stat only once
+      pageByGroup: Object.fromEntries(
+        r.groups.filter(g => g.group_type === "notebook" && g.group_id != null)
+          .map(g => [g.group_id, g.page_id ?? null])
+      ),
     });
   };
 
@@ -1246,6 +1251,19 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
     if (unit.error) { setToast(unit.error, "warn"); return; }
     const removeGroupRowIds    = r.groups.map(x => x.row_id).filter(id => !editForm.groups.includes(id));
     const removeResourceRowIds = r.resources.map(x => x.row_id).filter(id => !editForm.resources.includes(id));
+    // A page on a newly added notebook rides in with the insert, one on a kept link is set
+    // after the update since its row already exists
+    const addGroupPages = [];
+    const keptPageUpdates = [];
+    Object.entries(editForm.pageByGroup).forEach(([gidStr, pid]) => {
+      const gid = Number(gidStr);
+      const kept = r.groups.find(g => g.group_id === gid && editForm.groups.includes(g.row_id));
+      if (kept) {
+        if ((pid ?? null) !== (kept.page_id ?? null)) keptPageUpdates.push([kept.row_id, pid ?? null]);
+      } else if (editForm.addGroupIds.includes(gid) && pid != null) {
+        addGroupPages.push([gid, pid]);
+      }
+    });
     try {
       await loggedInvoke("update_todo_stat", {
         id: r.id,
@@ -1259,8 +1277,12 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
         removeGroupRowIds,
         removeResourceRowIds,
         addGroupIds: editForm.addGroupIds,
+        addGroupPages,
         addResourceIds: editForm.addResourceIds,
       });
+      for (const [rowId, pageId] of keptPageUpdates) {
+        await loggedInvoke("set_todo_stat_group_page", { rowId, pageId });
+      }
       setEditingId(null);
       setEditForm(null);
       setToast("Entry updated.");
@@ -1478,7 +1500,8 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                             return (
                               <ItemBar key={`g-${g.row_id}`} name={g.name}
                                 family={g.group_type === "notebook" ? "notebook" : "deck"}
-                                onOpen={live ? () => onOpenDeck(live) : undefined} />
+                                pageNumber={g.group_type === "notebook" ? g.page_number : null}
+                                onOpen={live ? () => onOpenDeck(live, g.group_type === "notebook" ? g.page_id : null) : undefined} />
                             );
                           })}
                       </div>
@@ -1642,6 +1665,29 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       </div>
                     );
                   })()}
+                  {(() => {
+                    const nbs = [];
+                    const seen = new Set();
+                    r.groups.filter(g => g.group_type === "notebook" && g.group_id != null && editForm.groups.includes(g.row_id))
+                      .forEach(g => { if (!seen.has(g.group_id)) { seen.add(g.group_id); nbs.push({ id: g.group_id, name: g.name }); } });
+                    allGroups.filter(g => g.group_type === "notebook" && editForm.addGroupIds.includes(g.id))
+                      .forEach(g => { if (!seen.has(g.id)) { seen.add(g.id); nbs.push({ id: g.id, name: g.name }); } });
+                    if (nbs.length === 0) return null;
+                    return (
+                      <div>
+                        <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Notebook pages (optional)</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {nbs.map(nb => (
+                            <div key={nb.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: 13, color: "var(--t-text-2)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nb.name}</span>
+                              <NotebookPageTag notebookId={nb.id} pageId={editForm.pageByGroup[nb.id] ?? null}
+                                onChange={pid => setEditForm(f => ({ ...f, pageByGroup: { ...f.pageByGroup, [nb.id]: pid } }))} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
                     Resources, decks, and notebooks that have been deleted can be removed here, but they cannot be added back.
                   </div>
@@ -1725,12 +1771,12 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
     }).catch(e => { logError("catch", e); setLoading(false); });
   }, []);
 
-  const openDeck = (group) => {
+  const openDeck = (group, pageId = null) => {
     onNavigateToGroup(group, {
       menu: "stats",
       label: "Stats",
       statsContext: { selectedPlanId, contentTab },
-    });
+    }, pageId);
   };
 
   const loadStats = (planId) => {

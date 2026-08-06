@@ -4,6 +4,12 @@ use chrono::Datelike;
 use rusqlite::{Connection, Result};
 use std::path::Path;
 
+/// The page tagged for a group when a todo is logged, if any. Pairs are (group_id, page_id)
+/// and only notebook links a page was chosen for appear
+fn page_for(pairs: &[(i64, i64)], group_id: i64) -> Option<i64> {
+    pairs.iter().find(|(g, _)| *g == group_id).map(|(_, p)| *p)
+}
+
 /// Snapshot a resource's full info into a todo_stats log row, kept after the resource is
 /// deleted while live values override it through COALESCE in the read query
 fn insert_stat_resource(stat_id: i64, resource_id: i64, conn: &Connection) -> Result<()> {
@@ -415,6 +421,7 @@ pub fn complete_todo(
     details: Option<String>,
     resource_ids: Vec<i64>,
     group_ids: Vec<i64>,
+    group_pages: Vec<(i64, i64)>,
     category: i64,
     text_override: Option<String>,
     conn: &Connection,
@@ -473,8 +480,8 @@ pub fn complete_todo(
             )
             .unwrap_or_default();
         conn.execute(
-            "INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type) VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![stat_id, group_id, group_name, group_type],
+            "INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type, page_id) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![stat_id, group_id, group_name, group_type, page_for(&group_pages, *group_id)],
         )?;
     }
 
@@ -496,6 +503,7 @@ pub fn log_free_todo(
     num_value: Option<f64>,
     variant_id: Option<i64>,
     group_ids: Vec<i64>,
+    group_pages: Vec<(i64, i64)>,
     resource_ids: Vec<i64>,
     date: Option<String>,
     conn: &Connection,
@@ -554,8 +562,8 @@ pub fn log_free_todo(
             )
             .unwrap_or_default();
         conn.execute(
-            "INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type) VALUES (?1, ?2, ?3, ?4)",
-            rusqlite::params![stat_id, group_id, group_name, group_type],
+            "INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type, page_id) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![stat_id, group_id, group_name, group_type, page_for(&group_pages, *group_id)],
         )?;
     }
 
@@ -576,6 +584,29 @@ pub fn uncomplete_todo(todo_id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Tag or clear the page on a notebook link that already exists, used by the stat editor for
+/// links it kept. Setting a page only takes when the page belongs to the link's own notebook
+pub fn set_todo_stat_group_page(
+    row_id: i64,
+    page_id: Option<i64>,
+    conn: &Connection,
+) -> Result<()> {
+    match page_id {
+        Some(pid) => conn.execute(
+            r#"
+            UPDATE todo_stat_group SET page_id = ?1
+            WHERE rowid = ?2 AND group_id = (SELECT group_id FROM page WHERE id = ?1)
+            "#,
+            rusqlite::params![pid, row_id],
+        )?,
+        None => conn.execute(
+            "UPDATE todo_stat_group SET page_id = NULL WHERE rowid = ?1",
+            rusqlite::params![row_id],
+        )?,
+    };
+    Ok(())
+}
+
 pub fn update_todo_stat(
     id: i64,
     date: String,
@@ -588,6 +619,7 @@ pub fn update_todo_stat(
     remove_group_row_ids: Vec<i64>,
     remove_resource_row_ids: Vec<i64>,
     add_group_ids: Vec<i64>,
+    add_group_pages: Vec<(i64, i64)>,
     add_resource_ids: Vec<i64>,
     conn: &Connection,
 ) -> Result<()> {
@@ -672,12 +704,12 @@ pub fn update_todo_stat(
     for group_id in &add_group_ids {
         conn.execute(
             r#"
-            INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type)
-            SELECT ?1, g.id, g.name, g.group_type FROM "group" g
+            INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type, page_id)
+            SELECT ?1, g.id, g.name, g.group_type, ?3 FROM "group" g
             WHERE g.id = ?2
               AND NOT EXISTS (SELECT 1 FROM todo_stat_group WHERE stat_id = ?1 AND group_id = ?2)
             "#,
-            rusqlite::params![id, group_id],
+            rusqlite::params![id, group_id, page_for(&add_group_pages, *group_id)],
         )?;
     }
     for resource_id in &add_resource_ids {

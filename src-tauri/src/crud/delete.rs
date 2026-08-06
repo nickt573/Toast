@@ -208,6 +208,13 @@ pub fn delete_notebook(id: i64, conn: &Connection, app_dir: &Path) -> Result<()>
         delete_media_file(app_dir, audio_file);
     }
 
+    // Drop any page tags on this notebook before its pages go, so no stat bar keeps a number
+    // for a page that no longer exists
+    conn.execute(
+        "UPDATE todo_stat_group SET page_id = NULL WHERE page_id IN (SELECT id FROM page WHERE group_id = ?1)",
+        [id],
+    )?;
+
     conn.execute(
         r#"DELETE FROM "group" WHERE id = ?1 AND group_type = 'notebook'"#,
         [id],
@@ -232,6 +239,13 @@ pub fn delete_page(id: i64, conn: &Connection, app_dir: &Path) -> Result<()> {
     }
 
     delete_media_file(app_dir, audio_file);
+
+    // Migrated databases never got the page FK, so drop the tag by hand. This also guards
+    // against SQLite handing the freed rowid to a new page and a stale tag pointing at it
+    conn.execute(
+        "UPDATE todo_stat_group SET page_id = NULL WHERE page_id = ?1",
+        [id],
+    )?;
 
     conn.execute("DELETE FROM page WHERE id = ?1", [id])?;
 

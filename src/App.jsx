@@ -32,6 +32,7 @@ export default function App() {
   const [toast, setToast] = useState({ message: "", type: "info" });
   const [initialDeck, setInitialDeck] = useState(null);
   const [initialNotebook, setInitialNotebook] = useState(null);
+  const [initialPageId, setInitialPageId] = useState(null);
   const [returnTo, setReturnTo] = useState(null);
   const [homeReturnContext, setHomeReturnContext] = useState(null);
   const [plansReturnContext, setPlansReturnContext] = useState(null);
@@ -66,7 +67,7 @@ export default function App() {
     }
   }
 
-  function navigateToGroup(group, origin) {
+  function navigateToGroup(group, origin, pageId = null) {
     if (origin) setReturnTo(origin);
     if (group.group_type === "deck") {
       setInitialDeck(group);
@@ -74,6 +75,7 @@ export default function App() {
       setMenu("decks");
     } else if (group.group_type === "notebook") {
       setInitialNotebook(group);
+      setInitialPageId(pageId);
       setInitialDeck(null);
       setMenu("notebooks");
     }
@@ -258,7 +260,8 @@ export default function App() {
         <Notebooks
           setToast={showToast}
           initialNotebook={initialNotebook}
-          onClearInitial={() => setInitialNotebook(null)}
+          initialPageId={initialPageId}
+          onClearInitial={() => { setInitialNotebook(null); setInitialPageId(null); }}
           returnTo={returnTo}
           onReturnToOrigin={returnToOrigin}
           homeSignal={homeSignal}

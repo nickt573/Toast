@@ -118,6 +118,7 @@ pub fn update_todo_stat(
     remove_group_row_ids: Vec<i64>,
     remove_resource_row_ids: Vec<i64>,
     add_group_ids: Vec<i64>,
+    add_group_pages: Vec<(i64, i64)>,
     add_resource_ids: Vec<i64>,
     state: tauri::State<AppState>,
 ) -> Result<(), String> {
@@ -134,10 +135,21 @@ pub fn update_todo_stat(
         remove_group_row_ids,
         remove_resource_row_ids,
         add_group_ids,
+        add_group_pages,
         add_resource_ids,
         &conn,
     )
     .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_todo_stat_group_page(
+    row_id: i64,
+    page_id: Option<i64>,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    update::set_todo_stat_group_page(row_id, page_id, &conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

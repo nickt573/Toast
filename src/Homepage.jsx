@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getVersion } from "@tauri-apps/api/app";
 
 import { CardFace, renderAnkiHtml, stripAudioTags } from "./Decks/CardFace";
-import { ResourceCard, GroupTypeBadge, Tip } from "./UIUtils";
+import { ResourceCard, GroupTypeBadge, Tip, NotebookPageTag } from "./UIUtils";
 import { computeCategory, maskToCategories, categoryStringToMask, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
 import UnitPicker from "./UnitPicker";
 import { resolveUnitPair } from "./unitPair";
@@ -20,8 +20,38 @@ function GroupPill({ group, onClick }) {
             onClick={onClick}
         >
             {group.name}
+            {group.page_number != null && <span className="nbtag-badge">p.{group.page_number}</span>}
             <GroupTypeBadge type={group.group_type} />
         </span>
+    );
+}
+
+// The pairs of (group id, page id) the backend takes, built from the notebooks a log selected
+// and any page tagged on them
+function groupPagesFor(allGroups, selectedGroupIds, pageByGroup) {
+    return selectedGroupIds
+        .map(id => allGroups.find(g => g.id === id))
+        .filter(g => g && g.group_type === "notebook" && pageByGroup[g.id] != null)
+        .map(g => [g.id, pageByGroup[g.id]]);
+}
+
+// One row per selected notebook to tag a page on, shared by the complete and log-extra popups
+function NotebookPagesPicker({ allGroups, selectedGroupIds, pageByGroup, onChange }) {
+    const nbs = allGroups.filter(g => g.group_type === "notebook" && selectedGroupIds.includes(g.id));
+    if (nbs.length === 0) return null;
+    return (
+        <div>
+            <div className="hp-popup-label">Notebook pages (optional)</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {nbs.map(nb => (
+                    <div key={nb.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 13, color: "var(--t-text-2)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nb.name}</span>
+                        <NotebookPageTag notebookId={nb.id} pageId={pageByGroup[nb.id] ?? null}
+                            onChange={pid => onChange(nb.id, pid)} />
+                    </div>
+                ))}
+            </div>
+        </div>
     );
 }
 
@@ -290,6 +320,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
     const [categoryMap, setCategoryMap] = useState(() => maskToCategories(todo.category ?? 64));
     const [selectedResourceIds, setSelectedResourceIds] = useState(() => todoResources.map(r => r.id));
     const [selectedGroupIds, setSelectedGroupIds] = useState(() => todoGroups.map(g => g.id));
+    const [pageByGroup, setPageByGroup] = useState({});
 
     function toggleResource(id) {
         setSelectedResourceIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -349,6 +380,10 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                     </div>
                 )}
 
+                <NotebookPagesPicker allGroups={allGroups} selectedGroupIds={selectedGroupIds}
+                    pageByGroup={pageByGroup}
+                    onChange={(gid, pid) => setPageByGroup(prev => ({ ...prev, [gid]: pid }))} />
+
                 <div>
                     <div className="hp-popup-label">Time spent (minutes)</div>
                     <input type="number" min={1} step={1} value={timeSpent}
@@ -382,6 +417,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                             selectedGroupIds,
                             computeCategory(categoryMap),
                             text,
+                            groupPagesFor(allGroups, selectedGroupIds, pageByGroup),
                         )}>
                         Done
                     </button>
@@ -402,6 +438,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
     const [details, setDetails] = useState("");
     const [selectedGroupIds, setSelectedGroupIds] = useState([]);
     const [selectedResourceIds, setSelectedResourceIds] = useState([]);
+    const [pageByGroup, setPageByGroup] = useState({});
     const [categoryMap, setCategoryMap] = useState(DEFAULT_CATEGORY());
     const [today, setToday] = useState("");
     const [date, setDate] = useState("");
@@ -427,6 +464,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
         setCategoryMap(DEFAULT_CATEGORY());
         setSelectedGroupIds([]);
         setSelectedResourceIds([]);
+        setPageByGroup({});
         setMode("form");
     }
 
@@ -456,6 +494,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
             numValue,
             variantId,
             groupIds: selectedGroupIds,
+            groupPages: groupPagesFor(allGroups, selectedGroupIds, pageByGroup),
             resourceIds: selectedResourceIds,
             date: date && date !== today ? date : null,
         });
@@ -541,6 +580,10 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                         </div>
                     </div>
                 )}
+
+                <NotebookPagesPicker allGroups={allGroups} selectedGroupIds={selectedGroupIds}
+                    pageByGroup={pageByGroup}
+                    onChange={(gid, pid) => setPageByGroup(prev => ({ ...prev, [gid]: pid }))} />
 
                 <div>
                     <div className="hp-popup-label">Time spent (minutes)</div>
@@ -833,13 +876,13 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
     const [studiedDeckIds, setStudiedDeckIds] = useState(() => new Set());
     const [streakInfo, setStreakInfo] = useState(null);
 
-    function navigateFromPlan(group, origin) {
+    function navigateFromPlan(group, origin, pageId = null) {
         onNavigateToGroup(group, {
             ...origin,
             menu: "home",
             label: plan.name,
             homeContext: { plan },
-        });
+        }, pageId);
     }
 
     useEffect(() => { loadData(); }, [plan.id]);
@@ -933,7 +976,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         }
     }
 
-    async function confirmComplete(timeSpent, numValue, variantId, details, resourceIds, groupIds, category, text) {
+    async function confirmComplete(timeSpent, numValue, variantId, details, resourceIds, groupIds, category, text, groupPages) {
         if (!completingTodo) return;
         if (!text?.trim()) { setToast("Please enter a todo name.", "warn"); return; }
         if (!category || category === 0) { setToast("Select at least one category.", "warn"); return; }
@@ -949,6 +992,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                 details,
                 resourceIds,
                 groupIds,
+                groupPages,
                 category,
                 text: text.trim(),
             });
@@ -960,7 +1004,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         } catch (e) { logError("catch", e); setToast("Failed to complete todo.", "error"); }
     }
 
-    async function confirmFreeTodo({ text, category, details, timeSpent, numValue, variantId, groupIds, resourceIds, date }) {
+    async function confirmFreeTodo({ text, category, details, timeSpent, numValue, variantId, groupIds, groupPages, resourceIds, date }) {
         if (!category || category === 0) { setToast("Select at least one category.", "warn"); return; }
         if (timeSpent <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
         const unit = resolveUnitPair(numValue, variantId);
@@ -968,7 +1012,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         try {
             await loggedInvoke("log_free_todo", {
                 planId: plan.id, text, category, details,
-                timeSpentMinutes: timeSpent, numValue: unit.numValue, variantId: unit.variantId, groupIds, resourceIds, date,
+                timeSpentMinutes: timeSpent, numValue: unit.numValue, variantId: unit.variantId, groupIds, groupPages, resourceIds, date,
             });
             setShowFreeTodo(false);
             resetStudyTimer(plan.id);
@@ -1087,7 +1131,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                                     const live = g.group_id != null ? allGroups.find(x => x.id === g.group_id) : null;
                                                     return (
                                                         <GroupPill key={`g-${g.row_id}`} group={g}
-                                                            onClick={live ? () => navigateFromPlan(live) : undefined} />
+                                                            onClick={live ? () => navigateFromPlan(live, undefined, g.group_type === "notebook" ? g.page_id : null) : undefined} />
                                                     );
                                                 })}
                                             </div>
