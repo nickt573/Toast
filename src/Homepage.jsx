@@ -1032,6 +1032,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
             <div className="hp-plan-page">
                 <div className="hp-plan-back">
                     <button className="quiet" onClick={onBack}>← Back</button>
+                    <h2>{plan.name}</h2>
                     <span className="hp-plan-back-streak">
                         {streakInfo?.streak > 0 && (
                             <span className={`hp-streak-chip${atRisk ? " at-risk" : ""}`}>
@@ -1039,13 +1040,12 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                             </span>
                         )}
                     </span>
-                    <h2>{plan.name}</h2>
                 </div>
 
                 <div className="hp-panel-group">
                 {/* Todos */}
                 <div className="hp-section-panel">
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                         <span className="hp-section-label hp-section-label--todos" style={{ marginBottom: 0, flex: 1 }}>Todos</span>
                         <StudyTimer planId={plan.id} />
                         <button className="hp-extra-add" title="Log extra activity"
@@ -1142,11 +1142,25 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         })}
                         </>
                     )}
+
+                    {/* Resources, collapsed by default */}
+                    {planResources.length > 0 && (
+                        <div className="hp-resources">
+                            <span className="hp-resources-toggle" onClick={() => setShowResources(s => !s)}>
+                                Resources <span className="t-caret">{showResources ? "▾" : "▸"}</span>
+                            </span>
+                            {showResources && (
+                                <div className="hp-resources-list">
+                                    {planResources.map(r => <ResourceCard key={r.id} res={r} />)}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Study */}
                 <div className="hp-section-panel">
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
                         <span className="hp-section-label hp-section-label--decks" style={{ marginBottom: 0, flex: 1 }}>Decks</span>
                         {(srsGroups.length > 0 || studiedToday.newCards > 0 || studiedToday.reviews > 0) && (
                             <span className="hp-studied-today">
@@ -1187,20 +1201,6 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                     })}
                 </div>
                 </div>
-
-                {/* Resources, collapsed by default */}
-                {planResources.length > 0 && (
-                    <div className="hp-resources">
-                        <span className="hp-resources-toggle" onClick={() => setShowResources(s => !s)}>
-                            Resources <span className="t-caret">{showResources ? "▾" : "▸"}</span>
-                        </span>
-                        {showResources && (
-                            <div className="hp-resources-list">
-                                {planResources.map(r => <ResourceCard key={r.id} res={r} />)}
-                            </div>
-                        )}
-                    </div>
-                )}
 
                 {completingTodo && (
                     <TodoCompletePopup

@@ -126,6 +126,12 @@
   /* The air between one content item and the next, rows in a list, cards in a landing
      page, and every list measures from this so the whole app loosens together */
   --t-list-gap:      12px;
+  /* The space on each side of a section divider, the plan builder and the homepage study
+     page both measuring from this so the two lay their sections out in step */
+  --t-section-div:   14px;
+  /* The width every striped bar settles at, the main landing pages and the plan study page
+     both sizing to this so the deck, notebook, plan and homepage bars read as one column */
+  --t-bar-col:       760px;
   /* Two corners and no more, anything holding content rounds the same amount, and
      buttons keep a tighter corner so they read as a control rather than a container */
   --t-r:             10px;
@@ -618,18 +624,18 @@ textarea { overflow-y: scroll; }
 
 /* Plans containers */
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.plans-scroll { flex: 1; overflow-y: scroll; padding: 4px var(--t-page-pad) var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
+.plans-scroll { flex: 1; overflow-y: scroll; padding: 16px var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
 /* Unified landing pages for Plans, Decks and Notebooks, solid family bands, each taking
    the shade its content boxes rest their bars in so no divider line is needed */
 /* The bar casts onto the page, so it has to stay in front since the body paints after it */
-.landing-hdr { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 5; box-shadow: var(--t-shadow-hdr); }
+.landing-hdr { display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 5; box-shadow: var(--t-shadow-hdr); }
 .landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 64%, #fff); --hdr-btn: var(--t-accent-h); --hdr-title: var(--hdr-title-plan); background: var(--hdr-band); }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); --hdr-title: var(--hdr-title-deck); background: var(--hdr-band); }
 .landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); --hdr-title: var(--hdr-title-notebook); background: var(--hdr-band); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; flex: 1; color: var(--hdr-title, var(--t-title)); }
-/* Inside a single plan the name reads in the plain near-black, not the themed header ink the landing title takes */
-.landing-hdr--detail h2 { color: var(--t-title); }
+/* The detail word bar keeps the family ink and hands its shadow to the name row below it */
+.landing-hdr--detail { z-index: 1; box-shadow: none; }
 /* What the page is holding right now, told quietly at the right of every header bar so
    it reads the same on the ones with buttons and the ones without */
 .hdr-context { margin-left: auto; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; color: var(--t-text-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -648,7 +654,7 @@ textarea { overflow-y: scroll; }
    notebooks rather than each keeping a copy */
 .landing-body,
 .dk-list,
-.nb-list { flex: 1; overflow-y: scroll; padding: 16px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; gap: var(--t-list-gap); }
+.nb-list { flex: 1; overflow-y: scroll; padding: 16px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; align-items: center; gap: var(--t-list-gap); }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
 
 /* The round add button in a landing header opens a small create popup, taking its family
@@ -807,8 +813,10 @@ textarea { overflow-y: scroll; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px var(--t-stripe-gutter) 16px 24px;
+  padding: 12px var(--t-stripe-gutter) 12px 24px;
   cursor: pointer;
+  width: 100%;
+  max-width: var(--t-bar-col);
 }
 
 /* Three vertical bars tucked into the right edge, where every box sets --t-stripe for the
@@ -843,7 +851,7 @@ textarea { overflow-y: scroll; }
      and it scales with --t-stripe-u so half size rows get a half size gutter */
   --t-stripe-gutter: calc(7 * var(--t-stripe-u));
   transition: --t-stripe var(--t-ease-hover);
-  border: var(--t-bw) solid var(--t-stripe-hi);
+  border: none;
   border-radius: var(--t-r);
   background-color: var(--t-surface);
   box-shadow: var(--t-shadow-card);
@@ -928,22 +936,46 @@ textarea { overflow-y: scroll; }
 .landing-stat--card      { --stat-c: var(--t-blue); }
 .landing-stat--page      { --stat-c: var(--t-plum); }
 .landing-stat--new       { --stat-c: var(--t-new); }
-.landing-stat--review    { --stat-c: #68AE7E; }   /* lighter than the base green */
+.landing-stat--review    { --stat-c: var(--t-review); }
 .landing-stat--plan      { --stat-c: var(--t-accent); }
 
 /* Todo row subsections, labeled like todo stats entries */
 .todo-section { margin-top: 3px; }
 /* Categories sits tight under the todo name, the sections after it keep the wider gap */
 .todo-section ~ .todo-section { margin-top: 8px; }
-.todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
+.todo-section-label { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); margin-bottom: 5px; }
 .todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
-/* Plan builder */
-.plan-builder-cols { display: flex; flex-direction: column; gap: 26px; }
-.plan-col-main { min-width: 0; }
-.plan-col-side { min-width: 0; padding-top: 22px; border-top: var(--t-bw) solid var(--t-border-2); }
-.plan-col-label { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 10px; }
+/* Plan builder, sections stacked cleanly on the page the way the homepage plan page does */
+.plan-builder-cols { display: flex; flex-direction: column; max-width: var(--t-bar-col); margin: 0 auto; }
+.plan-section-panel { min-width: 0; }
+/* The Decks section keeps a rule between it and the rest, with even space either side of it */
+.plan-section-panel + .plan-section-panel { margin-top: var(--t-section-div); padding-top: var(--t-section-div); border-top: var(--t-bw) solid var(--t-border-2); }
+.plan-col-label { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 4px; }
+.plan-col-label--resources { margin-top: 12px; }
 .plan-col-label--toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 7px; }
+/* A collapsed section is just its word, so it drops the spacing meant to sit around content */
+.plan-col-label--toggle.collapsed { margin-bottom: 0; }
+.plan-col-label--todos.collapsed + .plan-col-label--resources { margin-top: 2px; }
+/* Detail page name row: the header bar keeps the family word in its family ink, and the item's
+   own name rides just below it in the plain dark ink on a lighter tint of the same family band,
+   the back button (and any cross-links) moving down onto this row so it reads as one titled zone */
+/* Sits just above the body (z 2) but below nothing that would clip an actions menu opening
+   off it, and carries the header's drop shadow so the word bar above it can go shadowless */
+/* A fixed row height so the plan tier, which carries no action buttons, stands as tall as the
+   deck and notebook tiers that do */
+.detail-title-band { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 8px var(--t-page-pad); flex-shrink: 0; background: var(--band); position: relative; z-index: 2; box-shadow: var(--t-shadow-hdr); }
+.detail-title-band--plan     { --band: color-mix(in srgb, var(--t-accent) 42%, #fff);     --hdr-btn: var(--t-accent-h); }
+.detail-title-band--deck     { --band: color-mix(in srgb, var(--t-blue-bdr) 24%, #fff);   --hdr-btn: var(--t-blue-btn); }
+.detail-title-band--notebook { --band: color-mix(in srgb, var(--t-plum-bdr) 22%, #fff);   --hdr-btn: var(--t-plum); }
+/* The back button and any actions on the row wear the family colour, the plan pill keeps its caramel */
+.detail-title-band > button:not(.primary):not(.danger):not(.dk-cards-plan),
+.detail-title-band > div > button { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); box-shadow: none; }
+.detail-title-band > button:not(.primary):not(.danger):not(.dk-cards-plan):hover,
+.detail-title-band > div > button:hover { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); filter: brightness(0.92); }
+/* The Search toggle's caret rides the button's own light ink, not the dark caret used in panels */
+.detail-title-band > button .t-caret { color: inherit; }
+.detail-title { flex: 0 1 auto; min-width: 0; margin: 0; font-family: var(--t-font-head); font-size: 26px; font-weight: 750; letter-spacing: -0.02em; line-height: 1.1; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-col-label--todos     { color: var(--t-yellow); }
 .plan-col-label--resources { color: var(--t-clay); }
 .plan-col-label--srs       { color: var(--t-blue); }

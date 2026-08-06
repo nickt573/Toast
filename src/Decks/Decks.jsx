@@ -1179,13 +1179,13 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
 
   return (
     <div className="dk-cards-root">
-      <div className="dk-cards-header">
+      <div className="detail-title-band detail-title-band--deck">
         {returnTo ? (
           <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
         ) : (
           <button className="quiet" onClick={onBack}>← Back</button>
         )}
-        <h2>{deck.name}</h2>
+        <div className="detail-title detail-title--deck">{deck.name}</div>
         {planName && (
           <button className="dk-cards-plan" title={`Go to ${planName}`}
             onClick={() => onNavigateToPlan?.({ id: deck.plan_id, name: planName },

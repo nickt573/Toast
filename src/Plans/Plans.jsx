@@ -98,7 +98,6 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                             Overflow
                             <Tip text="When enabled, leftover cards that weren't studied today carry over to tomorrow without counting towards tomorrow's scheduled maximum. When disabled, the total due cards tomorrow will not exceed the set max." />
                         </label>
-                        <button className="primary" onClick={saveSettings}>Save</button>
                     </div>
                 )}
                 {removing && (
@@ -108,16 +107,27 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                         <button className="danger" onClick={() => { onRemove(true, true); setRemoving(false); }}>Reset &amp; Archive Stats</button>
                     </span>
                 )}
-                <span className="plan-srs-tip-wrap">
-                    <button className="btn-amber" onClick={onClamp}>Trim</button>
-                    <Tip text="Updates the due queue to the max minus non-overdue cards already studied today. Note that overflow cards may be unscheduled." />
-                </span>
-                <span className="plan-srs-tip-wrap">
-                    <button className="btn-blue" onClick={onClampMax}>Fill</button>
-                    <Tip text="Resets the due queue to the full max, ignoring cards already studied today. Note that overflow cards may be unscheduled." />
-                </span>
-                <button onClick={() => { setEditing((e) => !e); setRemoving(false); }}>{editing ? "Cancel" : "Settings"}</button>
-                <button className="danger" onClick={() => { setRemoving((r) => !r); setEditing(false); }}>{removing ? "Cancel" : "Remove"}</button>
+                {!editing && !removing && (
+                    <>
+                        <span className="plan-srs-tip-wrap">
+                            <button className="btn-amber" onClick={onClamp}>Trim</button>
+                            <Tip text="Updates the due queue to the max minus non-overdue cards already studied today. Note that overflow cards may be unscheduled." />
+                        </span>
+                        <span className="plan-srs-tip-wrap">
+                            <button className="btn-blue" onClick={onClampMax}>Fill</button>
+                            <Tip text="Resets the due queue to the full max, ignoring cards already studied today. Note that overflow cards may be unscheduled." />
+                        </span>
+                    </>
+                )}
+                {editing && (
+                    <button className="primary" onClick={saveSettings}>Save</button>
+                )}
+                {!removing && (
+                    <button onClick={() => { setEditing((e) => !e); setRemoving(false); }}>{editing ? "Cancel" : "Settings"}</button>
+                )}
+                {!editing && (
+                    <button className="danger" onClick={() => { setRemoving((r) => !r); setEditing(false); }}>{removing ? "Cancel" : "Remove"}</button>
+                )}
             </div>
             {removing && (
                 <div className="plan-srs-confirm-sub">
@@ -403,8 +413,8 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
                         </div>
                     ) : (
                         <div className="plan-resource-view">
-                            <div className="plan-resource-body">
-                                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                            <div className="plan-resource-head">
+                                <div className="plan-resource-heading">
                                     <div className="plan-resource-name">{r.name}</div>
                                     {r.url &&
                                         <a href={r.url} className="t-open-arrow plan-resource-url"
@@ -413,12 +423,12 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
                                         </a>}
                                     {r.resource_type && <span className="st-resource-card-type">{r.resource_type}</span>}
                                 </div>
-                                {r.notes && <div className="plan-resource-notes">{r.notes}</div>}
+                                <div className="plan-resource-actions">
+                                    <button onClick={() => startEdit(r)}>Edit</button>
+                                    <ConfirmDelete onConfirm={() => deleteResource(r.id)} small />
+                                </div>
                             </div>
-                            <div className="plan-resource-actions">
-                                <button onClick={() => startEdit(r)}>Edit</button>
-                                <ConfirmDelete onConfirm={() => deleteResource(r.id)} small />
-                            </div>
+                            {r.notes && <div className="plan-resource-notes">{r.notes}</div>}
                         </div>
                     )}
                 </div>
@@ -789,18 +799,18 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     if (editingPlan) {
         return (
             <div className="plans-root">
-                <div className="landing-hdr landing-hdr--plan landing-hdr--detail">
+                <div className="detail-title-band detail-title-band--plan">
                     {returnTo ? (
                         <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
                     ) : (
                         <button className="quiet" onClick={() => { setEditingPlan(null); setPlanResources([]); loadSummaries(); }}>← Back</button>
                     )}
-                    <h2>{editingPlan.name}</h2>
+                    <div className="detail-title detail-title--plan">{editingPlan.name}</div>
                 </div>
                 <div className="plans-scroll">
                     <div className="plan-builder-cols">
-                        <div className="plan-col-main">
-                            <div className="plan-col-label plan-col-label--todos plan-col-label--toggle" onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("todos")}>
+                        <div className="plan-section-panel">
+                            <div className={`plan-col-label plan-col-label--todos plan-col-label--toggle${collapsed.todos ? " collapsed" : ""}`} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("todos")}>
                                 Todos <span className="t-caret">{collapsed.todos ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.todos && <>
@@ -846,7 +856,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                     onCreated={() => getTodos(editingPlan.id)}
                                 />
                             </>}
-                            <div className="plan-col-label plan-col-label--resources plan-col-label--toggle" style={{ marginTop: 24 }} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("resources")}>
+                            <div className={`plan-col-label plan-col-label--resources plan-col-label--toggle${collapsed.resources ? " collapsed" : ""}`} onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("resources")}>
                                 Resources <span className="t-caret">{collapsed.resources ? "▸" : "▾"}</span>
                             </div>
                             {!collapsed.resources && (
@@ -854,7 +864,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                             )}
                         </div>
 
-                        <div className="plan-col-side">
+                        <div className="plan-section-panel">
                             <div className="plan-col-label plan-col-label--srs plan-col-label--toggle" onMouseDown={(e) => e.preventDefault()} onClick={() => toggleSection("srs")}>
                                 Decks <span className="t-caret">{collapsed.srs ? "▸" : "▾"}</span>
                             </div>

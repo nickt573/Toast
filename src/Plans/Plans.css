@@ -26,9 +26,12 @@
 .plan-resource-row { --t-stripe: var(--t-clay-stripe); --t-stripe-hi: var(--t-clay-lt); padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: var(--t-list-gap); }
 .plan-resource-edit-form { display: flex; flex-direction: column; gap: 6px; }
 .plan-resource-edit-actions { display: flex; gap: 6px; }
-.plan-resource-view { display: flex; align-items: flex-start; gap: 8px; }
-.plan-resource-body { flex: 1; min-width: 0; }
-.plan-resource-name { font-weight: 700; font-size: 17px; color: var(--t-title); }
+/* Column so a long description runs the full width under the actions before wrapping,
+   the same way the todo bar's category pills flow beneath its buttons */
+.plan-resource-view { display: flex; flex-direction: column; }
+.plan-resource-head { display: flex; align-items: flex-start; gap: 8px; }
+.plan-resource-heading { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.plan-resource-name { font-weight: 700; font-size: 18px; color: var(--t-title); }
 /* Raw URLs stay hidden behind a compact arrow */
 /* Only the nudge off the baseline it shares with the name, the mark itself is .t-open-arrow */
 .plan-resource-url { margin-top: 2px; }

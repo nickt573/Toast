@@ -39,8 +39,10 @@
 .dk-merge-row select { flex: 1; }
 
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
-.dk-cards-header { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); flex-shrink: 0; background: var(--hdr-band); position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
-.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--t-title); }
+.dk-cards-header { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 var(--t-page-pad); flex-shrink: 0; background: var(--hdr-band); position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
+/* The word bar hands its shadow to the name row below it */
+.dk-cards-header { box-shadow: none; }
+.dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--hdr-title-deck); }
 /* The plan a deck belongs to, a clickable badge that jumps to that plan, kept the plan caramel rather than the header's deck blue */
 .dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 .dk-cards-plan:hover { background: var(--t-accent); border: none; color: var(--t-accent-fg); filter: brightness(0.94); }
@@ -216,3 +218,5 @@
 /* Takes over the header's shadow while it is up, the way the merge panel does, so the page
    keeps one edge casting onto it rather than two stacked lines */
 .dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); font-size: 13px; color: var(--t-red); flex-shrink: 0; font-style: italic; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
+/* The confirm bar carries the shadow, so the header drops its own to avoid a double line */
+.detail-title-band--deck:has(+ .dk-confirm-bar) { box-shadow: none; }

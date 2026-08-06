@@ -82,47 +82,8 @@ export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGro
         return (
             <div className="plan-todo-row" style={{ opacity: dimmed ? 0.5 : 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 17, fontWeight: 700, color: "var(--t-title)", display: "flex", alignItems: "center", gap: 8 }}>
-                            {todo.text}
-                        </div>
-
-                        <div className="todo-section">
-                            <div className="todo-section-label">Categories</div>
-                            <div className="todo-section-pills">
-                                <CategoryPills mask={todo.category} />
-                            </div>
-                        </div>
-
-                        {(linkedGroups.length > 0 || linkedResources.length > 0) && (
-                            <div className="todo-section">
-                                <div className="todo-section-label">Resources / Decks / Notebooks</div>
-                                <div className="todo-section-pills">
-                                    {linkedResources.map(r => (
-                                        <span key={r.id}
-                                            onClick={() => r.url && openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`)}
-                                            className={`pill pill-clay${r.url ? " pill-clickable" : ""}`}>
-                                            {r.name}{r.url && <span style={{ opacity: 0.55, marginLeft: 2, fontSize: 9 }}>↗</span>}
-                                        </span>
-                                    ))}
-                                    {linkedGroups.map(g => (
-                                        <span key={g.id}
-                                            onClick={() => onNavigateToGroup(g, { menu: "plans", label: "Plans" })}
-                                            className={`pill ${g.group_type === "notebook" ? "pill-plum" : "pill-blue"} pill-clickable`}>
-                                            {g.name}
-                                            <GroupTypeBadge type={g.group_type} />
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {(() => {
-                            const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
-                                .filter((_, i) => (todo.frequency & (1 << i)) !== 0)
-                                .join(" · ");
-                            return days && <div style={{ marginTop: 8, fontSize: 10, color: "var(--t-text-3)" }}>{days}</div>;
-                        })()}
+                    <div style={{ flex: 1, fontSize: 20, fontWeight: 700, color: "var(--t-title)", display: "flex", alignItems: "center", gap: 8 }}>
+                        {todo.text}
                     </div>
 
                     <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
@@ -130,6 +91,43 @@ export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGro
                         <ConfirmDelete onConfirm={deleteTodo} small />
                     </div>
                 </div>
+
+                <div className="todo-section">
+                    <div className="todo-section-label">Categories</div>
+                    <div className="todo-section-pills">
+                        <CategoryPills mask={todo.category} />
+                    </div>
+                </div>
+
+                {(linkedGroups.length > 0 || linkedResources.length > 0) && (
+                    <div className="todo-section">
+                        <div className="todo-section-label">Resources / Decks / Notebooks</div>
+                        <div className="todo-section-pills">
+                            {linkedResources.map(r => (
+                                <span key={r.id}
+                                    onClick={() => r.url && openUrl(r.url.startsWith("http") ? r.url : `https://${r.url}`)}
+                                    className={`pill pill-clay${r.url ? " pill-clickable" : ""}`}>
+                                    {r.name}{r.url && <span style={{ opacity: 0.55, marginLeft: 2, fontSize: 9 }}>↗</span>}
+                                </span>
+                            ))}
+                            {linkedGroups.map(g => (
+                                <span key={g.id}
+                                    onClick={() => onNavigateToGroup(g, { menu: "plans", label: "Plans" })}
+                                    className={`pill ${g.group_type === "notebook" ? "pill-plum" : "pill-blue"} pill-clickable`}>
+                                    {g.name}
+                                    <GroupTypeBadge type={g.group_type} />
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {(() => {
+                    const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
+                        .filter((_, i) => (todo.frequency & (1 << i)) !== 0)
+                        .join(" · ");
+                    return days && <div style={{ marginTop: 8, fontSize: 10, color: "var(--t-text-3)" }}>{days}</div>;
+                })()}
             </div>
         );
     }

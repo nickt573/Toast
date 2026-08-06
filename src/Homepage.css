@@ -9,7 +9,9 @@
 
 .hp-home {
   padding: 32px var(--t-page-pad);
-  max-width: 600px;
+  /* The bar column plus the page padding on each side, so the day's cards line up with the
+     study page and the landing bars */
+  max-width: calc(var(--t-bar-col) + 2 * var(--t-page-pad));
   margin: 0 auto;
 }
 
@@ -181,51 +183,53 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-streak-chip.at-risk { background: var(--t-amber); color: var(--t-accent-fg); }
 .hp-plan-idle-note {
-  margin-right: auto;
-  font-size: 11px;
+  margin-top: 12px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--t-amber);
-  align-self: center;
 }
-.hp-plan-card-stats { display: flex; align-items: center; flex: 1; margin-top: 18px; }
-.hp-plan-stat-box { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.hp-stat-num { font-family: var(--t-font-head); font-size: 36px; font-weight: 800; letter-spacing: -0.03em; color: var(--t-text); line-height: 1; }
+/* The counts fill the space under the name, spread across the width so they reach the ribbon.
+   The top margin drops the whole region off the name so the counts ride nearer the card's
+   middle than its title */
+.hp-plan-card-stats { display: flex; align-items: stretch; flex: 1; margin-top: 12px; }
+/* The count, its label and the summary read as one block centred as a whole in the box, since
+   the summary is always present now rather than clearing during study */
+.hp-plan-stat-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hp-plan-stat-body { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1px; }
+/* The split beneath each count, card New/Review/Cram boxes and todo category circles, both in
+   the app's own solid-chip vocabulary */
+.hp-plan-detail { margin-top: 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.hp-plan-mini { font-size: 14px; font-weight: 700; color: var(--t-accent-fg); border-radius: var(--t-r-btn); padding: 4px 11px; font-variant-numeric: tabular-nums; }
+.hp-plan-mini--new    { background: var(--t-new); }
+.hp-plan-mini--review { background: var(--t-review); }
+.hp-plan-mini--cram   { background: var(--t-plum); }
+.hp-plan-mini.is-zero { background: var(--t-panel-fill); color: var(--t-silver); }
+.hp-stat-num { font-family: var(--t-font-head); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: var(--t-text); line-height: 1; font-variant-numeric: tabular-nums; }
 .hp-stat-num--todos { color: var(--t-yellow); }
 .hp-stat-num--decks { color: var(--t-blue); }
 .hp-stat-num--zero  { color: var(--t-green); }
-.hp-stat-lbl { font-size: 15px; color: var(--t-text-2); font-weight: 600; }
-/* The divider never highlights, resting a shade darker than the bar colour on a plain
-   card and taking the card's own edge on the two coloured states */
-.hp-plan-stat-divider { width: 2px; height: 44px; background: var(--t-stripe); margin: 0 20px; flex-shrink: 0; transition: background var(--t-ease-hover); }
-.hp-plan-card.has-due .hp-plan-stat-divider { background: var(--hp-plan-gold); }
-.hp-plan-card.is-done .hp-plan-stat-divider { background: var(--hp-plan-green); }
-.hp-plan-card-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
-.hp-plan-open { font-size: 12px; font-weight: 600; color: var(--t-accent); letter-spacing: 0.02em; transition: color var(--t-ease-hover); }
-/* Matches the green border and counts on a finished card */
-.hp-plan-card.is-done .hp-plan-open { color: var(--t-green); }
-.hp-plan-card:hover .hp-plan-open { color: var(--t-accent-h); }
-.hp-plan-card.is-done:hover .hp-plan-open { color: var(--t-green-h); }
+.hp-stat-lbl { font-size: 20px; color: var(--t-text-2); font-weight: 600; }
+/* Takes the card's own edge colour and never highlights, so it reads as part of the frame.
+   Stretches to the taller of the two stacks so it stays a clean full-height rule between them */
+.hp-plan-stat-divider { width: 2px; background: var(--t-stripe-hi); margin: 0 16px; flex-shrink: 0; align-self: stretch; }
 
 /* Plan study page */
 .hp-plan-page {
   padding: 24px var(--t-page-pad);
-  max-width: 700px;
+  /* The bar column plus the page padding on each side, so the study bars land at the same
+     width as the deck, notebook and plan bars on their landing pages */
+  max-width: calc(var(--t-bar-col) + 2 * var(--t-page-pad));
   margin: 0 auto;
 }
 
-/* Its own card again, a clean plate lifted off the page by its shadow */
 .hp-plan-back {
-  margin-bottom: 12px;
-  padding: 16px 22px 18px;
-  border-radius: var(--t-r);
-  background: var(--t-surface);
-  box-shadow: var(--t-shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 }
-/* Back stays pinned to the left where it always sat, filled plan gold like the Plans page. It
-   floats so a long name wraps to a new line before it would reach the button, then runs the
-   full width below it */
 .hp-plan-back .quiet {
-  float: left;
+  flex: none;
   background: var(--t-accent-h);
   border-color: var(--t-accent-h);
   color: var(--t-accent-fg);
@@ -237,18 +241,13 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   color: var(--t-accent-fg);
   filter: brightness(0.92);
 }
-/* The streak lives in the right corner, filling what used to be an empty reserve. It floats so
-   it balances the back button and keeps a short name centred, and holds a minimum width so the
-   name stays put on a plan with no streak yet */
 .hp-plan-back-streak {
-  float: right;
-  min-width: 66px;
+  flex: none;
+  margin-left: auto;
   min-height: 34px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
 }
-/* Same chip as the dashboard, scaled up to hold its own next to the 28px name */
 .hp-plan-back-streak .hp-streak-chip {
   font-size: 13px;
   padding: 5px 12px;
@@ -256,18 +255,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-plan-back h2 {
   margin: 0;
-  text-align: center;
+  text-align: left;
   font-family: var(--t-font-head);
   font-size: 28px;
   font-weight: 750;
   letter-spacing: -0.02em;
   color: var(--t-title);
-}
-/* Clears the floated back button and right reserve so the panel wraps its full height */
-.hp-plan-back::after {
-  content: "";
-  display: block;
-  clear: both;
 }
 
 /* Round yellow add button that logs extra activity, matching the create buttons elsewhere and the Todos family colour */
@@ -286,7 +279,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--t-surface);
+  background: transparent;
   border: none;
   border-radius: var(--t-r-btn);
   padding: 4px 5px 4px 8px;
@@ -313,17 +306,21 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 
 /* The sections share one card now, so the chrome lives on the group and each panel just
    holds its content with a gap keeping them apart */
+/* Todos and Decks are two distinct plates again, each lifted off the page by its own shadow */
 .hp-panel-group {
-  background: var(--t-surface);
-  border-radius: var(--t-r);
-  padding: 14px 20px;
-  margin-bottom: 16px;
-  box-shadow: var(--t-shadow-sm);
+  margin-bottom: 0;
 }
+/* Sections sit cleanly on the app background, no white panel around them */
 .hp-section-panel {
   padding: 0;
+  margin-bottom: 0;
 }
-.hp-section-panel + .hp-section-panel { margin-top: 28px; }
+/* The Decks section keeps a rule between it and the rest, matching the plan builder divider */
+.hp-section-panel + .hp-section-panel {
+  margin-top: var(--t-section-div);
+  padding-top: var(--t-section-div);
+  border-top: var(--t-bw) solid var(--t-border-2);
+}
 .hp-section-label {
   display: block;
   font-family: var(--t-font-head);
@@ -331,13 +328,13 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--t-accent);
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 .hp-section-label--todos { color: var(--t-yellow); }
 .hp-section-label--decks { color: var(--t-blue); }
 .hp-section-label--extra { color: var(--t-green); }
 /* Extra Todos ride in the Todos panel, so the header just needs breathing room above its own rows */
-.hp-section-label--extra-inline { margin-top: 22px; }
+.hp-section-label--extra-inline { margin-top: 12px; }
 
 /* Todo rows, yellow striped bars */
 .hp-todo-row {
@@ -476,10 +473,23 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-session-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 16px;
 }
-.hp-session-header h2 { margin: 0; flex: 1; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
+.hp-session-header .quiet {
+  flex: none;
+  background: var(--t-blue-btn);
+  border-color: var(--t-blue-btn);
+  color: var(--t-accent-fg);
+  box-shadow: none;
+}
+.hp-session-header .quiet:hover {
+  background: var(--t-blue-btn);
+  border-color: var(--t-blue-btn);
+  color: var(--t-accent-fg);
+  filter: brightness(0.92);
+}
+.hp-session-header h2 { margin: 0; flex: 1; text-align: left; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
 
 /* Card status row, type pill on the left and session counts on the right */
 .hp-session-status {
@@ -664,7 +674,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-popup-label { font-size: 12px; color: var(--t-text-2); margin-bottom: 2px; }
 .hp-popup-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-.hp-resources { margin-bottom: 16px; padding: 2px 6px; }
+.hp-resources { margin-top: 12px; padding: 2px 0; }
 .hp-resources-toggle {
   display: inline-flex;
   align-items: center;
