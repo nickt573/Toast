@@ -215,8 +215,8 @@ function GradeButtons({ onGrade, onCramGrade, isCram, card }) {
         { label: "Fine",  tierDelta:  1, grade: 2, cls: "hp-grade-fine",  easeDelta: -0.08, easeFloorZero: true },
         { label: "Easy",  tierDelta:  1, grade: 3, cls: "hp-grade-easy",  easeDelta:  0.10 },
     ] : [
-        { label: "One More Time", tierDelta: -1, grade: 4, cls: "hp-grade-omt",   easeDelta: -0.05 },
-        { label: "Got It",        tierDelta:  1, grade: 5, cls: "hp-grade-gotit", easeDelta:  0.00 },
+        { label: "One More Time", tierDelta: -1, grade: 4, cls: "hp-grade-omt",   easeDelta: -0.03 },
+        { label: "Got It",        tierDelta:  1, grade: 5, cls: "hp-grade-gotit", easeDelta:  0.03 },
     ];
 
     function calcNextSequence(tierDelta, easeDelta, easeFloorZero) {

@@ -327,8 +327,8 @@ pub fn grade_item(item_id: i64, grade: u8, conn: &mut Connection) -> Result<()> 
         1 => (-1, -0.08),
         2 => (1, -0.08),
         3 => (1, 0.10),
-        4 => (-1, -0.05),
-        5 => (1, 0.00),
+        4 => (-1, -0.03),
+        5 => (1, 0.03),
         _ => {
             return Err(rusqlite::Error::InvalidParameterName(format!(
                 "Invalid grade: {}",
