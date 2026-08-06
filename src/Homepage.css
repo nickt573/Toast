@@ -58,7 +58,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 
 .hp-greeting {
   font-family: var(--t-font-head);
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -377,11 +377,11 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 /* Global button styling is nowrap, so clamp long todo names against overflowing the popup */
 .hp-free-todo-text {
-  font-size: 17px;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 14px;
 }
 .hp-free-todo-option:hover { color: var(--t-text); }
 .hp-todo-row.done {
@@ -427,7 +427,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   min-width: 0;
   font-weight: 700;
   color: var(--t-title);
-  font-size: 17px;
+  font-size: 20px;
 }
 .hp-todo-text.done {
   text-decoration: line-through;
@@ -445,11 +445,12 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   margin-bottom: var(--t-list-gap);
   cursor: pointer;
 }
+.hp-deck-row:last-child { margin-bottom: 0; }
 .hp-deck-row--empty { cursor: default !important; --t-stripe: var(--t-green-bdr); --t-stripe-hi: var(--t-green); }
 /* A greyed blue, and bar and border share it so the hover swap to --t-stripe-hi is a no-op */
 .hp-deck-row--idle { cursor: default !important; --t-idle: color-mix(in srgb, var(--t-blue-lt) 32%, #d8dce0); --t-stripe: var(--t-idle); --t-stripe-hi: var(--t-idle); opacity: 0.6; }
 .hp-deck-row--idle .hp-deck-name { color: color-mix(in srgb, var(--t-blue) 55%, #777); font-weight: 600; }
-.hp-deck-name { flex: 1; font-weight: 700; font-size: 17px; color: var(--t-title); }
+.hp-deck-name { flex: 1; font-weight: 700; font-size: 18px; color: var(--t-title); }
 .hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
 .hp-studied-today { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
 .hp-studied-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
@@ -700,4 +701,4 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 /* Matches the todo and deck rows above it, scoped here since the same card also lists
    resources over in stats where the names stay as they are */
-.hp-resources-list .st-resource-card-name { font-weight: 700; }
+.hp-resources-list .st-resource-card-name { font-weight: 700; font-size: 19px; }

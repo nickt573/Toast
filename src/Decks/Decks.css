@@ -2,7 +2,7 @@
 .dk-root { display: flex; flex-direction: column; height: 100%; }
 
 /* The deck list is styled with the other landing lists in App.css */
-.dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 700; font-size: 24px; letter-spacing: -0.01em; color: var(--t-title); }
+.dk-deck-name { display: block; font-family: var(--t-font-head); font-weight: 800; font-size: 24px; letter-spacing: -0.01em; color: var(--t-title); }
 .dk-deck-name-input { width: 100%; }
 .dk-deck-plan { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
 
