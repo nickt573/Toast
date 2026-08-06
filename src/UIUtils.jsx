@@ -310,6 +310,129 @@ export function NotebookPageTag({ notebookId, pageId, onChange }) {
   );
 }
 
+// Single-choice dropdown that wears the same chrome as the unit and page pickers, so every menu
+// in the app matches instead of falling back to a native select. Pass a flat `options` list or
+// named `groups`, each option being { value, label }. `emptyOption` adds a leading row for the
+// unselected choice, and the trigger falls back to `placeholder` when nothing is picked
+export function SelectMenu({
+  value, onChange, options, groups, placeholder = "Select…", emptyOption,
+  menuWidth = 264, searchThreshold = 8, searchPlaceholder = "Search",
+  emptyHint = "Nothing to pick", className = "",
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [pos, setPos] = useState(null);
+  const wrapRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const groupList = groups ?? (options ? [{ label: null, options }] : []);
+  const allOptions = groupList.flatMap(g => g.options);
+  const selected = allOptions.find(o => o.value === value) || null;
+  const atEmpty = emptyOption && value === emptyOption.value;
+
+  // Pin the menu just under the trigger's on-screen spot, shifting left when the trigger sits
+  // too near the right edge to open flush, exactly as the page tag menu does
+  const place = () => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const r = wrap.getBoundingClientRect();
+    const top = r.bottom + 6;
+    if (top < navClipTop()) { setPos(null); return; }
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - menuWidth - 8));
+    setPos({ top, left });
+  };
+  useLayoutEffect(() => { if (open) place(); }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      if (wrapRef.current && wrapRef.current.contains(e.target)) return;
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    // Freeze the page behind the menu while it is open, so an open menu can never travel up into
+    // a header as its trigger scrolls. Scrolling inside the menu's own list still passes through
+    const blockScroll = (e) => {
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      e.preventDefault();
+    };
+    // A scroll that slips past the block anyway re-pins the menu to its trigger instead of
+    // leaving it stranded
+    const onScroll = (e) => {
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      place();
+    };
+    document.addEventListener("mousedown", onDoc);
+    window.addEventListener("wheel", blockScroll, { passive: false, capture: true });
+    window.addEventListener("touchmove", blockScroll, { passive: false, capture: true });
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", place);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      window.removeEventListener("wheel", blockScroll, { capture: true });
+      window.removeEventListener("touchmove", blockScroll, { capture: true });
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+
+  const q = query.trim().toLowerCase();
+  const shownGroups = q
+    ? groupList
+        .map(g => ({ ...g, options: g.options.filter(o => String(o.label).toLowerCase().includes(q)) }))
+        .filter(g => g.options.length > 0)
+    : groupList;
+
+  const choose = (v) => { onChange(v); setOpen(false); setQuery(""); };
+  const triggerLabel = selected ? selected.label : (emptyOption ? emptyOption.label : placeholder);
+
+  return (
+    <div className={`unit-picker page-tag-picker${className ? " " + className : ""}`} ref={wrapRef}>
+      <div className="unit-picker-control">
+        <button type="button" className={`unit-picker-select${selected ? " has-unit" : ""}`}
+          onClick={() => setOpen(o => !o)}>
+          <span className="unit-picker-select-label">{triggerLabel}</span>
+          <span className="unit-picker-caret">▾</span>
+        </button>
+      </div>
+
+      {open && pos && createPortal(
+        <div className="unit-picker-menu page-tag-menu" ref={menuRef} style={{ top: pos.top, left: pos.left, width: menuWidth }}>
+          {allOptions.length > searchThreshold && (
+            <input type="text" className="unit-picker-search" autoFocus placeholder={searchPlaceholder}
+              value={query} onChange={e => setQuery(e.target.value)} />
+          )}
+          <div className="unit-picker-list">
+            {emptyOption && !q && (
+              <div className={`unit-picker-row${atEmpty ? " active" : ""}`}>
+                <button type="button" className={`unit-picker-opt${atEmpty ? " active" : ""}`}
+                  onClick={() => choose(emptyOption.value)}>
+                  <span className="unit-picker-optname">{emptyOption.label}</span>
+                </button>
+              </div>
+            )}
+            {shownGroups.map((g, gi) => (
+              <div key={g.label ?? gi} className="unit-picker-optgroup">
+                {g.label != null && <div className="unit-picker-grouphead">{g.label}</div>}
+                {g.options.map(o => (
+                  <div key={o.value} className={`unit-picker-row${o.value === value ? " active" : ""}`}>
+                    <button type="button" className={`unit-picker-opt${o.value === value ? " active" : ""}`}
+                      onClick={() => choose(o.value)}>
+                      <span className="unit-picker-optname">{o.label}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ))}
+            {allOptions.length === 0 && <div className="unit-picker-hint">{emptyHint}</div>}
+            {allOptions.length > 0 && shownGroups.length === 0 && <div className="unit-picker-hint">No matches</div>}
+          </div>
+        </div>,
+        document.body)}
+    </div>
+  );
+}
+
 // Full-screen blocker for operations that must not be interrupted, sitting under the toast
 // layer so error toasts stay readable
 export function BusyOverlay({ title, note }) {

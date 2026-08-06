@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { NewCardForm } from "../Decks/Decks";
-import { ConfirmDelete, CreateMenu } from "../UIUtils";
+import { ConfirmDelete, CreateMenu, SelectMenu } from "../UIUtils";
 import { mediaSrc } from "../mediaPaths";
 import { AudioPlayer } from "../Decks/CardFace";
 import { loggedInvoke, logError } from "../logger";
@@ -203,13 +203,13 @@ function NotebookList({ setToast, onOpenNotebook }) {
                 <div className="nb-merge-panel">
                     <div style={{ fontSize: 13, fontWeight: 500 }}>Merge two notebooks</div>
                     <div className="nb-merge-row">
-                        <select value={mergeNotebookA ?? ""} onChange={(e) => setMergeNotebookA(Number(e.target.value))}>
-                            {notebooks.filter(n => n.id !== mergeNotebookB).map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
-                        </select>
+                        <SelectMenu value={mergeNotebookA} onChange={(v) => setMergeNotebookA(v)}
+                            placeholder="Select a notebook"
+                            options={notebooks.filter(n => n.id !== mergeNotebookB).map(n => ({ value: n.id, label: n.name }))} />
                         <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>+</span>
-                        <select value={mergeNotebookB ?? ""} onChange={(e) => setMergeNotebookB(Number(e.target.value))}>
-                            {notebooks.filter(n => n.id !== mergeNotebookA).map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
-                        </select>
+                        <SelectMenu value={mergeNotebookB} onChange={(v) => setMergeNotebookB(v)}
+                            placeholder="Select a notebook"
+                            options={notebooks.filter(n => n.id !== mergeNotebookA).map(n => ({ value: n.id, label: n.name }))} />
                     </div>
                     <input type="text" placeholder="New notebook name..." value={mergeName}
                         onChange={(e) => setMergeName(e.target.value)} />
@@ -716,10 +716,11 @@ function CardCreatorPanel({ setToast }) {
     const deckSelector = (
         <div className="dk-new-card-row">
             <label>Deck</label>
-            <select value={deckId ?? ""} onChange={(e) => setDeckId(e.target.value ? Number(e.target.value) : null)}>
-                <option value="">Select a deck…</option>
-                {decks.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            <SelectMenu value={deckId} onChange={(v) => setDeckId(v)}
+                placeholder="Select a deck…"
+                emptyOption={{ value: null, label: "Select a deck…" }}
+                emptyHint="No decks yet"
+                options={decks.map((d) => ({ value: d.id, label: d.name }))} />
         </div>
     );
 

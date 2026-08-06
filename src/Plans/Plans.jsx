@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 
 import Todos from "./Todos";
 import { computeFrequency, computeCategory, maskToArray, maskToCategories, FrequencyPicker, CategoryPicker } from "./PlanUtils";
-import { Tip, ConfirmDelete, GroupTypeBadge, CreateMenu } from "../UIUtils";
+import { Tip, ConfirmDelete, GroupTypeBadge, CreateMenu, SelectMenu } from "../UIUtils";
 import "./Plans.css";
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
@@ -226,12 +226,12 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
             ) : (
                 <div className="plan-srs-add">
                     <div className="plan-section-title">Link Deck to SRS</div>
-                    <select value={selectedGroupId ?? ""}
-                        onChange={(e) => setSelectedGroupId(e.target.value ? Number(e.target.value) : null)}>
-                        <option value="">Select a deck</option>
-                        {unassigned.filter(g => g.group_type === "deck").map(g =>
-                            <option key={g.id} value={g.id}>{g.name}</option>)}
-                    </select>
+                    <SelectMenu value={selectedGroupId}
+                        onChange={(v) => setSelectedGroupId(v)}
+                        placeholder="Select a deck"
+                        emptyOption={{ value: null, label: "Select a deck" }}
+                        emptyHint="No decks to link"
+                        options={unassigned.filter(g => g.group_type === "deck").map(g => ({ value: g.id, label: g.name }))} />
                     <div className="plan-srs-settings-fields">
                         <label className="plan-srs-settings-label">
                             Max New
@@ -431,17 +431,15 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
                     {otherResources.length > 0 && (
                         <div className="plan-resource-copyfrom">
                             <span>Copy from</span>
-                            <select value={copyFrom} onChange={(e) => pickCopyFrom(e.target.value)}>
-                                <option value="">None (new)</option>
-                                {otherPlans.map((p) => {
-                                    const rs = otherResources.filter((r) => r.plan_id === p.id);
-                                    return rs.length > 0 && (
-                                        <optgroup key={p.id} label={p.name}>
-                                            {rs.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                                        </optgroup>
-                                    );
-                                })}
-                            </select>
+                            <SelectMenu value={copyFrom} onChange={(v) => pickCopyFrom(v)}
+                                placeholder="None (new)"
+                                emptyOption={{ value: "", label: "None (new)" }}
+                                groups={otherPlans
+                                    .map((p) => ({
+                                        label: p.name,
+                                        options: otherResources.filter((r) => r.plan_id === p.id).map((r) => ({ value: r.id, label: r.name })),
+                                    }))
+                                    .filter((g) => g.options.length > 0)} />
                         </div>
                     )}
                     <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name (e.g. Duolingo, Genki I)" autoFocus
@@ -562,17 +560,15 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
                     {otherTodos.length > 0 && (
                         <div className="plan-resource-copyfrom">
                             <span>Copy from</span>
-                            <select value={copyFrom} onChange={(e) => pickCopyFrom(e.target.value)}>
-                                <option value="">None (new)</option>
-                                {otherPlans.map((p) => {
-                                    const ts = otherTodos.filter((t) => t.plan_id === p.id);
-                                    return ts.length > 0 && (
-                                        <optgroup key={p.id} label={p.name}>
-                                            {ts.map((t) => <option key={t.id} value={t.id}>{t.text}</option>)}
-                                        </optgroup>
-                                    );
-                                })}
-                            </select>
+                            <SelectMenu value={copyFrom} onChange={(v) => pickCopyFrom(v)}
+                                placeholder="None (new)"
+                                emptyOption={{ value: "", label: "None (new)" }}
+                                groups={otherPlans
+                                    .map((p) => ({
+                                        label: p.name,
+                                        options: otherTodos.filter((t) => t.plan_id === p.id).map((t) => ({ value: t.id, label: t.text })),
+                                    }))
+                                    .filter((g) => g.options.length > 0)} />
                         </div>
                     )}
                     <div>

@@ -16,7 +16,7 @@ function UploadedHtmlField({ html }) {
     </>
   );
 }
-import { Tip, ConfirmDelete, CreateMenu } from "../UIUtils";
+import { Tip, ConfirmDelete, CreateMenu, SelectMenu } from "../UIUtils";
 import "./Decks.css";
 
 const VIEW_DECKS = "decks";
@@ -307,13 +307,13 @@ function DeckList({ setToast, onOpenDeck }) {
         <div className="dk-merge-panel">
           <div style={{ fontSize: 13, fontWeight: 500, color: "var(--t-text)" }}>Merge two decks</div>
           <div className="dk-merge-row">
-            <select value={mergeDeckA ?? ""} onChange={(e) => setMergeDeckA(Number(e.target.value))}>
-              {decks.filter(d => d.id !== mergeDeckB).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            <SelectMenu value={mergeDeckA} onChange={(v) => setMergeDeckA(v)}
+              placeholder="Select a deck"
+              options={decks.filter(d => d.id !== mergeDeckB).map(d => ({ value: d.id, label: d.name }))} />
             <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>+</span>
-            <select value={mergeDeckB ?? ""} onChange={(e) => setMergeDeckB(Number(e.target.value))}>
-              {decks.filter(d => d.id !== mergeDeckA).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            <SelectMenu value={mergeDeckB} onChange={(v) => setMergeDeckB(v)}
+              placeholder="Select a deck"
+              options={decks.filter(d => d.id !== mergeDeckA).map(d => ({ value: d.id, label: d.name }))} />
           </div>
           <input type="text" placeholder="New deck name..." value={mergeName}
             onChange={(e) => setMergeName(e.target.value)}
