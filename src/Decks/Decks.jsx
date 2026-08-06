@@ -143,8 +143,6 @@ function DeckList({ setToast, onOpenDeck }) {
     loadSrsSummaries();
   }, []);
 
-  const getPlanName = (planId) => plans.find((p) => p.id === planId)?.name ?? null;
-
   const createDeck = async () => {
     const name = newName.trim();
     if (!name) { setToast("Please enter a valid name.", "warn"); return; }
@@ -422,15 +420,6 @@ function DeckList({ setToast, onOpenDeck }) {
                       <b>{srsSummaries[deck.id]?.reviewTotal ?? 0}</b>
                       <span>review</span>
                     </span>
-                    {deck.plan_id && getPlanName(deck.plan_id) && (
-                      <>
-                        <span className="landing-stat-divider" />
-                        <span className="landing-stat landing-stat--plan landing-stat--text">
-                          <b title={getPlanName(deck.plan_id)}>{getPlanName(deck.plan_id)}</b>
-                          <span>plan</span>
-                        </span>
-                      </>
-                    )}
                   </div>
                 </>
               )}
@@ -610,14 +599,17 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     const last = cardLog[0]?.graded_at;
     return (
       <div className="dk-card-log">
-        {form.tier === 0 ? <span className="dk-log-new">New</span> : <span className="dk-log-review">Review</span>}
-        {` · Review retention: ${isReview ? retention + "%" : "N/A"}`}
-        {total === 1 ? ` · Seen ${total} time` : ` · Seen ${total} times`}
-        {last && ` · Last seen: ${last}`}
+        <span>
+          {form.tier === 0 ? <span className="dk-log-new">New</span> : <span className="dk-log-review">Review</span>}
+          {` · Review retention: ${isReview ? retention + "%" : "N/A"}`}
+          {total === 1 ? ` · Seen ${total} time` : ` · Seen ${total} times`}
+          {form.tier >= 1 && ` · Tier ${form.tier}`}
+        </span>
+        {last && <span className="dk-log-last">Last seen: {last}</span>}
       </div>
     );
   })() : (
-    <div className="dk-card-log"><span className="dk-log-new">New</span> · Unseen</div>
+    <div className="dk-card-log"><span><span className="dk-log-new">New</span> · Unseen</span></div>
   );
 
   if (previewing) {
@@ -943,6 +935,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
   const [plans, setPlans] = useState([]);
   const [confirmReset, setConfirmReset] = useState(false);
   const [dateSince, setDateSince] = useState("");
+  const [dateUntil, setDateUntil] = useState("");
   const [today, setToday] = useState(null);
   const [lastSeenMap, setLastSeenMap] = useState({});
   const [retentionMap, setRetentionMap] = useState({});
@@ -1118,8 +1111,15 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
     else if (filter === "uploaded") result = result.filter(c => c.is_uploaded);
 
     if (dateSince) result = result.filter(c => lastSeenMap[c.id] && lastSeenMap[c.id] >= dateSince);
+    if (dateUntil) result = result.filter(c => lastSeenMap[c.id] && lastSeenMap[c.id] <= dateUntil);
 
     if (sort === "sequence") result = [...result].sort((a, b) => sortDir === "asc" ? a.sequence - b.sequence : b.sequence - a.sequence);
+    // Tier only means something once a card has left the new pile, so like retention it drops
+    // every still-new card and leaves only the ones that actually sit on a tier
+    else if (sort === "tier") {
+      result = result.filter(c => c.tier >= 1);
+      result = [...result].sort((a, b) => sortDir === "asc" ? a.tier - b.tier : b.tier - a.tier);
+    }
     // Retention doubles as a filter, dropping any card with no rate so the list is only ever
     // cards that actually have a retention to compare
     else if (sort === "retention") {
@@ -1132,14 +1132,21 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
     else if (sortDir === "desc") result = [...result].reverse();
 
     return result;
-  }, [cards, search, scopeMain, scopeSupport, filter, dateSince, lastSeenMap, retentionMap, sort, sortDir, deck.plan_id]);
+  }, [cards, search, scopeMain, scopeSupport, filter, dateSince, dateUntil, lastSeenMap, retentionMap, sort, sortDir, deck.plan_id]);
 
-  // Clicking the active sort again flips the direction
-  const pickSort = (key) => {
-    if (sort === key) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSort(key); setSortDir("asc"); }
+  const SORTS = [
+    { key: "id",        label: "Created"   },
+    { key: "sequence",  label: "Due"       },
+    { key: "retention", label: "Retention" },
+    { key: "tier",      label: "Tier"      },
+  ];
+  const sortLabel = SORTS.find(s => s.key === sort)?.label ?? "Created";
+  // The field pill steps through the orders, always landing ascending on a fresh field
+  const cycleSort = () => {
+    const i = SORTS.findIndex(s => s.key === sort);
+    setSort(SORTS[(i + 1) % SORTS.length].key);
+    setSortDir("asc");
   };
-  const sortArrow = (key) => sort === key ? (sortDir === "asc" ? " ↑" : " ↓") : "";
 
   // Only rows near the viewport render, with spacer rows holding the scroll height
   useLayoutEffect(() => {
@@ -1226,16 +1233,17 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
             <div className="dk-sort-filter-row">
               <button className={`dk-filter-toggle${filtersOpen || filter !== "all" ? " active" : ""}`}
                 onClick={() => setFiltersOpen(o => !o)} title="Filters">{filtersOpen ? "▾" : "▸"}</button>
-              <div className="dk-sort-seg">
-                <button className={sort === "id" ? "active" : ""} onClick={() => pickSort("id")}>Created{sortArrow("id")}</button>
-                <button className={sort === "sequence" ? "active" : ""} onClick={() => pickSort("sequence")}>Due{sortArrow("sequence")}</button>
-                <button className={sort === "retention" ? "active" : ""} onClick={() => pickSort("retention")}>Retention{sortArrow("retention")}</button>
+              <div className="dk-sort-cycle">
+                <button className="dk-sort-field" onClick={cycleSort} title="Order cards by">{sortLabel}</button>
+                <button className="dk-sort-dir" onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title="Flip direction">{sortDir === "asc" ? "↑" : "↓"}</button>
               </div>
               {today && (
                 <div className="dk-date-filter">
-                  <span>Seen after:</span>
+                  <span>Last seen:</span>
                   <input type="date" value={dateSince} onChange={e => setDateSince(e.target.value)} />
-                  {dateSince && <button className="dk-date-clear" title="Clear" onClick={() => setDateSince("")}>×</button>}
+                  <span>-</span>
+                  <input type="date" value={dateUntil} onChange={e => setDateUntil(e.target.value)} />
+                  {(dateSince || dateUntil) && <button className="dk-date-clear" title="Clear" onClick={() => { setDateSince(""); setDateUntil(""); }}>×</button>}
                 </div>
               )}
             </div>
@@ -1279,9 +1287,11 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
                   ? "This deck isn't linked to a plan."
                   : sort === "retention"
                     ? "No cards have been reviewed enough to have a review retention."
-                    : search || filter !== "all" || dateSince
-                      ? "No cards match your filters."
-                      : "No cards yet, create some below!"}
+                    : sort === "tier"
+                      ? "No cards have been reviewed enough to have a tier."
+                      : search || filter !== "all" || dateSince || dateUntil
+                        ? "No cards match your filters."
+                        : "No cards yet, create some below!"}
               </div>
             </div>
           ) : (

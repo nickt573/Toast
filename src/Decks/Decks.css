@@ -66,11 +66,14 @@
 
 .dk-sort-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .dk-sort-filter-row .dk-date-filter { margin-left: auto; }
-.dk-sort-seg { display: flex; gap: 4px; flex-shrink: 0; }
-.dk-sort-seg button { padding: 3px 11px; font-size: 11px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); cursor: pointer; color: var(--t-btn-fg); white-space: nowrap; box-shadow: none; user-select: none; }
-.dk-sort-seg button:hover { background: var(--t-btn-h); box-shadow: none; }
-.dk-sort-seg button.active,
-.dk-sort-seg button.active:hover { background: var(--t-blue-btn); border-color: var(--t-blue-btn); color: var(--t-btn-fg); filter: brightness(1); }
+.dk-sort-cycle { display: flex; flex-shrink: 0; }
+.dk-sort-cycle button { font-size: 11px; border: 1px solid var(--t-blue-btn); background: var(--t-blue-btn); color: var(--t-btn-fg); cursor: pointer; box-shadow: none; white-space: nowrap; user-select: none; }
+.dk-sort-cycle button:hover { filter: brightness(1.06); box-shadow: none; }
+.dk-sort-cycle button:active { transform: none; box-shadow: none; }
+.dk-sort-field { padding: 3px 11px; border-radius: var(--t-r-btn) 0 0 var(--t-r-btn); }
+.dk-sort-field:active { background: var(--t-blue-btn); }
+.dk-sort-cycle .dk-sort-dir { padding: 3px 9px; border-radius: 0 var(--t-r-btn) var(--t-r-btn) 0; border-left: none; border-color: var(--t-blue); background: var(--t-blue); font-weight: 700; }
+.dk-sort-cycle .dk-sort-dir:active { background: var(--t-blue); }
 
 .dk-date-filter { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); flex-wrap: nowrap; flex-shrink: 0; }
 .dk-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
@@ -166,9 +169,10 @@
 /* Fill comes from the read-only input rule, the same as every other file picker */
 .dk-file-row input[type="text"] { flex: 1; font-size: 12px; }
 .dk-editor-actions { display: flex; gap: 8px; padding-top: 12px; flex-shrink: 0; align-items: center; flex-wrap: wrap; }
-.dk-card-log { font-size: 11px; color: var(--t-text-3); padding: 8px 10px; margin-top: 2px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-btn); }
+.dk-card-log { font-size: 11px; color: var(--t-text-3); padding: 8px 10px; margin-top: 2px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-btn); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dk-log-last { margin-left: auto; white-space: nowrap; }
 .dk-log-new    { color: #6BA6CE;  font-weight: 700; }   /* sky blue, apart from the deck slate */
-.dk-log-review { color: var(--t-green); font-weight: 700; }
+.dk-log-review { color: var(--t-review); font-weight: 700; }
 .dk-priority-star { color: #D9A521; font-size: 12px; line-height: 1; }
 /* A hidden copy of the marks on the left balances the real ones on the right, so the date
    stays centred while the marks trail at a fixed gap */
