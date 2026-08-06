@@ -224,3 +224,25 @@
 .dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); font-size: 13px; color: var(--t-red); flex-shrink: 0; font-style: italic; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 /* The confirm bar carries the shadow, so the header drops its own to avoid a double line */
 .detail-title-band--deck:has(+ .dk-confirm-bar) { box-shadow: none; }
+
+/* The drill-down control is phone only, hidden in the desktop side-by-side layout */
+.dk-mobile-back { display: none; }
+
+@media (max-width: 640px) {
+  /* The list and editor can't share a phone screen, so each takes the whole width and the
+     mobile-detail class flips between them: list first, tap a card to drill into the editor */
+  .dk-table-pane {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    border-right: none;
+  }
+  .dk-cards-body .dk-editor-pane,
+  .dk-cards-body .dk-editor-none { display: none; }
+  .dk-cards-body.mobile-detail .dk-table-pane { display: none; }
+  .dk-cards-body.mobile-detail .dk-editor-pane { display: flex; }
+  .dk-cards-body.mobile-detail .dk-editor-none { display: block; }
+
+  /* Back sits first in the editor's top bar and shoves the rest to the right */
+  .dk-mobile-back { display: inline-block; margin-right: auto; }
+}

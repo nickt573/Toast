@@ -958,6 +958,7 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
             </div>
 
             {isOpen && (
+              <div className="st-table-scroll">
               <table className="st-table">
                 <colgroup>
                   <col /><col /><col /><col /><col /><col /><col />
@@ -1029,6 +1030,7 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             {/* Every studied deck gets the bar even with no fortnight to page back to, so

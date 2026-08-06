@@ -169,3 +169,17 @@ button.togo-choice.active:hover {
 
 .togo-choice-label { font-size: 13px; font-weight: 600; color: var(--t-text); }
 .togo-choice-hint  { font-size: 11px; color: var(--t-text-2); }
+
+@media (max-width: 640px) {
+  /* The five-column saved-ID row won't fit a phone, so the name takes the top line and the
+     ID, its age and the buttons flow beneath it */
+  .togo-recents li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+  }
+  .togo-recents li > .togo-label,
+  .togo-recents li > .togo-label-input { flex: 1 1 100%; }
+  .togo-recents .togo-meta { text-align: left; }
+}

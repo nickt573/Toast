@@ -1070,3 +1070,119 @@ textarea { overflow-y: scroll; }
 .pill .nbtag-badge { background: var(--t-plum-lt); }
 
 /* The page picker reuses the unit picker's chip and menu, so its classes live there */
+
+/* ============================================================
+   Mobile layer. Everything here is width-gated so the fixed
+   1000px desktop window never sees it, and the desktop rules
+   above are left exactly as they were.
+   ============================================================ */
+
+/* No tap-to-zoom delay on anything you press */
+button, a, input, select, textarea, [role="button"] { touch-action: manipulation; }
+
+@media (max-width: 640px) {
+  /* iOS zooms in on a focused field smaller than 16px and never zooms back out */
+  input, select, textarea { font-size: 16px; }
+
+  /* The status bar sits over the top now that the nav has left it, so hold the page
+     clear of it, and keep the sides inside the rounded screen corners */
+  .app-shell {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+
+  /* Nav drops to the bottom of the shell as a thumb-reachable tab bar, in flow so the
+     page above never hides behind it */
+  .app-nav {
+    order: 2;
+    height: auto;
+    padding: 0 0 env(safe-area-inset-bottom) 0;
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.04), 0 -2px 0 rgba(0,0,0,0.14);
+  }
+  .app-content { order: 1; }
+
+  /* Drop the desktop furniture and let the two tab groups flatten into one row */
+  .app-nav-logo,
+  .app-nav-spacer { display: none; }
+  .app-nav-center { display: contents; }
+
+  /* Every tab an equal slice of the bar, tall enough to be a real touch target */
+  .app-nav-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    height: auto;
+    min-height: 52px;
+    padding: 7px 1px;
+    gap: 0;
+    /* Stretch children to the tab width so a long label wraps instead of spilling past it */
+    align-items: stretch;
+  }
+  /* Home behaves like the rest instead of wearing its pink desktop chip */
+  .app-nav-tab--home { height: auto; align-self: stretch; border-radius: 0; }
+  .app-nav-tab--home.active { background: none; }
+
+  /* The active marker rides the top edge of the bar instead of the bottom */
+  .app-nav-tab.active::after { top: 0; bottom: auto; }
+  .app-nav-tab--home.active::after { display: block; }
+
+  /* Subtitles are too long for a phone tab, the label carries it and wraps to two lines
+     when a name like Toast to Go can't fit on one */
+  .app-nav-tab-label { font-size: 10px; line-height: 1.1; text-align: center; width: 100%; }
+  .app-nav-tab-sub { display: none; }
+
+  /* The desktop 24px gutter and 27px titles eat a phone's width, so every page that
+     measures from these tokens loosens together */
+  :root { --t-page-pad: 14px; --t-title-size: 21px; }
+
+  /* Slimmer decorative edge bars so the content column isn't crowded, the same shrink on
+     every striped row so they stay one family */
+  .landing-card,
+  .st-resource-card,
+  .st-item-bar,
+  .hp-todo-row,
+  .hp-deck-row,
+  .plan-srs-row,
+  .plan-srs-add,
+  .plan-resource-row,
+  .plan-resource-add,
+  .plan-todo-form,
+  .plan-todo-row,
+  .plan-todo-edit { --t-stripe-u: 6px; }
+  .hp-free-todo-option,
+  .hp-free-todo-option:hover { --t-stripe-u: 4px; }
+
+  /* Landing cards stack on a phone: the name row, then the stat readouts on their own full
+     width line, then the actions, so nothing has to fight for the same row */
+  .landing-card { flex-direction: column; align-items: stretch; gap: 10px; padding-left: 16px; }
+  .landing-card-stats { margin-top: 0; }
+  .landing-stat { min-width: 52px; }
+  .landing-stat-divider { margin: 0 12px; }
+  .landing-card-actions { justify-content: flex-end; }
+
+  /* Header bars stay a single row: the title truncates and the controls hold the right edge
+     instead of spilling onto new lines, and the redundant count note drops out */
+  .landing-hdr,
+  .dk-cards-header,
+  .nb-pages-header,
+  .st-header,
+  .detail-title-band { height: auto; min-height: 50px; }
+  .hdr-context { display: none; }
+  .landing-hdr h2,
+  .dk-cards-header h2,
+  .nb-pages-header h2,
+  .st-header h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .detail-title { flex: 1 1 auto; font-size: 21px; }
+
+  /* Pinned create and picker menus never grow wider than the screen */
+  .t-add-menu,
+  .unit-picker-menu { width: auto; max-width: calc(100vw - 24px); }
+
+  /* Imported card HTML can carry huge images or wide tables, so keep them inside the card */
+  .hp-card-box img, .hp-card-box video,
+  .dk-preview-card img, .dk-preview-card video,
+  .hp-similar img, .hp-similar video,
+  .nb-editor-scroll img, .nb-editor-scroll video { max-width: 100%; height: auto; }
+  .hp-card-box table,
+  .dk-preview-card table,
+  .hp-similar table,
+  .nb-editor-scroll table { display: block; overflow-x: auto; max-width: 100%; }
+}

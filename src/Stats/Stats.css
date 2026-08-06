@@ -343,3 +343,16 @@
 .st-pill-dead--archived { --dead-pill: #CDC3BE; --dead-pill-h: #BFB3AD; --dead-pill-a: #B5AAA4; }
 .st-pill-dead--deleted  { --dead-pill: #E5BBAF; --dead-pill-h: #DAA89A; --dead-pill-a: #D09686; }
 .st-pill-dead--merged   { --dead-pill: #CDBBD6; --dead-pill-h: #C2ADCD; --dead-pill-a: #B7A0C4; }
+
+@media (max-width: 640px) {
+  /* The seven metric cards wrap to fit rather than squeezing into unreadable slivers */
+  .st-metrics { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+
+  /* The todo filter panel stacks its columns into one, controls run full width */
+  .st-filters { grid-template-columns: 1fr; }
+  .st-field .st-dd { width: 100%; }
+
+  /* The deck sessions table keeps every column and scrolls sideways inside its card */
+  .st-table-scroll { overflow-x: auto; }
+  .st-table { min-width: 480px; }
+}

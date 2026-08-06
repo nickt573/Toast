@@ -453,7 +453,7 @@ function DeckList({ setToast, onOpenDeck }) {
 
 // Card Editor
 
-function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan, logVersion }) {
+function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan, logVersion, onBack }) {
   const [form, setForm] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewFlipped, setPreviewFlipped] = useState(false);
@@ -616,6 +616,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     return (
       <div className="dk-editor-pane dk-editor-pane--preview" ref={paneRef} onScroll={handlePaneScroll}>
         <div className="dk-editor-topbar">
+          {onBack && <button className="dk-mobile-back" onClick={onBack}>‹ Cards</button>}
           <button className="quiet" onClick={() => setPreviewing(false)}>Edit</button>
           {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
           <button style={{ marginLeft: "auto" }} onClick={() => setPreviewFlipped((f) => !f)}>
@@ -635,6 +636,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
   return (
     <div className="dk-editor-pane" ref={paneRef} onScroll={handlePaneScroll}>
       <div className="dk-editor-topbar">
+        {onBack && <button className="dk-mobile-back" onClick={onBack}>‹ Cards</button>}
         <button onClick={() => { setPreviewing(true); setPreviewFlipped(false); }}>Preview</button>
         {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
       </div>
@@ -925,6 +927,9 @@ function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearch
 function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNavigateToPlan }) {
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  // On a phone the list and editor can't share the screen, so tapping a card drills into
+  // the editor and Back returns to the list. Ignored by the desktop side-by-side layout.
+  const [mobileDetail, setMobileDetail] = useState(false);
   const [search, setSearch] = useState("");
   // Which fields the text search matches, and at least one stays on at all times
   const [scopeMain, setScopeMain] = useState(true);
@@ -1165,7 +1170,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
   const spacerStyle = (px) => ({ height: px, padding: 0, border: "none", background: "transparent" });
 
   const selectedCard = cards.find((c) => c.id === selectedId) ?? null;
-  const handleCreated = (card) => { setCards((prev) => [...prev, card]); setSelectedId(card.id); };
+  const handleCreated = (card) => { setCards((prev) => [...prev, card]); setSelectedId(card.id); setMobileDetail(true); };
   const handleSaved = async (updated) => {
     const old = cards.find(c => c.id === updated.id);
     if (old?.is_paused !== updated.is_paused) {
@@ -1179,6 +1184,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
     const fresh = await loggedInvoke("get_cards", { deckId: deck.id });
     setCards(fresh);
     setSelectedId(fresh.length > 0 ? fresh[0].id : null);
+    setMobileDetail(false);
   };
   const handleRescheduled = (updated) => {
     setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
@@ -1217,7 +1223,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
         </div>
       )}
 
-      <div className="dk-cards-body">
+      <div className={`dk-cards-body${mobileDetail ? " mobile-detail" : ""}`}>
         <div className="dk-table-pane" ref={tablePaneRef}>
           <div className="dk-table-search">
             <div className="dk-search-row">
@@ -1325,7 +1331,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
                             ? (card.tier === 0 ? "is-new-due" : "is-review-due")
                             : "",
                         ].filter(Boolean).join(" ")}
-                        onClick={() => setSelectedId(card.id)}>
+                        onClick={() => { setSelectedId(card.id); setMobileDetail(true); }}>
                         <td><div className="dk-cell-clamp">{front}</div></td>
                         <td><div className="dk-cell-clamp">{back}</div></td>
                         <td>
@@ -1377,6 +1383,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
         <CardEditor
           setToast={setToast}
           card={selectedCard}
+          onBack={() => setMobileDetail(false)}
           onSaved={handleSaved}
           onDeleted={handleDeleted}
           onRescheduled={handleRescheduled}

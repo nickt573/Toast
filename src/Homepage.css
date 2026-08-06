@@ -702,3 +702,15 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* Matches the todo and deck rows above it, scoped here since the same card also lists
    resources over in stats where the names stay as they are */
 .hp-resources-list .st-resource-card-name { font-weight: 700; font-size: 19px; }
+
+@media (max-width: 640px) {
+  /* The dashboard card carries its own wider bars, slimmed here to match every other row */
+  .hp-plan-card { --t-stripe-u: 8px; }
+
+  /* The swap popup can't be wider than the screen it floats over */
+  .hp-popup { width: min(420px, calc(100vw - 24px)); }
+
+  /* The fixed corner help and version chips would land on top of the bottom tab bar */
+  .hp-help-btn,
+  .hp-version { display: none; }
+}
