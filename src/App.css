@@ -3,6 +3,7 @@
 :root {
   /* Backgrounds, peachy Neapolitan cream and warm paper surfaces */
   --t-bg:            #F8E5D6;   /* main app background, peach cream, kept deeper than the surface so borderless white content reads against it */
+  --t-panel-fill:    #FCEEE4;   /* a really subtle light peach the todo stat table rests its open rows on */
   --t-surface:       #FFF9F4;   /* card or surface fill, warm off-white */
   --t-surface-2:     #FBEAE0;   /* muted, read-only fields and form zones */
   --t-surface-3:     #F7D9C4;   /* deep peach, table and section headers over white bodies */

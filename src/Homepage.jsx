@@ -1313,17 +1313,26 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                     loggedInvoke("get_plan_srs_groups", { planId: plan.id }),
                     loggedInvoke("get_plan_streak", { planId: plan.id }),
                 ]);
-                const todayTodos = todos.filter(t => !t.is_disabled && !t.is_done).length;
-                const deckDueCounts = await Promise.all(
+                const dueTodos = todos.filter(t => !t.is_disabled && !t.is_done);
+                // OR the categories still waiting so the card can show what kind of work is due
+                const todoCategories = dueTodos.reduce((m, t) => m | (t.category ?? 0), 0);
+                const deckDue = await Promise.all(
                     srs
                         .filter(([group]) => group.group_type === "deck")
                         .map(async ([group]) => {
                             const [n, r, c] = await loggedInvoke("count_due_items", { groupId: group.id });
-                            return n + r + c;
+                            return { n, r, c };
                         })
                 );
-                const totalDue = deckDueCounts.reduce((a, b) => a + b, 0);
-                counts[plan.id] = { todos: todayTodos, cards: totalDue, streakInfo };
+                const newDue = deckDue.reduce((a, b) => a + b.n, 0);
+                const reviewDue = deckDue.reduce((a, b) => a + b.r, 0);
+                const cramDue = deckDue.reduce((a, b) => a + b.c, 0);
+                counts[plan.id] = {
+                    todos: dueTodos.length,
+                    cards: newDue + reviewDue + cramDue,
+                    newDue, reviewDue, cramDue, todoCategories,
+                    streakInfo,
+                };
             }));
             setPlanCounts(counts);
         } catch (e) { logError("catch", e); setToast("Failed to load plans.", "error"); }
@@ -1409,23 +1418,32 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                     </div>
                                     <div className="hp-plan-card-stats">
                                         <div className="hp-plan-stat-box">
-                                            <span className={`hp-stat-num ${isDone ? "hp-stat-num--zero" : "hp-stat-num--todos"}`}>{counts?.todos ?? 0}</span>
-                                            <span className="hp-stat-lbl">{(counts?.todos ?? 0) == 1 ? "todo due" : "todos due"}</span>
+                                            <div className="hp-plan-stat-body">
+                                                <span className={`hp-stat-num ${isDone ? "hp-stat-num--zero" : "hp-stat-num--todos"}`}>{counts?.todos ?? 0}</span>
+                                                <span className="hp-stat-lbl">{(counts?.todos ?? 0) == 1 ? "todo due" : "todos due"}</span>
+                                            </div>
+                                            <div className="hp-plan-detail">
+                                                <CategoryPills mask={counts?.todoCategories ?? 0} abbrev showAll dotSize={26} />
+                                            </div>
                                         </div>
                                         <div className="hp-plan-stat-divider" />
                                         <div className="hp-plan-stat-box">
-                                            <span className={`hp-stat-num ${isDone ? "hp-stat-num--zero" : "hp-stat-num--decks"}`}>{counts?.cards ?? 0}</span>
-                                            <span className="hp-stat-lbl">{(counts?.cards ?? 0) == 1 ? "card due" : "cards due"}</span>
+                                            <div className="hp-plan-stat-body">
+                                                <span className={`hp-stat-num ${isDone ? "hp-stat-num--zero" : "hp-stat-num--decks"}`}>{counts?.cards ?? 0}</span>
+                                                <span className="hp-stat-lbl">{(counts?.cards ?? 0) == 1 ? "card due" : "cards due"}</span>
+                                            </div>
+                                            <div className="hp-plan-detail">
+                                                <span className={`hp-plan-mini hp-plan-mini--new${counts?.newDue > 0 ? "" : " is-zero"}`}>New {counts?.newDue ?? 0}</span>
+                                                <span className={`hp-plan-mini hp-plan-mini--review${counts?.reviewDue > 0 ? "" : " is-zero"}`}>Review {counts?.reviewDue ?? 0}</span>
+                                                {counts?.cramDue > 0 && <span className="hp-plan-mini hp-plan-mini--cram">Cram {counts.cramDue}</span>}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="hp-plan-card-foot">
-                                        {idle && (
-                                            <span className="hp-plan-idle-note">
-                                                Nothing due today. Log an extra activity to {streakInfo.streak > 0 ? "keep" : "start"} your streak.
-                                            </span>
-                                        )}
-                                        <span className="hp-plan-open">Open plan →</span>
-                                    </div>
+                                    {idle && (
+                                        <div className="hp-plan-idle-note">
+                                            Nothing due today. Log an extra activity to {streakInfo.streak > 0 ? "keep" : "start"} your streak.
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

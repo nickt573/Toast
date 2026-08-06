@@ -78,20 +78,38 @@ export function FrequencyPicker({ frequency, onChange }) {
     );
 }
 
-// Solid colored category pills, matching the todo stats table header
-export function CategoryPills({ mask, style, small = false }) {
-    const cats = CATEGORIES.filter(({ bit }) => mask & bit);
+// Solid colored category pills, matching the todo stats table header. With showAll the whole
+// category set renders and the ones missing from the mask grey out, so a summary stays put
+// while its unused or finished categories read as inactive
+export function CategoryPills({ mask, style, small = false, abbrev = false, showAll = false, dotSize = 20 }) {
+    const cats = showAll ? CATEGORIES : CATEGORIES.filter(({ bit }) => mask & bit);
     if (cats.length === 0) return null;
     return (
-        <span style={{ display: "inline-flex", gap: small ? 3 : 5, flexWrap: "wrap", ...style }}>
-            {cats.map(({ label, color }) => (
-                <span key={label} style={{
-                    display: "inline-block", padding: small ? "0px 5px" : "2px 8px", borderRadius: "var(--t-r-tab)",
-                    fontSize: small ? 8 : 10, fontWeight: 600, background: color, color: "var(--t-btn-fg)",
-                }}>
-                    {label}
-                </span>
-            ))}
+        <span style={{ display: "inline-flex", gap: small ? 3 : (abbrev ? 8 : 5), flexWrap: "wrap", ...style }}>
+            {cats.map(({ label, bit, color }) => {
+                const active = (mask & bit) !== 0;
+                const fill = active ? color : "var(--t-panel-fill)";
+                const fg = active ? "var(--t-btn-fg)" : "var(--t-silver)";
+                return abbrev ? (
+                    <svg key={label} width={dotSize} height={dotSize} viewBox="0 0 20 20"
+                        style={{ flexShrink: 0, display: "block" }}>
+                        <title>{label}</title>
+                        <circle cx="10" cy="10" r="10" fill={fill} />
+                        <text x="10" y="10" textAnchor="middle" dominantBaseline="central"
+                            fontSize="12" fontWeight="700" fill={fg}
+                            style={{ fontFamily: "inherit" }}>
+                            {label[0]}
+                        </text>
+                    </svg>
+                ) : (
+                    <span key={label} style={{
+                        display: "inline-block", padding: small ? "0px 5px" : "2px 8px", borderRadius: "var(--t-r-tab)",
+                        fontSize: small ? 8 : 10, fontWeight: 600, background: fill, color: fg,
+                    }}>
+                        {label}
+                    </span>
+                );
+            })}
         </span>
     );
 }

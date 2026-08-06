@@ -106,50 +106,50 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   line-height: 1.5;
 }
 
-/* Plan card, a white paper sheet with a state border, carrying the same colour pair a
-   striped box does so the edge and the centre bar can never drift apart */
+/* Plan card, the same striped bar the deck and todo rows wear, sized up as the day's entry
+   point, carrying one colour pair so the edge and the stripes can never drift apart */
 .hp-plan-card {
-  /* The plan card wears a lighter caramel and forest than the rest of the app, kept here
-     so the shared colours those two lighten from stay where they are */
-  --hp-plan-gold:  color-mix(in srgb, var(--t-accent) 76%, #fff);
-  --hp-plan-green: color-mix(in srgb, var(--t-green-h) 66%, #fff);
   --t-stripe: var(--t-border-2);
   --t-stripe-hi: var(--t-border-3);
-  padding: 22px 24px;
-  min-height: 170px;
+  /* A grown stripe unit so the bars read as a ribbon down the card's edge, wide enough to
+     carry the extra height a landing card doesn't have, rather than the thin list-row rule */
+  --t-stripe-u: 15px;
+  /* Reserve the right edge for the stripes so the streak chip and counts clear them */
+  --t-stripe-gutter: calc(7 * var(--t-stripe-u));
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  border: var(--t-bw) solid var(--t-stripe-hi);
+  min-height: 140px;
+  padding: 13px var(--t-stripe-gutter) 20px 24px;
+  border: none;
   border-radius: var(--t-r);
   cursor: pointer;
-  background: var(--t-surface);
+  background-color: var(--t-surface);
+  background-image: linear-gradient(90deg,
+    transparent 0 calc(100% - 6 * var(--t-stripe-u)),
+    var(--t-stripe) calc(100% - 6 * var(--t-stripe-u)) calc(100% - 5 * var(--t-stripe-u)),
+    transparent calc(100% - 5 * var(--t-stripe-u)) calc(100% - 4 * var(--t-stripe-u)),
+    var(--t-stripe) calc(100% - 4 * var(--t-stripe-u)) calc(100% - 3 * var(--t-stripe-u)),
+    transparent calc(100% - 3 * var(--t-stripe-u)) calc(100% - 2 * var(--t-stripe-u)),
+    var(--t-stripe) calc(100% - 2 * var(--t-stripe-u)) calc(100% - 1 * var(--t-stripe-u)),
+    transparent calc(100% - 1 * var(--t-stripe-u)));
   margin-bottom: var(--t-list-gap);
   box-shadow: var(--t-shadow-card);
-  transition: background var(--t-ease-hover);
-}
-.hp-plan-card:hover {
-  background: #FAF1E5;
-}
-/* Done plans highlight green on hover, mixed with white rather than the warm surface so it stays clean */
-.hp-plan-card.is-done:hover {
-  background: color-mix(in srgb, var(--t-green) 14%, #fff);
+  transition: --t-stripe var(--t-ease-hover);
 }
 /* A plan with nothing due but no study logged yet still counts as open work, so it wears
    the same caramel as a plan with cards waiting */
-.hp-plan-card.has-due {
-  --t-stripe: var(--t-accent-stripe);
-  --t-stripe-hi: var(--hp-plan-gold);
-}
+.hp-plan-card.has-due { --t-stripe: var(--t-accent-stripe); --t-stripe-hi: var(--t-accent); }
 /* Nothing left due today, a green border and check matching the deck rows */
-.hp-plan-card.is-done {
-  --t-stripe: var(--t-green-stripe);
-  --t-stripe-hi: var(--hp-plan-green);
-}
+.hp-plan-card.is-done { --t-stripe: var(--t-green-stripe); --t-stripe-hi: var(--t-green); }
+/* Hover deepens the stripes to the border colour, the same as every other bar. The state
+   classes are matched here too, or their equal specificity would cancel the deepen out */
+.hp-plan-card:hover,
+.hp-plan-card.has-due:hover,
+.hp-plan-card.is-done:hover { --t-stripe: var(--t-stripe-hi); }
 .hp-plan-check {
   color: var(--t-green);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1;
   flex-shrink: 0;
   user-select: none;
@@ -168,7 +168,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-plan-name {
   font-family: var(--t-font-head);
-  font-size: 25px;
+  font-size: 27px;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.15;
