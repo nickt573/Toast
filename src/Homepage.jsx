@@ -804,11 +804,11 @@ function StudySession({ group, onBack, setToast }) {
                         {isCramTurn
                             ? <span className="pill pill-cram">Cram</span>
                             : card.tier > 0
-                                ? <span className="pill pill-green">Review{card.is_overdue === true && " - Overdue"}</span>
+                                ? <span className="pill pill-review">Review{card.is_overdue === true && " - Overdue"}</span>
                                 : <span className="pill pill-new">New{card.is_overdue === true && " - Overdue"}</span>}
                         <div className="hp-session-counts">
                             <span className="pill pill-new" style={{ opacity: currentType === "new" ? 1 : 0.4 }}>New: {newCount}</span>
-                            <span className="pill pill-green" style={{ opacity: currentType === "review" ? 1 : 0.4 }}>Review: {reviewCount}</span>
+                            <span className="pill pill-review" style={{ opacity: currentType === "review" ? 1 : 0.4 }}>Review: {reviewCount}</span>
                             {cramCount > 0 && <span className="pill pill-cram" style={{ opacity: currentType === "cram" ? 1 : 0.4 }}>Cram: {cramCount}</span>}
                         </div>
                     </div>

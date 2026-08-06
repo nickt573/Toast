@@ -59,6 +59,7 @@
   --t-green:         #4A8C5E;
   --t-green-h:       #3E764F;   /* hover deepens */
   --t-green-bdr:     #A6C6A8;
+  --t-review:        #5CA372;   /* review green, lighter than promote and streak but not lime */
 
   /* Destructive red */
   --t-red:           #B85454;
@@ -508,6 +509,7 @@ textarea { overflow-y: scroll; }
   user-select: none;
 }
 .pill-green  { background: var(--t-green); color: var(--t-accent-fg); }
+.pill-review { background: var(--t-review); color: var(--t-accent-fg); }
 .pill-blue   { background: var(--t-blue);  color: var(--t-accent-fg); }
 /* The sky the new-card counts wear, so the pill over a card matches the count above it */
 .pill-new    { background: var(--t-new);   color: var(--t-accent-fg); }
@@ -890,7 +892,7 @@ textarea { overflow-y: scroll; }
 .hp-deck-new,
 .plan-srs-count--new       { background: var(--t-new); }
 .hp-deck-review,
-.plan-srs-count--review    { background: var(--t-green); }
+.plan-srs-count--review    { background: var(--t-review); }
 .hp-deck-cram      { background: var(--t-plum); }
 
 
