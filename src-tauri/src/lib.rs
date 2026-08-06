@@ -33,7 +33,11 @@ fn set_dock_icon() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    // Android proxies every webview request through reqwest, and reqwest's rustls backend
+    // panics without a process-wide crypto provider, so install one before anything runs
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
+    let builder = tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::default()
                 .level(log::LevelFilter::Info)
@@ -44,9 +48,16 @@ pub fn run() {
                 )])
                 .build(),
         )
-        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_dialog::init());
+
+    // The updater and process plugins have no mobile counterpart, mobile updates go through
+    // the app stores instead
+    #[cfg(desktop)]
+    let builder = builder
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_process::init());
+
+    builder
         .setup(|app| {
             #[cfg(target_os = "macos")]
             set_dock_icon();
