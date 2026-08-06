@@ -465,6 +465,50 @@ const stretchRetention = {
   },
 };
 
+// A dashed line across the By Time chart marking the average total hours per bucket
+const avgTimeLine = {
+  id: "avgTimeLine",
+  afterDatasetsDraw(chart) {
+    if (!chart.options.plugins?.avgTimeLine?.display) return;
+    const n = chart.data.labels.length;
+    if (!n) return;
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      for (const d of chart.data.datasets) sum += (d.data[i] ?? 0);
+    }
+    const avg = sum / n;
+    if (!(avg > 0)) return;
+    const { ctx, chartArea: { left, right, top }, scales: { y } } = chart;
+    const yPix = y.getPixelForValue(avg);
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([5, 4]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = RED;
+    ctx.moveTo(left, yPix);
+    ctx.lineTo(right, yPix);
+    ctx.stroke();
+    // Value pill riding the right end of the line, red fill so the number stays readable over bars
+    ctx.setLineDash([]);
+    const text = `${avg.toFixed(1)}h`;
+    ctx.font = "700 12px 'Atkinson Hyperlegible', system-ui, sans-serif";
+    const tw = ctx.measureText(text).width;
+    const padX = 7, bw = tw + padX * 2, bh = 20;
+    const bx = right - bw;
+    let by = yPix - bh - 4;
+    if (by < top) by = yPix + 4;
+    ctx.fillStyle = RED;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 5);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, bx + padX, by + bh / 2 + 0.5);
+    ctx.restore();
+  },
+};
+
 // Metric card
 function MetricCard({ label, value, color, faces }) {
   const items = faces ?? [{ label, value, color }];
@@ -506,6 +550,7 @@ const RANGES = [
 
 function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const [tab, setTab] = useState("bytime");
+  const [showAvg, setShowAvg] = useState(false);
   const [range,  setRange]  = useState(30);
   const [offset, setOffset] = useState(0);
   const [retMode, setRetMode] = useState("daily");
@@ -581,7 +626,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
     </span>
   );
 
-  const rangeControls = (win) => (
+  const rangeControls = (win, extra) => (
     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
       <div className="st-pills">
         {RANGES.map(({ label, days }) => (
@@ -593,6 +638,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
           </button>
         ))}
       </div>
+      {extra && <span style={{ marginLeft: 10, display: "inline-flex", alignItems: "center" }}>{extra}</span>}
       {range === null ? (
         win.unit !== "day" && (
           <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--t-text-3)" }}>
@@ -617,6 +663,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
   const timeOpts = (() => {
     const o = barOpts(true, "Hours", dateTicks(timeWin.unit), false, timeWin.unit);
     delete o.scales.y.ticks.stepSize;
+    o.plugins = { ...o.plugins, avgTimeLine: { display: showAvg } };
     return o;
   })();
 
@@ -638,11 +685,16 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
         groupStats.length === 0 && todoStats.length === 0
           ? <div className="empty-bubble">No study time recorded yet.</div>
           : <div>
-              {rangeControls(timeWin)}
+              {rangeControls(timeWin,
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "var(--t-text-2)", cursor: "pointer", userSelect: "none" }}>
+                  <input type="checkbox" checked={showAvg} onChange={() => setShowAvg(a => !a)} />
+                  Average Time
+                </label>
+              )}
               {timeData.labels.length === 0
                 ? <div className="empty-bubble">No time recorded in this period.</div>
                 : <div style={{ height: 200 }}>
-                    <Bar data={timeData} options={timeOpts} />
+                    <Bar data={timeData} options={timeOpts} plugins={[avgTimeLine]} />
                   </div>
               }
             </div>
