@@ -17,7 +17,7 @@
 }
 /* A real orange rather than the peach it used to mix, but muted, so it sits at the same
    strength as the bands on the other pages */
-.st-header { --hdr-band: color-mix(in srgb, #DD8A34 52%, #fff); display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
+.st-header { --hdr-band: color-mix(in srgb, #DD8A34 52%, #fff); display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 .st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--hdr-title-stat); }
 .st-body { flex: 1; overflow-y: scroll; padding: 15px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
@@ -56,7 +56,7 @@
 /* The todo history filters, a panel of labelled fields. Each field is a quiet label over its
    controls, the same shape a todo's Categories and Resources sections wear, so the eye lands
    on a group at a time rather than a wall of pills and inputs */
-.st-filters { margin: 0 0 16px; padding: 14px 16px; background: color-mix(in srgb, #DD8A34 45%, #fff); border: 1px solid var(--t-border); border-radius: var(--t-r); box-shadow: var(--t-shadow-card); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px 18px; align-items: end; }
+.st-filters { margin: 0 0 16px; padding: 14px 16px; background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r); box-shadow: 0 1px 0 rgba(74,58,61,0.13), 0 2px 6px -3px rgba(74,58,61,0.20); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px 18px; align-items: end; }
 .st-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .st-field-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); white-space: nowrap; }
 .st-field-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -67,7 +67,14 @@
 .st-input--minutes { width: 64px; }
 /* Native date inputs sit at a wide intrinsic size and won't shrink, so the date range wraps
    while the flexible search row on the same column stays on one line. Let them flex down. */
-.st-input[type="date"] { flex: 1 1 82px; max-width: 130px; padding: 0 3px; }
+/* Byte-for-byte the notebook and deck date boxes, compact with the wide native calendar icon
+   shrunk down so it stops padding the box out with empty space */
+.st-input[type="date"] { font-size: 12px; padding: 2px 4px; }
+.st-input[type="date"]::-webkit-calendar-picker-indicator { margin: 0; padding: 0; width: 12px; height: 12px; }
+/* The dash grows to fill, spreading the two compact boxes so the date range spans the same
+   width the search box does below it. That lands the presets in the same spot as that row's
+   scope pills, with the same gap after the box, at any window width */
+.st-input[type="date"] + .st-affix { flex: 1 1 auto; text-align: center; }
 .st-search-input { flex: 1 1 110px; min-width: 110px; }
 /* Date range and Search share a column. Both the date boxes and the search box grow to fill
    the column, so the leftover space is soaked up by the boxes rather than inflating the gaps.
@@ -117,7 +124,7 @@
 
 /* Tabs, a flat underline and no border, the same as the nav tabs */
 .st-tabs { display: flex; gap: 0; margin-bottom: 16px; }
-.st-tab { position: relative; padding: 7px 14px; border: none; background: none; font-size: 13px; cursor: pointer; color: var(--t-text-3); font-family: inherit; font-weight: 600; box-shadow: none; transition: none; }
+.st-tab { position: relative; padding: 7px 15px; border: none; background: none; font-size: 16px; cursor: pointer; color: var(--t-text-3); font-family: inherit; font-weight: 600; box-shadow: none; transition: none; }
 .st-tab:hover, .st-tab:active { background: none; color: var(--t-text-3); border-color: transparent; box-shadow: none; filter: none; transform: none; }
 .st-tab.active, .st-tab.active:hover { color: var(--t-text); }
 .st-tab.active::after {
@@ -144,7 +151,7 @@
   cursor: pointer;
 }
 .st-deck-line { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--st-deck-band-2); }
-.st-deck-name { font-weight: 700; font-size: 15px; color: var(--st-card-name); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-deck-name { font-weight: 700; font-size: 18px; color: var(--st-card-name); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* An archived, deleted or merged deck keeps the blue card every other deck has, since its
    badge and the filter pill's tint already say which it is */
@@ -254,7 +261,7 @@
 /* A collapsed row keeps its name in its own column so it can't push the tags below */
 .st-todo-collapsed { display: flex; flex-direction: column; background: var(--st-todo-band-2); cursor: pointer; }
 .st-todo-line { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--st-todo-band-2); }
-.st-todo-text { font-weight: 700; flex: 1; min-width: 0; font-size: 15px; color: var(--st-card-name); overflow-wrap: anywhere; }
+.st-todo-text { font-weight: 700; flex: 1; min-width: 0; font-size: 18px; color: var(--st-card-name); overflow-wrap: anywhere; }
 .st-todo-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; padding: 7px 14px; background: var(--st-todo-band); }
 .st-todo-meta-right { display: inline-flex; gap: 5px; align-items: center; margin-left: auto; }
 /* The unit tab is inline-block rather than flex so ellipsis applies, and the compound
@@ -291,7 +298,7 @@
 .st-todo-foot { display: flex; align-items: center; gap: 7px; padding: 7px 14px; background: var(--st-todo-band); }
 /* The body lightens off the muted surface, the same step the table's alt rows take, so
    an open todo reads as paper against the page rather than another tinted panel */
-.st-todo-expanded { padding: 12px 14px; background: color-mix(in srgb, var(--t-surface-2) 45%, var(--t-surface)); border-top: 1px solid var(--st-todo-band); }
+.st-todo-expanded { padding: 12px 14px; background: var(--t-panel-fill); border-top: 1px solid var(--st-todo-band); }
 /* The last section drops its gap so the space under it equals the padding above the first */
 .st-todo-expanded > .st-todo-section:last-child { margin-bottom: 0; }
 .st-todo-notes { margin: 0; color: var(--t-text-2); white-space: pre-wrap; font-size: 13px; background: var(--t-surface); border: 1px solid var(--t-border-2); border-radius: var(--t-r-input); padding: 9px 12px; }
@@ -300,9 +307,16 @@
 
 /* Expanded todo, where the shared resource card styles live in App.css */
 .st-todo-section { margin-bottom: 10px; }
-/* Resource names stay compact inside the expanded todo, the 15px size is for full-width lists */
-.st-todo-expanded .st-resource-card-name { font-size: 17px; }
-.st-todo-section-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; line-height: 1; color: var(--t-label); margin-bottom: 5px; }
+/* The open todo's first row: categories on the left, the units and time it logged on the right */
+.st-todo-summary { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.st-todo-summary .st-todo-section-label { margin-bottom: 0; }
+.st-todo-summary-cats { display: flex; flex-direction: column; gap: 5px; }
+.st-todo-summary-meta { display: flex; gap: 6px; margin-left: auto; }
+/* Centered over its own pill so a tiny value like 2m reads as a self-contained chip, not a left-justified label with an off-centre pill */
+.st-todo-summary-field { display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; }
+/* Resource names match the deck and notebook bars beside them, and every other name font */
+.st-todo-expanded .st-resource-card-name { font-size: 18px; }
+.st-todo-section-label { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; line-height: 1; color: var(--t-label); margin-bottom: 5px; }
 .st-todo-section-pills { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 
 .st-btn-sm { padding: 3px 8px; border: 1px solid var(--t-btn); border-radius: var(--t-r-btn); background: var(--t-btn); font-size: 12px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--t-btn-fg); box-shadow: none; }

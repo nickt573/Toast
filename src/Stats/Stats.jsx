@@ -1474,16 +1474,32 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
 
               {isOpen && !isEditing && (
                 <div className="st-todo-expanded">
-                  {cats.length > 0 && (
-                    <div className="st-todo-section">
-                      <div className="st-todo-section-label">Categories</div>
-                      <div className="st-todo-section-pills">
-                        {cats.map(c => (
-                          <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
-                        ))}
+                  <div className="st-todo-section st-todo-summary">
+                    {cats.length > 0 && (
+                      <div className="st-todo-summary-cats">
+                        <div className="st-todo-section-label">Categories</div>
+                        <div className="st-todo-section-pills">
+                          {cats.map(c => (
+                            <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="st-todo-summary-meta">
+                      {r.unit_label && (
+                        <div className="st-todo-summary-field">
+                          <div className="st-todo-section-label">Units</div>
+                          <span className="st-meta-pill st-meta-pill--count st-todo-unit" title={fmtUnit(r.num_value, r.unit_label)}>
+                            {fmtUnit(r.num_value, r.unit_label)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="st-todo-summary-field">
+                        <div className="st-todo-section-label">Time</div>
+                        <span className="st-meta-pill st-meta-pill--time">{fmtTime(r.time_spent_minutes)}</span>
                       </div>
                     </div>
-                  )}
+                  </div>
                   {(r.resources.length > 0 || r.groups.length > 0) && (
                     <div className="st-todo-section">
                       <div className="st-todo-section-label">Resources / Decks / Notebooks</div>
@@ -1520,15 +1536,6 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                 <div className="st-todo-foot">
                   <button className="st-btn-sm" onClick={() => startEdit(r)}>Edit</button>
                   <ConfirmDelete small onConfirm={() => deleteRow(r.id)} />
-                  {/* The time and amount hold the same right edge they take when the row is closed */}
-                  <span className="st-todo-meta-right">
-                    {r.unit_label && (
-                      <span className="st-meta-pill st-meta-pill--count st-todo-unit" title={fmtUnit(r.num_value, r.unit_label)}>
-                        {fmtUnit(r.num_value, r.unit_label)}
-                      </span>
-                    )}
-                    <span className="st-meta-pill st-meta-pill--time">{fmtTime(r.time_spent_minutes)}</span>
-                  </span>
                 </div>
               )}
 
