@@ -76,7 +76,7 @@
   --t-blue-bg:       #D8E4F1;
   --t-blue-bdr:      #9DB8D2;
   --t-blue-lt:       #7695B8;   /* the navy lightened, for a deck row's stripes and border */
-  --t-blue-btn:      color-mix(in srgb, var(--t-blue) 82%, #fff);   /* the deck add button, and the selected state its card-view buttons share */
+  --t-blue-btn:      color-mix(in srgb, var(--t-blue) 90%, #fff);   /* the deck add button, and the selected state its card-view buttons share */
   --t-blue-stripe:   color-mix(in srgb, var(--t-blue-bdr) 70%, #fff);   /* a deck row's resting bars, lighter than the border they deepen to */
   --t-new:           #5C93BC;   /* new cards, a sky a step down from the old light one, still kept apart from the deck slate */
 
@@ -148,7 +148,7 @@
   --t-shadow-sm:     0 1px 0 rgba(74,58,61,0.12);
   /* Only the content cards lift this far, kept apart from -sm so deepening the cards
      leaves the panels and sheets already on -sm where they are */
-  --t-shadow-card:   0 1px 0 rgba(74,58,61,0.13), 0 2px 6px -3px rgba(74,58,61,0.20);
+  --t-shadow-card:   0 1px 0 rgba(74,58,61,0.15), 0 3px 8px -3px rgba(74,58,61,0.24);
   --t-shadow:        0 1px 0 rgba(74,58,61,0.16), 0 3px 5px -3px rgba(74,58,61,0.18);
   --t-shadow-lg:     0 2px 0 rgba(74,58,61,0.12), 0 10px 16px -10px rgba(74,58,61,0.30);
   /* What a page's header bar casts onto the page instead of drawing a rule under itself */

@@ -392,7 +392,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                 </div>
 
                 <div>
-                    <div className="hp-popup-label">Units completed (optional)</div>
+                    <div className="hp-popup-label">Units (optional)</div>
                     <UnitPicker value={numValue} variantId={variantId} setToast={setToast}
                         onChange={({ value, variantId }) => { setNumValue(value); setVariantId(variantId); }} />
                 </div>
@@ -593,7 +593,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                 </div>
 
                 <div>
-                    <div className="hp-popup-label">Units completed (optional)</div>
+                    <div className="hp-popup-label">Units (optional)</div>
                     <UnitPicker value={numValue} variantId={variantId} setToast={setToast}
                         onChange={({ value, variantId }) => { setNumValue(value); setVariantId(variantId); }} />
                 </div>

@@ -238,7 +238,7 @@ export default function UnitPicker({ value, variantId, onChange, setToast, onUni
                 <div className="unit-picker-form-title">New Unit</div>
                 {draft.map((name, i) => (
                   <div key={i} className={`unit-picker-fieldrow${i === 0 ? " is-main" : ""}`} title={i === 0 ? "The name shown by default" : undefined}>
-                    <input autoFocus={i === 0} className="unit-picker-field" placeholder={i === 0 ? "Name" : "Alternate name"} value={name}
+                    <input autoFocus={i === 0} className="unit-picker-field" placeholder={i === 0 ? "e.g. chapters, videos, lessons" : "Alternate name"} value={name}
                       onChange={e => setDraft(d => d.map((x, j) => j === i ? e.target.value : x))}
                       onKeyDown={e => { if (e.key === "Enter") submitCreate(); }} />
                     {i !== 0 && (

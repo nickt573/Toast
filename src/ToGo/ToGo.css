@@ -166,7 +166,6 @@ button.togo-choice.active {
 button.togo-choice.active:hover {
   background: color-mix(in srgb, var(--t-accent-bg) 94%, var(--t-text));
 }
-button.togo-choice.active .togo-choice-label { color: var(--t-accent-h); }
 
 .togo-choice-label { font-size: 13px; font-weight: 600; color: var(--t-text); }
 .togo-choice-hint  { font-size: 11px; color: var(--t-text-2); }

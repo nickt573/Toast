@@ -1633,7 +1633,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Units completed (optional)</div>
+                      <div style={{ fontSize: 11, color: "var(--t-text-3)", marginBottom: 4 }}>Units (optional)</div>
                       <UnitPicker
                         value={editForm.numValue}
                         variantId={editForm.variantId}
