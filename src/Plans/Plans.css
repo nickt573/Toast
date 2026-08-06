@@ -83,3 +83,12 @@
 }
 .landing-card--plan.landing-card--disabled { --t-stripe: var(--t-border); --t-stripe-hi: var(--t-border-3); }
 .landing-card--disabled .landing-card-body { opacity: 0.5; }
+
+/* enable/disable moves into the ... menu on the phone */
+.t-mobile .plan-disable-toggle { display: none; }
+
+/* phone: ... inline with name/counts, bare-number counts, tighter settings inputs */
+.t-mobile .plan-srs-count-lbl { display: none; }
+.t-mobile .plan-srs-settings { gap: 8px; }
+.t-mobile .plan-srs-settings-label { gap: 2px; }
+.t-mobile .plan-srs-settings-input { width: 42px; margin-left: 4px; }

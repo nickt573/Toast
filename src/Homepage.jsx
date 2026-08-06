@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { getVersion } from "@tauri-apps/api/app";
 
 import { CardFace, renderAnkiHtml, stripAudioTags } from "./Decks/CardFace";
-import { ResourceCard, GroupTypeBadge, Tip, NotebookPageTag } from "./UIUtils";
+import { ResourceCard, GroupTypeBadge, Tip, NotebookPageTag, useIsMobile } from "./UIUtils";
 import { computeCategory, maskToCategories, categoryStringToMask, CategoryPicker, CategoryPills } from "./Plans/PlanUtils";
 import UnitPicker from "./UnitPicker";
 import { resolveUnitPair } from "./unitPair";
@@ -519,7 +519,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                             {shownTodos.map(t => (
                                 <button key={t.id} className="hp-free-todo-option" title={t.text} onClick={() => pickTodo(t)}>
                                     <span className="hp-free-todo-text">{t.text}</span>
-                                    <CategoryPills mask={t.category ?? 64} small />
+                                    <CategoryPills mask={t.category ?? 64} small className="hp-free-todo-cats" />
                                 </button>
                             ))}
                         </div>
@@ -1037,7 +1037,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
         <div className="hp-root">
             <div className="hp-plan-page">
                 <div className="hp-plan-back">
-                    <button className="quiet" onClick={onBack}>← Back</button>
+                    <button className="quiet hdr-btn" aria-label="Back" onClick={onBack}><span className="hdr-btn-ico" aria-hidden="true">←</span><span className="hdr-btn-txt">← Back</span></button>
                     <h2>{plan.name}</h2>
                     <span className="hp-plan-back-streak">
                         {streakInfo?.streak > 0 && (
@@ -1258,6 +1258,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
     const [displayDate, setDisplayDate] = useState("");
     const [version, setVersion] = useState("");
     const [dayStale, setDayStale] = useState(false);
+    const isMobile = useIsMobile();
 
     function loadDisplayDate() {
         loggedInvoke("get_current_date").then(ds => {
@@ -1372,11 +1373,24 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
         <div className="hp-root">
             <div className="hp-home">
                 <div className="hp-greeting-row">
-                    <div>
-                        <div className="hp-greeting">{firstLaunch ? "Welcome!" : "Welcome back"}</div>
-                        <div className="hp-date">{displayDate}</div>
+                    <div className="hp-greeting-left">
+                        <img className="hp-logo" src="/toast-icon.png" alt="Toast" draggable={false} />
+                        <div>
+                            <div className="hp-greeting">{firstLaunch ? "Welcome!" : "Welcome back"}</div>
+                            <div className="hp-date-row">
+                                <div className="hp-date">{displayDate}</div>
+                                {isMobile && onRefreshDay && (
+                                    <button className={`hp-refresh-day hp-refresh-icon${dayStale ? " stale" : ""}`} onClick={onRefreshDay} aria-label="Refresh date">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M20 11a8 8 0 1 0-.9 4.5" />
+                                            <polyline points="20 4 20 11 13 11" />
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                    {onRefreshDay && (
+                    {!isMobile && onRefreshDay && (
                         <button className={`hp-refresh-day${dayStale ? " stale" : ""}`} onClick={onRefreshDay}>Refresh Date</button>
                     )}
                 </div>
@@ -1431,7 +1445,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                                 <span className="hp-stat-lbl">{(counts?.todos ?? 0) == 1 ? "todo due" : "todos due"}</span>
                                             </div>
                                             <div className="hp-plan-detail">
-                                                <CategoryPills mask={counts?.todoCategories ?? 0} abbrev showAll dotSize={23} />
+                                                <CategoryPills mask={counts?.todoCategories ?? 0} abbrev showAll dotSize={23} className="hp-plan-cats" />
                                             </div>
                                         </div>
                                         <div className="hp-plan-stat-divider" />
@@ -1441,9 +1455,11 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                                 <span className="hp-stat-lbl">{(counts?.cards ?? 0) == 1 ? "card due" : "cards due"}</span>
                                             </div>
                                             <div className="hp-plan-detail">
-                                                <span className={`hp-plan-mini hp-plan-mini--new${counts?.newDue > 0 ? "" : " is-zero"}`}>New {counts?.newDue ?? 0}</span>
-                                                <span className={`hp-plan-mini hp-plan-mini--review${counts?.reviewDue > 0 ? "" : " is-zero"}`}>Review {counts?.reviewDue ?? 0}</span>
-                                                {counts?.cramDue > 0 && <span className="hp-plan-mini hp-plan-mini--cram">Cram {counts.cramDue}</span>}
+                                                <span className="hp-plan-mini-nr">
+                                                    <span className={`hp-plan-mini hp-plan-mini--new${counts?.newDue > 0 ? "" : " is-zero"}`}><span className="hp-plan-mini-lbl">New </span>{counts?.newDue ?? 0}</span>
+                                                    <span className={`hp-plan-mini hp-plan-mini--review${counts?.reviewDue > 0 ? "" : " is-zero"}`}><span className="hp-plan-mini-lbl">Review </span>{counts?.reviewDue ?? 0}</span>
+                                                </span>
+                                                {counts?.cramDue > 0 && <span className="hp-plan-mini hp-plan-mini--cram"><span className="hp-plan-mini-lbl">Cram </span>{counts.cramDue}</span>}
                                             </div>
                                         </div>
                                     </div>

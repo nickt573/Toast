@@ -209,6 +209,11 @@
 .dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }
 .dk-preview-label { font-size: 11px; font-weight: 600; color: var(--t-label); }
 
+.dk-actions-btn { letter-spacing: 2px; }
+/* round centred ellipsis on the phone */
+.t-mobile .dk-actions-btn { width: 24px; height: 24px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0; line-height: 0; letter-spacing: 0; }
+.t-mobile .dk-actions-btn::before { content: "\22EF"; font-size: 18px; line-height: 1; }
+
 .dk-actions-menu { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border-radius: var(--t-r); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 150px; display: flex; flex-direction: column; overflow: hidden; }
 /* Square so hover highlights sit flush inside the menu container, whose own radius clips
    the outer corners */
@@ -223,3 +228,23 @@
 .dk-confirm-bar { display: flex; align-items: center; gap: 10px; padding: 8px var(--t-page-pad); background: var(--t-red-bg); font-size: 13px; color: var(--t-red); flex-shrink: 0; font-style: italic; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
 /* The confirm bar carries the shadow, so the header drops its own to avoid a double line */
 .detail-title-band--deck:has(+ .dk-confirm-bar) { box-shadow: none; }
+
+.dk-mobile-back { display: none; }
+
+/* Phone shows one pane at a time: the card list, then mobile-detail swaps in the editor */
+.t-mobile .dk-table-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  border-right: none;
+}
+.t-mobile .dk-cards-body .dk-editor-pane,
+.t-mobile .dk-cards-body .dk-editor-none { display: none; }
+.t-mobile .dk-cards-body.mobile-detail .dk-table-pane { display: none; }
+.t-mobile .dk-cards-body.mobile-detail .dk-editor-pane { display: flex; }
+.t-mobile .dk-cards-body.mobile-detail .dk-editor-none { display: block; }
+
+/* the bottom padding lifts the low-sitting back arrow to the centre */
+.t-mobile .dk-mobile-back { display: inline-flex; align-items: center; justify-content: center; margin-right: auto; width: 24px; height: 24px; padding: 0 0 3px; border-radius: 50%; font-size: 15px; line-height: 1; flex-shrink: 0; }
+
+.t-mobile .dk-import-anki { display: none; }

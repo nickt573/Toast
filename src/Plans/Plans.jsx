@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 
 import Todos from "./Todos";
 import { computeFrequency, computeCategory, maskToArray, maskToCategories, FrequencyPicker, CategoryPicker } from "./PlanUtils";
-import { Tip, ConfirmDelete, GroupTypeBadge, CreateMenu, SelectMenu } from "../UIUtils";
+import { Tip, ConfirmDelete, GroupTypeBadge, CreateMenu, SelectMenu, CardMenu, HdrInfo, useIsMobile } from "../UIUtils";
 import "./Plans.css";
 
 const DEFAULT_CATEGORY = () => ({ 1: false, 2: false, 4: false, 8: false, 16: false, 32: false, 64: false });
@@ -22,6 +22,7 @@ const byLiveThenName = (a, b) => (a.is_disabled ? 1 : 0) - (b.is_disabled ? 1 : 
 // Deck row
 
 function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData, srsGroups, setToast, onNavigateToGroup }) {
+    const isMobile = useIsMobile();
     const [removing, setRemoving] = useState(false);
     const [editing, setEditing] = useState(false);
     const [maxNew, setMaxNew] = useState(String(scheduler.max_new));
@@ -69,9 +70,17 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                     </span>
                 )}
                 <span className="plan-srs-counts">
-                    <span className="plan-srs-count plan-srs-count--new">New: {dueCount[0]}/{scheduler.max_new}</span>
-                    <span className="plan-srs-count plan-srs-count--review">Review: {dueCount[1]}/{scheduler.max_review}</span>
+                    <span className="plan-srs-count plan-srs-count--new"><span className="plan-srs-count-lbl">New: </span>{dueCount[0]}/{scheduler.max_new}</span>
+                    <span className="plan-srs-count plan-srs-count--review"><span className="plan-srs-count-lbl">Review: </span>{dueCount[1]}/{scheduler.max_review}</span>
                 </span>
+                {isMobile && !editing && (
+                    <CardMenu label="Deck actions" tone="deck" items={[
+                        { label: "Settings", onClick: () => { setEditing(true); setRemoving(false); } },
+                        { label: "Remove & Preserve", onClick: () => onRemove(false, false) },
+                        { label: "Reset & Keep Stats", danger: true, confirm: true, onClick: () => onRemove(true, false) },
+                        { label: "Reset & Archive Stats", danger: true, confirm: true, onClick: () => onRemove(true, true) },
+                    ]} />
+                )}
             </div>
             <div className="plan-srs-actions">
                 {editing && (
@@ -100,7 +109,7 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                         </label>
                     </div>
                 )}
-                {removing && (
+                {!isMobile && removing && (
                     <span className="plan-srs-confirm-actions">
                         <button onClick={() => { onRemove(false, false); setRemoving(false); }}>Remove &amp; Preserve</button>
                         <button className="danger" onClick={() => { onRemove(true, false); setRemoving(false); }}>Reset &amp; Keep Stats</button>
@@ -122,14 +131,22 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                 {editing && (
                     <button className="primary" onClick={saveSettings}>Save</button>
                 )}
-                {!removing && (
-                    <button onClick={() => { setEditing((e) => !e); setRemoving(false); }}>{editing ? "Cancel" : "Settings"}</button>
-                )}
-                {!editing && (
-                    <button className="danger" onClick={() => { setRemoving((r) => !r); setEditing(false); }}>{removing ? "Cancel" : "Remove"}</button>
+                {isMobile ? (
+                    editing ? (
+                        <button onClick={() => setEditing(false)}>Cancel</button>
+                    ) : null
+                ) : (
+                    <>
+                        {!removing && (
+                            <button onClick={() => { setEditing((e) => !e); setRemoving(false); }}>{editing ? "Cancel" : "Settings"}</button>
+                        )}
+                        {!editing && (
+                            <button className="danger" onClick={() => { setRemoving((r) => !r); setEditing(false); }}>{removing ? "Cancel" : "Remove"}</button>
+                        )}
+                    </>
                 )}
             </div>
-            {removing && (
+            {!isMobile && removing && (
                 <div className="plan-srs-confirm-sub">
                     Preserve unlinks the deck and freezes it exactly as-is, so re-adding resumes right where it
                     left off. Reset sends every card back to new, with the option to archive this deck's old stats
@@ -277,6 +294,7 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
 // Resources Section
 
 function ResourcesSection({ planId, plans, setToast, onChanged }) {
+    const isMobile = useIsMobile();
     const [resources, setResources] = useState([]);
     const [adding, setAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -424,8 +442,17 @@ function ResourcesSection({ planId, plans, setToast, onChanged }) {
                                     {r.resource_type && <span className="st-resource-card-type">{r.resource_type}</span>}
                                 </div>
                                 <div className="plan-resource-actions">
-                                    <button onClick={() => startEdit(r)}>Edit</button>
-                                    <ConfirmDelete onConfirm={() => deleteResource(r.id)} small />
+                                    {isMobile ? (
+                                        <CardMenu tone="resource" items={[
+                                            { label: "Edit", onClick: () => startEdit(r) },
+                                            { label: "Delete", danger: true, confirm: true, onClick: () => deleteResource(r.id) },
+                                        ]} />
+                                    ) : (
+                                        <>
+                                            <button onClick={() => startEdit(r)}>Edit</button>
+                                            <ConfirmDelete onConfirm={() => deleteResource(r.id)} small />
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             {r.notes && <div className="plan-resource-notes">{r.notes}</div>}
@@ -657,6 +684,7 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
 // Plans
 
 export default function Plans({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext, returnTo, onReturnToOrigin, homeSignal }) {
+    const isMobile = useIsMobile();
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [name, setName] = useState("");
@@ -801,9 +829,9 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
             <div className="plans-root">
                 <div className="detail-title-band detail-title-band--plan">
                     {returnTo ? (
-                        <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
+                        <button className="quiet hdr-btn" aria-label={`Back to ${returnTo.label}`} onClick={onReturnToOrigin}><span className="hdr-btn-ico" aria-hidden="true">←</span><span className="hdr-btn-txt">← Back to {returnTo.label}</span></button>
                     ) : (
-                        <button className="quiet" onClick={() => { setEditingPlan(null); setPlanResources([]); loadSummaries(); }}>← Back</button>
+                        <button className="quiet hdr-btn" aria-label="Back" onClick={() => { setEditingPlan(null); setPlanResources([]); loadSummaries(); }}><span className="hdr-btn-ico" aria-hidden="true">←</span><span className="hdr-btn-txt">← Back</span></button>
                     )}
                     <div className="detail-title detail-title--plan">{editingPlan.name}</div>
                 </div>
@@ -881,9 +909,11 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
             <div className="landing-hdr landing-hdr--plan">
                 <h2>Plans</h2>
                 {plans.length > 0 && (
-                    <span className="hdr-context">
-                        {plans.length} {plans.length === 1 ? "plan" : "plans"} · {totalTodos} {totalTodos === 1 ? "todo" : "todos"} · {totalResources} {totalResources === 1 ? "resource" : "resources"}
-                    </span>
+                    <HdrInfo items={[
+                        `${plans.length} ${plans.length === 1 ? "plan" : "plans"}`,
+                        `${totalTodos} ${totalTodos === 1 ? "todo" : "todos"}`,
+                        `${totalResources} ${totalResources === 1 ? "resource" : "resources"}`,
+                    ]} />
                 )}
                 <CreateMenu open={creating} onToggle={() => setCreating((c) => !c)}
                     value={name} onChange={setName} onCreate={createPlan}
@@ -936,6 +966,12 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                     <button className="primary" onMouseDown={(e) => e.preventDefault()} onClick={() => confirmEdit(plan.id)}>Save</button>
                                     <button onMouseDown={(e) => e.preventDefault()} onClick={() => setEditingId(null)}>Cancel</button>
                                 </>
+                            ) : isMobile ? (
+                                <CardMenu tone="plan" items={[
+                                    { label: plan.is_disabled ? "Enable" : "Disable", onClick: () => toggleDisabled(plan) },
+                                    { label: "Edit", onClick: () => { setEditingId(plan.id); setEditingName(plan.name); } },
+                                    { label: "Delete", danger: true, confirm: true, onClick: () => deletePlan(plan) },
+                                ]} />
                             ) : (
                                 <>
                                     <button onClick={(e) => { e.stopPropagation(); setEditingId(plan.id); setEditingName(plan.name); }}>Edit</button>

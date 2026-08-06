@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { NewCardForm } from "../Decks/Decks";
-import { ConfirmDelete, CreateMenu, SelectMenu } from "../UIUtils";
+import { ConfirmDelete, CreateMenu, SelectMenu, CardMenu, HdrInfo, useIsMobile } from "../UIUtils";
 import { mediaSrc } from "../mediaPaths";
 import { AudioPlayer } from "../Decks/CardFace";
 import { loggedInvoke, logError } from "../logger";
@@ -86,6 +86,7 @@ function isContentEmpty(json) {
 // Notebook List
 
 function NotebookList({ setToast, onOpenNotebook }) {
+    const isMobile = useIsMobile();
     const [notebooks, setNotebooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [pageCounts, setPageCounts] = useState({});
@@ -189,9 +190,10 @@ function NotebookList({ setToast, onOpenNotebook }) {
             <div className="landing-hdr landing-hdr--notebook">
                 <h2>Notebooks</h2>
                 {notebooks.length > 0 && (
-                    <span className="hdr-context">
-                        {notebooks.length} {notebooks.length === 1 ? "notebook" : "notebooks"} · {totalPages.toLocaleString()} {totalPages === 1 ? "page" : "pages"}
-                    </span>
+                    <HdrInfo items={[
+                        `${notebooks.length} ${notebooks.length === 1 ? "notebook" : "notebooks"}`,
+                        `${totalPages.toLocaleString()} ${totalPages === 1 ? "page" : "pages"}`,
+                    ]} />
                 )}
                 <button onClick={startMerge} disabled={notebooks.length < 2}>Merge Notebooks</button>
                 <CreateMenu open={creating}
@@ -256,6 +258,12 @@ function NotebookList({ setToast, onOpenNotebook }) {
                                     <button className="primary" onMouseDown={(e) => e.preventDefault()} onClick={() => confirmEdit(nb.id)}>Save</button>
                                     <button onMouseDown={(e) => e.preventDefault()} onClick={() => setEditingId(null)}>Cancel</button>
                                 </>
+                            ) : isMobile ? (
+                                <CardMenu tone="notebook" items={[
+                                    { label: "Edit", onClick: () => startEdit(nb, { stopPropagation() {} }) },
+                                    { label: "Duplicate", onClick: () => duplicateNotebook(nb) },
+                                    { label: "Delete", danger: true, confirm: true, onClick: () => deleteNotebook(nb.id) },
+                                ]} />
                             ) : (
                                 <>
                                     <button onClick={(e) => startEdit(nb, e)}>Edit</button>
@@ -484,7 +492,25 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
 
     const insertImage = useCallback(async () => {
         if (!editor) return;
-        const path = await pickFile(["png", "jpg", "jpeg", "gif", "webp"]);
+        let path;
+        // The phone's picker returns a content URI the backend can't read, so the webview file
+        // input hands us the bytes and save_media_bytes stores them, same as the card editor
+        if (document.documentElement.classList.contains("t-mobile")) {
+            const file = await new Promise((resolve) => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/png,image/jpeg,image/gif,image/webp";
+                input.onchange = () => resolve(input.files && input.files[0] ? input.files[0] : null);
+                input.click();
+            });
+            if (!file) return;
+            try {
+                const bytes = new Uint8Array(await file.arrayBuffer());
+                path = await loggedInvoke("save_media_bytes", { data: Array.from(bytes), kind: "page-image" });
+            } catch (e) { logError("save_media_bytes", e); return; }
+        } else {
+            path = await pickFile(["png", "jpg", "jpeg", "gif", "webp"]);
+        }
         if (path) {
             editor.chain().focus().setImage({ src: mediaSrc(path), rawPath: path }).run();
         }
@@ -772,6 +798,7 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
 // Page viewer and editor
 
 function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, startNewOnOpen, initialPageId }) {
+    const isMobile = useIsMobile();
     const [allPages, setAllPages] = useState([]);
     const [query, setQuery] = useState("");
     const [pageIndex, setPageIndex] = useState(0);
@@ -957,18 +984,18 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         <div className="nb-pages-root">
             <div className="detail-title-band detail-title-band--notebook">
                 {returnTo ? (
-                    <button className="quiet" onClick={() => handleBack(onReturnToOrigin)}>← Back to {returnTo.label}</button>
+                    <button className="quiet hdr-btn" aria-label={`Back to ${returnTo.label}`} onClick={() => handleBack(onReturnToOrigin)}><span className="hdr-btn-ico" aria-hidden="true">←</span><span className="hdr-btn-txt">← Back to {returnTo.label}</span></button>
                 ) : (
-                    <button className="quiet" onClick={() => handleBack(onBack)}>← Back</button>
+                    <button className="quiet hdr-btn" aria-label="Back" onClick={() => handleBack(onBack)}><span className="hdr-btn-ico" aria-hidden="true">←</span><span className="hdr-btn-txt">← Back</span></button>
                 )}
                 <div className="detail-title detail-title--notebook">{notebook.name}</div>
-                <span className="hdr-context">{allPages.length.toLocaleString()} page{allPages.length !== 1 ? "s" : ""}</span>
+                <HdrInfo items={[`${allPages.length.toLocaleString()} page${allPages.length !== 1 ? "s" : ""}`]} />
                 {!editing && allPages.length > 1 && (
-                    <button onClick={() => setShowSearch(s => !s)}>
-                        Search <span className="t-caret">{showSearch ? "▾" : "▸"}</span>
+                    <button className="hdr-btn" aria-label="Search pages" onClick={() => setShowSearch(s => !s)}>
+                        <span className="hdr-btn-ico" aria-hidden="true">⌕</span><span className="hdr-btn-txt">Search <span className="t-caret">{showSearch ? "▾" : "▸"}</span></span>
                     </button>
                 )}
-                {!editing && <button onClick={startNew}>+ New Page</button>}
+                {!editing && <button className="hdr-btn" aria-label="New page" onClick={startNew}><span className="hdr-btn-ico" aria-hidden="true">+</span><span className="hdr-btn-txt">+ New Page</span></button>}
             </div>
 
             {!editing && showSearch && allPages.length > 1 && (
@@ -1026,8 +1053,17 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                         {currentPage.audio_file && (
                                             <AudioPlayer path={currentPage.audio_file} buttonClassName="audio-btn sm" seekable />
                                         )}
-                                        <button onClick={() => startEdit(currentPage)}>Edit</button>
-                                        <ConfirmDelete onConfirm={deletePage} />
+                                        {isMobile ? (
+                                            <CardMenu tone="notebook" items={[
+                                                { label: "Edit", onClick: () => startEdit(currentPage) },
+                                                { label: "Delete", danger: true, confirm: true, onClick: deletePage },
+                                            ]} />
+                                        ) : (
+                                            <>
+                                                <button onClick={() => startEdit(currentPage)}>Edit</button>
+                                                <ConfirmDelete onConfirm={deletePage} />
+                                            </>
+                                        )}
                                     </div>
                                     {(currentPage.description || currentPage.created_date) && (
                                         <div className="nb-page-meta-row">

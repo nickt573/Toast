@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { computeFrequency, maskToArray, computeCategory, maskToCategories, FrequencyPicker, CategoryPicker, CategoryPills } from "./PlanUtils";
-import { ConfirmDelete, GroupTypeBadge } from "../UIUtils";
+import { ConfirmDelete, GroupTypeBadge, CardMenu, useIsMobile } from "../UIUtils";
 
 export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGroup, planResources, allGroups, planName }) {
+    const isMobile = useIsMobile();
     const [editing, setEditing] = useState(false);
     const [text, setText] = useState(todo.text);
     const [orderNum, setOrderNum] = useState(todo.position ?? "");
@@ -87,8 +88,17 @@ export default function Todos({ todo, dimmed, setToast, refresh, onNavigateToGro
                     </div>
 
                     <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-                        <button onClick={() => setEditing(true)}>Edit</button>
-                        <ConfirmDelete onConfirm={deleteTodo} small />
+                        {isMobile ? (
+                            <CardMenu tone="todo" items={[
+                                { label: "Edit", onClick: () => setEditing(true) },
+                                { label: "Delete", danger: true, confirm: true, onClick: deleteTodo },
+                            ]} />
+                        ) : (
+                            <>
+                                <button onClick={() => setEditing(true)}>Edit</button>
+                                <ConfirmDelete onConfirm={deleteTodo} small />
+                            </>
+                        )}
                     </div>
                 </div>
 

@@ -3,6 +3,20 @@ import { createPortal } from "react-dom";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { loggedInvoke, logError } from "./logger";
 
+// True only in the phone webview. Desktop is pinned at 1000px, so it always reads false.
+export function useIsMobile() {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const on = () => setMobile(mq.matches);
+    mq.addEventListener("change", on);
+    on();
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return mobile;
+}
+
 export function Tip({ text }) {
   const [visible, setVisible] = useState(false);
   const [tipStyle, setTipStyle] = useState({ top: 0, left: 0, opacity: 0 });
@@ -25,6 +39,9 @@ export function Tip({ text }) {
 
     setTipStyle({ top, left, opacity: 1 });
   }, [visible]);
+
+  // The hover-only badges do nothing on touch, so the phone drops every one of them
+  if (typeof document !== "undefined" && document.documentElement.classList.contains("t-mobile")) return null;
 
   return (
     <span
@@ -466,6 +483,72 @@ export function CreateMenu({ open, onToggle, value, onChange, onCreate, title, p
           </div>
         </div>
       )}
+    </span>
+  );
+}
+
+export function CardMenu({ items, glyph = "⋯", label = "Card actions", tone }) {
+  const [open, setOpen] = useState(false);
+  const [armed, setArmed] = useState(null);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setArmed(null); } };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [open]);
+  return (
+    <span className={`card-menu${tone ? " card-menu--" + tone : ""}`} ref={ref}>
+      <button className="card-menu-btn" aria-label={label}
+        onClick={(e) => { e.stopPropagation(); setArmed(null); setOpen((o) => !o); }}>{glyph}</button>
+      {open && (
+        <div className="card-menu-list">
+          {items.map((it) => {
+            const isArmed = armed === it.label;
+            return (
+              <button key={it.label} className={`card-menu-item${it.danger ? " danger" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (it.confirm && !isArmed) { setArmed(it.label); return; }
+                  setOpen(false); setArmed(null); it.onClick();
+                }}>
+                {isArmed ? `Confirm ${it.label.toLowerCase()}?` : it.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </span>
+  );
+}
+
+// The header's count line ("2 decks, 948 cards"). Desktop shows it inline as before, the phone
+// hides it for space and tucks it behind a graph button that pops the same values, comma-joined.
+export function HdrInfo({ items }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const isMobile = useIsMobile();
+  useEffect(() => {
+    if (!open) return;
+    const away = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [open]);
+  const list = items.filter(Boolean);
+  if (list.length === 0) return null;
+  if (!isMobile) return <span className="hdr-context">{list.join(" · ")}</span>;
+  return (
+    <span className="hdr-info" ref={ref}>
+      <button className="hdr-btn hdr-info-btn" aria-label="Details" onClick={() => setOpen((o) => !o)}>
+        <span className="hdr-btn-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+            <rect x="3" y="11" width="4" height="9" rx="1" />
+            <rect x="10" y="5" width="4" height="15" rx="1" />
+            <rect x="17" y="8" width="4" height="12" rx="1" />
+          </svg>
+        </span>
+      </button>
+      {open && <span className="hdr-info-pop">{list.join(", ")}</span>}
     </span>
   );
 }

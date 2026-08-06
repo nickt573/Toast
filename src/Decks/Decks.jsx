@@ -16,7 +16,7 @@ function UploadedHtmlField({ html }) {
     </>
   );
 }
-import { Tip, ConfirmDelete, CreateMenu, SelectMenu } from "../UIUtils";
+import { Tip, ConfirmDelete, CreateMenu, SelectMenu, CardMenu, HdrInfo, useIsMobile } from "../UIUtils";
 import "./Decks.css";
 
 const VIEW_DECKS = "decks";
@@ -27,6 +27,33 @@ async function pickFile(extensions) {
     const path = await open({ multiple: false, filters: [{ name: "File", extensions }] });
     return path ?? null;
   } catch { return null; }
+}
+
+const MEDIA_KIND = {
+  image: { accept: "image/png,image/jpeg,image/gif,image/webp", extensions: ["png", "jpg", "jpeg", "gif", "webp"] },
+  audio: { accept: "audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a", extensions: ["mp3", "wav", "ogg", "m4a"] },
+};
+
+// Desktop hands back a path the backend copies on save. The phone's native picker returns a
+// content URI the backend can't read, so there the webview's own file input gives us the bytes
+// and save_media_bytes stores them, returning a path the save then keeps. Same flow on iOS and
+// Android, both of whose webviews back the file input.
+async function pickCardMedia(kind) {
+  if (!document.documentElement.classList.contains("t-mobile")) {
+    return await pickFile(MEDIA_KIND[kind].extensions);
+  }
+  const file = await new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = MEDIA_KIND[kind].accept;
+    input.onchange = () => resolve(input.files && input.files[0] ? input.files[0] : null);
+    input.click();
+  });
+  if (!file) return null;
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    return await loggedInvoke("save_media_bytes", { data: Array.from(bytes), kind });
+  } catch (e) { logError("save_media_bytes", e); return null; }
 }
 
 function emptyNewCard(groupId) {
@@ -126,6 +153,7 @@ function DeckList({ setToast, onOpenDeck }) {
   const [mergeArchive, setMergeArchive] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [creating, setCreating] = useState(false);
+  const isMobile = useIsMobile();
 
   const loadSrsSummaries = () =>
     loggedInvoke("get_deck_srs_summaries")
@@ -289,11 +317,12 @@ function DeckList({ setToast, onOpenDeck }) {
       <div className="landing-hdr landing-hdr--deck">
         <h2>Decks</h2>
         {decks.length > 0 && (
-          <span className="hdr-context">
-            {decks.length} {decks.length === 1 ? "deck" : "decks"} · {totalCards.toLocaleString()} {totalCards === 1 ? "card" : "cards"}
-          </span>
+          <HdrInfo items={[
+            `${decks.length} ${decks.length === 1 ? "deck" : "decks"}`,
+            `${totalCards.toLocaleString()} ${totalCards === 1 ? "card" : "cards"}`,
+          ]} />
         )}
-        <button onClick={pickAnkiFile}>Import Anki</button>
+        <button className="dk-import-anki" onClick={pickAnkiFile}>Import Anki</button>
         <button onClick={startMerge} disabled={decks.length < 2}>Merge Decks</button>
         <CreateMenu open={creating}
           onToggle={() => { setCreating((c) => !c); setMerging(false); setAnkiPending(null); }}
@@ -430,6 +459,13 @@ function DeckList({ setToast, onOpenDeck }) {
                   <button className="primary" onMouseDown={(e) => e.preventDefault()} onClick={() => confirmEdit(deck.id)}>Save</button>
                   <button onMouseDown={(e) => e.preventDefault()} onClick={() => setEditingId(null)}>Cancel</button>
                 </>
+              ) : isMobile ? (
+                <CardMenu tone="deck" items={[
+                  { label: "Edit", onClick: () => startEdit(deck, { stopPropagation() {} }) },
+                  { label: "Duplicate (fresh)", onClick: () => duplicateDeck(deck, true) },
+                  { label: "Duplicate (keep progress)", onClick: () => duplicateDeck(deck, false) },
+                  { label: "Delete", danger: true, confirm: true, onClick: () => deleteDeck(deck.id) },
+                ]} />
               ) : duplicatingId === deck.id ? (
                 <>
                   <button onClick={() => duplicateDeck(deck, true)} title="Copy the cards but reset all SRS progress">Fresh</button>
@@ -453,7 +489,7 @@ function DeckList({ setToast, onOpenDeck }) {
 
 // Card Editor
 
-function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan, logVersion }) {
+function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan, logVersion, onBack }) {
   const [form, setForm] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewFlipped, setPreviewFlipped] = useState(false);
@@ -555,10 +591,10 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
-  const pickFrontImage = async () => { const p = await pickFile(["png","jpg","jpeg","gif","webp"]); if (p) set("front_image", p); };
-  const pickBackImage  = async () => { const p = await pickFile(["png","jpg","jpeg","gif","webp"]); if (p) set("back_image", p); };
-  const pickFrontAudio = async () => { const p = await pickFile(["mp3","wav","ogg","m4a"]); if (p) set("front_audio", p); };
-  const pickBackAudio  = async () => { const p = await pickFile(["mp3","wav","ogg","m4a"]); if (p) set("back_audio", p); };
+  const pickFrontImage = async () => { const p = await pickCardMedia("image"); if (p) set("front_image", p); };
+  const pickBackImage  = async () => { const p = await pickCardMedia("image"); if (p) set("back_image", p); };
+  const pickFrontAudio = async () => { const p = await pickCardMedia("audio"); if (p) set("front_audio", p); };
+  const pickBackAudio  = async () => { const p = await pickCardMedia("audio"); if (p) set("back_audio", p); };
 
   const deleteCard = async () => {
     skipAutoSaveRef.current = true;
@@ -616,6 +652,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     return (
       <div className="dk-editor-pane dk-editor-pane--preview" ref={paneRef} onScroll={handlePaneScroll}>
         <div className="dk-editor-topbar">
+          {onBack && <button className="dk-mobile-back" aria-label="Back to cards" onClick={onBack}>←</button>}
           <button className="quiet" onClick={() => setPreviewing(false)}>Edit</button>
           {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
           <button style={{ marginLeft: "auto" }} onClick={() => setPreviewFlipped((f) => !f)}>
@@ -635,6 +672,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
   return (
     <div className="dk-editor-pane" ref={paneRef} onScroll={handlePaneScroll}>
       <div className="dk-editor-topbar">
+        {onBack && <button className="dk-mobile-back" aria-label="Back to cards" onClick={onBack}>←</button>}
         <button onClick={() => { setPreviewing(true); setPreviewFlipped(false); }}>Preview</button>
         {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
       </div>
@@ -770,10 +808,10 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
 
   useEffect(() => { set("group_id", groupId); }, [groupId]);
 
-  const pickFrontImage = async () => { const p = await pickFile(["png","jpg","jpeg","gif","webp"]); if (p) set("front_image", p); };
-  const pickBackImage  = async () => { const p = await pickFile(["png","jpg","jpeg","gif","webp"]); if (p) set("back_image", p); };
-  const pickFrontAudio = async () => { const p = await pickFile(["mp3","wav","ogg","m4a"]); if (p) set("front_audio", p); };
-  const pickBackAudio  = async () => { const p = await pickFile(["mp3","wav","ogg","m4a"]); if (p) set("back_audio", p); };
+  const pickFrontImage = async () => { const p = await pickCardMedia("image"); if (p) set("front_image", p); };
+  const pickBackImage  = async () => { const p = await pickCardMedia("image"); if (p) set("back_image", p); };
+  const pickFrontAudio = async () => { const p = await pickCardMedia("audio"); if (p) set("front_audio", p); };
+  const pickBackAudio  = async () => { const p = await pickCardMedia("audio"); if (p) set("back_audio", p); };
 
   const submit = async () => {
     if (!form.group_id) { setToast("Please select a deck.", "warn"); return; }
@@ -906,7 +944,7 @@ function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearch
 
   return (
     <div style={{ position: "relative" }} ref={ref}>
-      <button onClick={() => setOpen(o => !o)} title="Deck actions" style={{ letterSpacing: 2 }}>...</button>
+      <button className="dk-actions-btn" onClick={() => setOpen(o => !o)} title="Deck actions">...</button>
       {open && (
         <div className="dk-actions-menu">
           <button className="dk-menu-item" onClick={() => act(onPauseAll)}>Pause All</button>
@@ -925,6 +963,10 @@ function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearch
 function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNavigateToPlan }) {
   const [cards, setCards] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  // On a phone the list and editor can't share the screen, so tapping a card drills into
+  // the editor and Back returns to the list. Ignored by the desktop side-by-side layout.
+  const [mobileDetail, setMobileDetail] = useState(false);
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   // Which fields the text search matches, and at least one stays on at all times
   const [scopeMain, setScopeMain] = useState(true);
@@ -1015,7 +1057,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
 
   useEffect(() => {
     loggedInvoke("get_cards", { deckId: deck.id })
-      .then((c) => { setCards(c); if (c.length > 0) setSelectedId(c[0].id); })
+      // Desktop pre-selects the first card so the editor pane isn't blank; the phone opens
+      // to the list with nothing selected, so no blue row shows until a card is tapped
+      .then((c) => { setCards(c); if (c.length > 0 && !isMobile) setSelectedId(c[0].id); })
       .catch(e => logError("catch", e));
     loggedInvoke("get_plans").then(setPlans).catch(e => logError("catch", e));
     loggedInvoke("get_current_date").then(setToday).catch(e => logError("catch", e));
@@ -1165,7 +1209,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
   const spacerStyle = (px) => ({ height: px, padding: 0, border: "none", background: "transparent" });
 
   const selectedCard = cards.find((c) => c.id === selectedId) ?? null;
-  const handleCreated = (card) => { setCards((prev) => [...prev, card]); setSelectedId(card.id); };
+  const handleCreated = (card) => { setCards((prev) => [...prev, card]); setSelectedId(card.id); setMobileDetail(true); };
   const handleSaved = async (updated) => {
     const old = cards.find(c => c.id === updated.id);
     if (old?.is_paused !== updated.is_paused) {
@@ -1179,6 +1223,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
     const fresh = await loggedInvoke("get_cards", { deckId: deck.id });
     setCards(fresh);
     setSelectedId(fresh.length > 0 ? fresh[0].id : null);
+    setMobileDetail(false);
   };
   const handleRescheduled = (updated) => {
     setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
@@ -1188,9 +1233,9 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
     <div className="dk-cards-root">
       <div className="detail-title-band detail-title-band--deck">
         {returnTo ? (
-          <button className="quiet" onClick={onReturnToOrigin}>← Back to {returnTo.label}</button>
+          <button className="quiet hdr-btn" aria-label={`Back to ${returnTo.label}`} onClick={onReturnToOrigin}><span className="hdr-btn-ico" aria-hidden="true">←</span><span className="hdr-btn-txt">← Back to {returnTo.label}</span></button>
         ) : (
-          <button className="quiet" onClick={onBack}>← Back</button>
+          <button className="quiet hdr-btn" aria-label="Back" onClick={onBack}><span className="hdr-btn-ico" aria-hidden="true">←</span><span className="hdr-btn-txt">← Back</span></button>
         )}
         <div className="detail-title detail-title--deck">{deck.name}</div>
         {planName && (
@@ -1200,7 +1245,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
             {planName}<span className="dk-cards-plan-arrow">↗</span>
           </button>
         )}
-        <span className="hdr-context">{cards.length.toLocaleString()} card{cards.length !== 1 ? "s" : ""}</span>
+        <HdrInfo items={[`${cards.length.toLocaleString()} card${cards.length !== 1 ? "s" : ""}`]} />
         <DeckActions onPauseAll={pauseAll} onUnpauseAll={unpauseAll}
           onAllSearchable={() => setAllSearchable(true)} onAllNotSearchable={() => setAllSearchable(false)}
           onResetRequest={() => setConfirmReset(true)} />
@@ -1217,7 +1262,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
         </div>
       )}
 
-      <div className="dk-cards-body">
+      <div className={`dk-cards-body${mobileDetail ? " mobile-detail" : ""}`}>
         <div className="dk-table-pane" ref={tablePaneRef}>
           <div className="dk-table-search">
             <div className="dk-search-row">
@@ -1325,7 +1370,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
                             ? (card.tier === 0 ? "is-new-due" : "is-review-due")
                             : "",
                         ].filter(Boolean).join(" ")}
-                        onClick={() => setSelectedId(card.id)}>
+                        onClick={() => { setSelectedId(card.id); setMobileDetail(true); }}>
                         <td><div className="dk-cell-clamp">{front}</div></td>
                         <td><div className="dk-cell-clamp">{back}</div></td>
                         <td>
@@ -1377,6 +1422,7 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
         <CardEditor
           setToast={setToast}
           card={selectedCard}
+          onBack={() => setMobileDetail(false)}
           onSaved={handleSaved}
           onDeleted={handleDeleted}
           onRescheduled={handleRescheduled}

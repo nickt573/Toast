@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "app": "tauri dev --config src-tauri/tauri.dev.conf.json"
+    "app": "tauri dev --config src-tauri/tauri.dev.conf.json",
+    "android": "tauri android dev",
+    "end-android": "node scripts/end-android.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

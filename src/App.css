@@ -174,6 +174,8 @@ a { color: var(--t-blue); text-decoration: underline; }
 /* Pasted links inside a todo description, wrap so a long url can't overflow */
 .t-inline-link { color: var(--t-blue); text-decoration: underline; cursor: pointer; word-break: break-all; }
 
+* { -webkit-tap-highlight-color: transparent; }
+
 /* Universal button, solid ink, presses down instead of lifting */
 button {
   font-family: inherit;
@@ -452,6 +454,7 @@ textarea { overflow-y: scroll; }
    do yet is amber, which always says so rather than failing quietly */
 .toast.error { background: var(--t-red); color: var(--t-btn-fg); }
 .toast.warn { background: var(--t-amber); color: var(--t-btn-fg); }
+.t-mobile .toast { bottom: calc(env(safe-area-inset-bottom) + 66px); }
 
 /* Busy overlay for Toast to Go transfers */
 .busy-overlay {
@@ -933,6 +936,21 @@ textarea { overflow-y: scroll; }
 .landing-card-meta { font-size: 11px; color: var(--t-text-3); margin-top: 2px; }
 .landing-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
+.card-menu { position: relative; display: inline-flex; }
+.card-menu-btn { width: 28px; height: 28px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; line-height: 1; }
+/* ... circle filled with its family colour, like the + button */
+.t-mobile .card-menu--plan .card-menu-btn     { background: var(--t-accent-h); border-color: var(--t-accent-h); color: var(--t-accent-fg); }
+.t-mobile .card-menu--deck .card-menu-btn     { background: var(--t-blue-btn); border-color: var(--t-blue-btn); color: var(--t-accent-fg); }
+.t-mobile .card-menu--notebook .card-menu-btn { background: var(--t-plum);   border-color: var(--t-plum);   color: var(--t-accent-fg); }
+.t-mobile .card-menu--todo .card-menu-btn     { background: var(--t-yellow); border-color: var(--t-yellow); color: var(--t-accent-fg); }
+.t-mobile .card-menu--resource .card-menu-btn { background: var(--t-clay);   border-color: var(--t-clay);   color: var(--t-accent-fg); }
+.card-menu-list { position: absolute; right: 0; top: calc(100% + 4px); background: var(--t-surface); border-radius: var(--t-r); box-shadow: var(--t-shadow-lg); z-index: 50; min-width: 168px; display: flex; flex-direction: column; overflow: hidden; }
+.t-mobile .card-menu-list { border: 1px solid var(--t-border); box-shadow: 0 6px 20px rgba(0,0,0,0.30); }
+.card-menu-item { padding: 10px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }
+.card-menu-item:hover { background: var(--t-surface-2); color: var(--t-text); box-shadow: none; }
+.card-menu-item.danger { color: var(--t-red); background: none; border: none; }
+.card-menu-item.danger:hover { background: var(--t-red-bg); color: var(--t-red); box-shadow: none; }
+
 /* Stat readouts beneath the name, homepage-style number over label */
 .landing-card-stats { display: flex; align-items: flex-end; margin-top: 14px; }
 /* Fixed min-width so counts line up column-wise across cards */
@@ -994,6 +1012,9 @@ textarea { overflow-y: scroll; }
 .detail-title-band > div > button:hover { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); filter: brightness(0.92); }
 /* The Search toggle's caret rides the button's own light ink, not the dark caret used in panels */
 .detail-title-band > button .t-caret { color: inherit; }
+
+/* Icon hidden on desktop, shown by the mobile layer where the label is dropped */
+.hdr-btn-ico { display: none; font-size: 16px; line-height: 1; }
 .detail-title { flex: 0 1 auto; min-width: 0; margin: 0; font-family: var(--t-font-head); font-size: 26px; font-weight: 750; letter-spacing: -0.02em; line-height: 1.1; color: var(--t-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-col-label--todos     { color: var(--t-yellow); }
 .plan-col-label--resources { color: var(--t-clay); }
@@ -1088,3 +1109,134 @@ textarea { overflow-y: scroll; }
 .pill .nbtag-badge { background: var(--t-plum-lt); }
 
 /* The page picker reuses the unit picker's chip and menu, so its classes live there */
+
+/* Mobile layer. Every rule is scoped under .t-mobile (set on <html> only in the phone
+   webview), so the desktop window can never match any of it. */
+
+button, a, input, select, textarea, [role="button"] { touch-action: manipulation; }
+
+/* Keep focused fields at 16px so iOS doesn't zoom in and never zoom back out */
+.t-mobile input, .t-mobile select, .t-mobile textarea { font-size: 16px; }
+/* firm width so a filled-in date can't stretch the box */
+.t-mobile input[type="date"] { font-size: 12px; padding: 2px 4px; min-width: 0; width: 116px; max-width: 116px; box-sizing: border-box; }
+
+.t-mobile .app-shell {
+  padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+
+/* Nav becomes a bottom tab bar, kept in flow so the page never hides behind it */
+.t-mobile .app-nav {
+  order: 2;
+  height: auto;
+  padding: 0 0 env(safe-area-inset-bottom) 0;
+  box-shadow: 0 -1px 0 rgba(255,255,255,0.04), 0 -2px 0 rgba(0,0,0,0.14);
+}
+.t-mobile .app-content { order: 1; }
+
+.t-mobile .app-nav-logo,
+.t-mobile .app-nav-spacer { display: none; }
+.t-mobile .app-nav-center { display: contents; }
+
+.t-mobile .app-nav-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  height: auto;
+  min-height: 52px;
+  padding: 7px 1px;
+  gap: 0;
+  align-items: stretch;
+}
+.t-mobile .app-nav-tab--home { height: auto; align-self: stretch; border-radius: 0; }
+
+.t-mobile .app-nav-tab-label { font-size: 10px; line-height: 1.1; text-align: center; width: 100%; }
+.t-mobile .app-nav-tab-sub { display: none; }
+
+/* active tab: a thick top bar, except home which gets a filled block */
+.t-mobile .app-nav-tab.active { background: none; }
+.t-mobile .app-nav-tab.active::after {
+  top: 0; bottom: auto; left: 0; right: 0; transform: none;
+  width: 100%; height: 4px; border-radius: 0;
+  background: var(--tab-underline, var(--t-accent)); box-shadow: none;
+}
+.t-mobile .app-nav-tab--home.active { background: color-mix(in srgb, var(--tab-underline, var(--t-accent)) 22%, transparent); }
+.t-mobile .app-nav-tab--home.active::after { display: none; }
+
+.t-mobile { --t-page-pad: 14px; --t-title-size: 21px; }
+
+.t-mobile .landing-card,
+.t-mobile .st-resource-card,
+.t-mobile .st-item-bar,
+.t-mobile .hp-todo-row,
+.t-mobile .hp-deck-row,
+.t-mobile .plan-srs-row,
+.t-mobile .plan-srs-add,
+.t-mobile .plan-resource-row,
+.t-mobile .plan-resource-add,
+.t-mobile .plan-todo-form,
+.t-mobile .plan-todo-row,
+.t-mobile .plan-todo-edit { --t-stripe-u: 6px; }
+.t-mobile .hp-free-todo-option,
+.t-mobile .hp-free-todo-option:hover { --t-stripe-u: 4px; }
+
+.t-mobile .landing-card { flex-direction: column; align-items: stretch; gap: 10px; padding-left: 16px; position: relative; }
+.t-mobile .landing-card-stats { margin-top: 0; }
+.t-mobile .landing-stat { min-width: 52px; }
+.t-mobile .landing-stat-divider { margin: 0 12px; }
+.t-mobile .landing-card-actions { justify-content: flex-end; }
+
+/* band grows its own top padding to fill the camera-cutout strip; clip-proof under
+   overflow-hidden roots since nothing is painted above the band */
+.t-mobile .landing-hdr,
+.t-mobile .dk-cards-header,
+.t-mobile .nb-pages-header,
+.t-mobile .st-header,
+.t-mobile .detail-title-band { height: auto; min-height: calc(50px + env(safe-area-inset-top)); padding-top: calc(env(safe-area-inset-top) + 8px); }
+/* band-less pages clear the cutout on top of their own top padding */
+.t-mobile .hp-home { padding-top: calc(env(safe-area-inset-top) + 32px); }
+.t-mobile .hp-plan-page { padding-top: calc(env(safe-area-inset-top) + 24px); }
+.t-mobile .togo-root { padding-top: env(safe-area-inset-top); }
+.t-mobile .hdr-context { display: none; }
+.t-mobile .hdr-btn { display: inline-flex; align-items: center; gap: 0; width: 28px; height: 28px; padding: 0; border-radius: 50%; justify-content: center; flex-shrink: 0; }
+.t-mobile .hdr-btn-ico { display: inline-flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 15px; line-height: 1; }
+.t-mobile .hdr-btn-txt { display: none; }
+/* the graph button that reveals the hidden header count line */
+.t-mobile .hdr-info { position: relative; display: inline-flex; }
+.t-mobile .hdr-info-btn { background: var(--hdr-btn, var(--t-accent)); border-color: var(--hdr-btn, var(--t-accent)); color: var(--t-accent-fg); }
+.t-mobile .hdr-info-pop { position: absolute; top: calc(100% + 6px); right: 0; z-index: 60; background: var(--t-surface); border: 1px solid var(--t-border); border-radius: var(--t-r-btn); box-shadow: 0 6px 20px rgba(0,0,0,0.30); padding: 7px 11px; font-size: 12px; font-weight: 600; color: var(--t-text-2); white-space: nowrap; }
+
+.t-mobile .landing-card-actions { position: absolute; top: 14px; right: var(--t-stripe-gutter); }
+.t-mobile .landing-card:has(.landing-card-body > input) .landing-card-actions { position: static; }
+/* leave room for the absolute ... button so a long name wraps instead of running behind it */
+.t-mobile .landing-card-name { padding-right: 32px; font-size: 23px; }
+.t-mobile .landing-hdr h2,
+.t-mobile .dk-cards-header h2,
+.t-mobile .nb-pages-header h2,
+.t-mobile .st-header h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-mobile .detail-title { flex: 1 1 auto; font-size: 21px; }
+
+.t-mobile .t-add-menu,
+.t-mobile .unit-picker-menu { width: auto; max-width: calc(100vw - 24px); }
+
+/* smaller round buttons on the phone */
+.t-mobile .t-add-btn { width: 24px; height: 24px; font-size: 19px; }
+.t-mobile .hdr-btn { width: 24px; height: 24px; }
+.t-mobile .card-menu-btn { width: 24px; height: 24px; font-size: 15px; }
+/* the back arrow glyph sits low, so nudge it up to the centre */
+.t-mobile .hdr-btn[aria-label="Back"] .hdr-btn-ico,
+.t-mobile .hdr-btn[aria-label^="Back to"] .hdr-btn-ico { transform: translateY(-1.5px); }
+
+.t-mobile .dk-new-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.t-mobile .dk-new-card-checkrow { flex-wrap: nowrap; column-gap: 16px; }
+.t-mobile .dk-new-card-check, .t-mobile .dk-new-card-check label { font-size: 14.5px; }
+.t-mobile .dk-new-card-check input[type="checkbox"] { width: 17px; height: 17px; }
+.t-mobile .dk-new-card-actions button.primary { margin-left: auto; }
+
+/* Imported card HTML can carry oversized images or wide tables, hold them inside the card */
+.t-mobile .hp-card-box img, .t-mobile .hp-card-box video,
+.t-mobile .dk-preview-card img, .t-mobile .dk-preview-card video,
+.t-mobile .hp-similar img, .t-mobile .hp-similar video,
+.t-mobile .nb-editor-scroll img, .t-mobile .nb-editor-scroll video { max-width: 100%; height: auto; }
+.t-mobile .hp-card-box table,
+.t-mobile .dk-preview-card table,
+.t-mobile .hp-similar table,
+.t-mobile .nb-editor-scroll table { display: block; overflow-x: auto; max-width: 100%; }

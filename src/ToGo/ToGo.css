@@ -169,3 +169,16 @@ button.togo-choice.active:hover {
 
 .togo-choice-label { font-size: 13px; font-weight: 600; color: var(--t-text); }
 .togo-choice-hint  { font-size: 11px; color: var(--t-text-2); }
+
+/* The saved-ID row wraps: name on top, then ID, age and buttons beneath it */
+.t-mobile .togo-recents li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.t-mobile .togo-recents li > .togo-label,
+.t-mobile .togo-recents li > .togo-label-input { flex: 1 1 100%; }
+.t-mobile .togo-recents .togo-meta { text-align: left; }
+
+.t-mobile .togo-close-card { display: none; }

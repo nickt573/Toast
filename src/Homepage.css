@@ -52,6 +52,14 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   margin-bottom: 16px;
 }
 .hp-refresh-day { flex-shrink: 0; margin-top: 4px; }
+.hp-greeting-left { display: flex; align-items: center; gap: 10px; }
+.hp-logo { display: none; }
+.t-mobile .hp-logo { display: block; width: 40px; height: 40px; border-radius: var(--t-r-btn); flex-shrink: 0; }
+.t-mobile .hp-date-row { display: flex; align-items: center; gap: 10px; }
+.t-mobile .hp-date-row .hp-refresh-day { margin-top: 0; }
+/* the text button becomes a round refresh-arrow, purple at rest and gold when the day is stale */
+.t-mobile .hp-refresh-icon { width: 22px; height: 22px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.t-mobile .hp-refresh-icon svg { width: 12px; height: 12px; display: block; }
 /* Golden when a refresh would actually advance the app day */
 .hp-refresh-day.stale { background: var(--t-yellow); border-color: var(--t-yellow); color: #FFFDF7; }
 .hp-refresh-day.stale:hover { background: #C9941F; border-color: #C9941F; color: #FFFDF7; }
@@ -211,6 +219,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* The split beneath each count, card New/Review/Cram boxes and todo category circles, both in
    the app's own solid-chip vocabulary */
 .hp-plan-detail { margin-top: 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+/* wrapper is invisible on desktop so the minis stay one flat row */
+.hp-plan-mini-nr { display: contents; }
 .hp-plan-mini { font-size: 13px; font-weight: 700; color: var(--t-accent-fg); border-radius: var(--t-r-btn); padding: 3px 10px; font-variant-numeric: tabular-nums; }
 .hp-plan-mini--new    { background: var(--t-new); }
 .hp-plan-mini--review { background: var(--t-review); }
@@ -714,3 +724,29 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* Matches the todo and deck rows above it, scoped here since the same card also lists
    resources over in stats where the names stay as they are */
 .hp-resources-list .st-resource-card-name { font-weight: 700; font-size: 19px; }
+
+.t-mobile .hp-plan-card { --t-stripe-u: 8px; }
+.t-mobile .hp-plan-name { font-size: 24px; }
+/* clear the notch, matching the plan page's top gap, so the deck name isn't jammed to the top */
+.t-mobile .hp-session { padding-top: calc(env(safe-area-inset-top) + 24px); }
+
+/* Drop the New/Review/Cram words to bare numbers on one line, desktop keeps the words */
+/* align the two numbers, then two centred lines under each */
+.t-mobile .hp-plan-stat-box { justify-content: flex-start; }
+/* bare numbers on the phone, desktop keeps the words */
+.t-mobile .hp-plan-mini-lbl { display: none; }
+/* min-height matches the two rows of category dots opposite, so one row of numbers centres
+   between them and a second cram row drops to meet the bottom row */
+.t-mobile .hp-plan-detail { flex-direction: column; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 5px; min-height: 52px; }
+.t-mobile .hp-plan-mini-nr { display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: center; gap: 5px; }
+.t-mobile .hp-plan-mini { padding: 3px 8px; }
+.t-mobile .hp-plan-cats { justify-content: center; width: 100%; }
+/* larger category circles in the Log Extra list */
+.t-mobile .hp-free-todo-cats svg { width: 19px; height: 19px; }
+
+.t-mobile .hp-popup { width: min(420px, calc(100vw - 24px)); }
+
+/* These fixed corner chips would sit on top of the bottom tab bar */
+.t-mobile .hp-version { display: none; }
+/* lifted clear of the bottom tab bar */
+.t-mobile .hp-help-btn { bottom: calc(env(safe-area-inset-bottom) + 62px); left: 10px; }

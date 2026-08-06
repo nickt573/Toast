@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
-import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip, NotebookPageTag } from "../UIUtils";
-import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
+import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip, NotebookPageTag, HdrInfo, useIsMobile } from "../UIUtils";
+import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL, CategoryPills, categoryStringToMask } from "../Plans/PlanUtils";
 import UnitPicker from "../UnitPicker";
 import { resolveUnitPair } from "../unitPair";
 import {
@@ -626,7 +626,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
     </span>
   );
 
-  const rangeControls = (win, extra) => (
+  const rangeControls = (win, extra, legendNode) => (
     <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
       <div className="st-pills">
         {RANGES.map(({ label, days }) => (
@@ -639,23 +639,24 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
         ))}
       </div>
       {extra && <span style={{ marginLeft: 10, display: "inline-flex", alignItems: "center" }}>{extra}</span>}
-      {range === null ? (
-        win.unit !== "day" && (
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--t-text-3)" }}>
-            {win.unit === "week" ? "weekly" : "monthly"} totals
+      {/* The legend rides at the left of this nav row on the phone (hidden here on desktop, where
+          it stays up in the chart header), sitting across from the date arrows on the right */}
+      <span className="st-range-nav">
+        {legendNode && <span className="st-range-legend">{legendNode}</span>}
+        {range === null ? (
+          win.unit !== "day" && (
+            <span className="st-range-when">{win.unit === "week" ? "weekly" : "monthly"} totals</span>
+          )
+        ) : (
+          <span className="st-range-dates">
+            <button className="st-btn-sm" disabled={!win.canGoOlder} style={!win.canGoOlder ? { opacity: 0.4 } : {}}
+              onClick={() => setOffset(o => o + 1)}>‹</button>
+            <span className="st-range-datetext">{win.start} – {win.end}</span>
+            <button className="st-btn-sm" disabled={!canGoNewer} style={!canGoNewer ? { opacity: 0.4 } : {}}
+              onClick={() => setOffset(o => o - 1)}>›</button>
           </span>
-        )
-      ) : (
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-          <button className="st-btn-sm" disabled={!win.canGoOlder} style={!win.canGoOlder ? { opacity: 0.4 } : {}}
-            onClick={() => setOffset(o => o + 1)}>‹</button>
-          <span style={{ fontSize: 11, color: "var(--t-text-3)", fontVariantNumeric: "tabular-nums" }}>
-            {win.start} – {win.end}
-          </span>
-          <button className="st-btn-sm" disabled={!canGoNewer} style={!canGoNewer ? { opacity: 0.4 } : {}}
-            onClick={() => setOffset(o => o - 1)}>›</button>
-        </span>
-      )}
+        )}
+      </span>
     </div>
   );
 
@@ -677,8 +678,9 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
             </button>
           ))}
         </div>
-        {(tab === "bycards" || tab === "bydeck") && legend}
-        {tab === "bytime" && timeLegend}
+        {tab === "bycards" && <span className="st-header-legend-movable">{legend}</span>}
+        {tab === "bydeck" && <span className="st-bydeck-legend">{legend}</span>}
+        {tab === "bytime" && <span className="st-header-legend-movable">{timeLegend}</span>}
       </div>
 
       {tab === "bytime" && (
@@ -689,7 +691,8 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
                 <label style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "var(--t-text-2)", cursor: "pointer", userSelect: "none" }}>
                   <input type="checkbox" checked={showAvg} onChange={() => setShowAvg(a => !a)} />
                   Average Time
-                </label>
+                </label>,
+                timeLegend
               )}
               {timeData.labels.length === 0
                 ? <div className="empty-bubble">No time recorded in this period.</div>
@@ -704,7 +707,7 @@ function ChartPanel({ groupStats: allGroupStats, todoStats, today }) {
         groupStats.length === 0
           ? <div className="empty-bubble">No deck study data yet.</div>
           : <div>
-              {rangeControls(overWin)}
+              {rangeControls(overWin, null, legend)}
               {barData.labels.length === 0
                 ? <div className="empty-bubble">No study recorded in this period.</div>
                 : <>
@@ -958,6 +961,7 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
             </div>
 
             {isOpen && (
+              <div className="st-table-scroll">
               <table className="st-table">
                 <colgroup>
                   <col /><col /><col /><col /><col /><col /><col />
@@ -990,10 +994,10 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
                         className={`${i % 2 === 1 ? "st-row-alt" : ""}${selectedRowId === r.id ? " st-row-selected" : ""}`}
                         onClick={() => setSelectedRowId(id => (id === r.id ? null : r.id))}
                         style={{ cursor: "pointer" }}>
-                        <td><span className="st-badge" style={{ background: "var(--t-new)", color: "var(--t-accent-fg)" }}>{r.num_new}</span></td>
-                        <td><span className="st-badge" style={{ background: "var(--t-green)", color: "var(--t-accent-fg)" }}>{r.num_promote}</span></td>
-                        <td><span className="st-badge" style={{ background: "var(--t-red)", color: "var(--t-accent-fg)" }}>{r.num_demote}</span></td>
-                        <td>
+                        <td data-label="New"><span className="st-badge" style={{ background: "var(--t-new)", color: "var(--t-accent-fg)" }}>{r.num_new}</span></td>
+                        <td data-label="Promoted"><span className="st-badge" style={{ background: "var(--t-green)", color: "var(--t-accent-fg)" }}>{r.num_promote}</span></td>
+                        <td data-label="Demoted"><span className="st-badge" style={{ background: "var(--t-red)", color: "var(--t-accent-fg)" }}>{r.num_demote}</span></td>
+                        <td data-label="Retention">
                           {(r.num_promote + r.num_demote) === 0 ? (
                             <div className="st-ret-bar-wrap">
                               <div className="st-ret-bar-track">
@@ -1014,8 +1018,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
                             </div>
                           )}
                         </td>
-                        <td></td>
-                        <td className="st-date-cell">
+                        <td className="st-td-spacer"></td>
+                        <td className="st-date-cell" data-label="Date">
                           <span className="st-date">
                             {r.date}
                             {r.is_archived && (
@@ -1023,12 +1027,13 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
                             )}
                           </span>
                         </td>
-                        <td style={{ fontSize: 12, color: "var(--t-text-3)" }}>{fmtTime(r.time_spent_minutes)}</td>
+                        <td data-label="Time" style={{ fontSize: 12, color: "var(--t-text-3)" }}>{fmtTime(r.time_spent_minutes)}</td>
                       </tr>
                     </Fragment>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             {/* Every studied deck gets the bar even with no fortnight to page back to, so
@@ -1188,6 +1193,7 @@ function FilterDropdown({ label, active, groups, value, onSelect, className }) {
 }
 
 function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResources, allUnits, onOpenDeck }) {
+  const isMobile = useIsMobile();
   const [catFilter, setCatFilter] = useState(() => new Set(["all"]));
   const [expanded,  setExpanded]  = useState({});
   const [dateFrom,  setDateFrom]  = useState("");
@@ -1370,13 +1376,13 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
             sections do. The panel is one grid, the wide date and search fields share the
             first column, the two dropdowns stack in the middle column so the rows line up,
             and the category pills take the full-width bottom row */}
-        <div className="st-field">
+        <div className="st-field st-field--wide">
           <div className="st-field-label">Date range</div>
           <div className="st-field-row">
             <input type="date" className="st-input" value={dateFrom} onChange={editDate(setDateFrom)} />
             <span className="st-affix">-</span>
             <input type="date" className="st-input" value={dateTo} onChange={editDate(setDateTo)} />
-            <div className="st-pills">
+            <div className="st-pills st-pills--date">
               {[{ label: "All", days: null }, { label: "7d", days: 7 }, { label: "30d", days: 30 }, { label: "90d", days: 90 }].map(({ label, days }) => (
                 <button key={label} className={`st-pill${preset === label ? " active" : ""}`} onClick={() => applyPreset(label, days)}>{label}</button>
               ))}
@@ -1411,7 +1417,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
             <span className="st-affix st-affix--min">min</span>
           </div>
         </div>
-        <div className="st-field">
+        <div className="st-field st-field--wide">
           <div className="st-field-label">Search</div>
           <div className="st-field-row">
             <input
@@ -1509,9 +1515,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                 </div>
                 {!isOpen && (
                 <div className="st-todo-tags">
-                  {cats.map(c => (
-                    <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
-                  ))}
+                  {isMobile
+                    ? <CategoryPills mask={categoryStringToMask(r.category)} />
+                    : cats.map(c => (
+                        <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
+                      ))}
                   <span className="st-todo-meta-right">
                     {r.unit_label && (
                       <span className="st-meta-pill st-meta-pill--count st-todo-unit" title={fmtUnit(r.num_value, r.unit_label)}>
@@ -1531,9 +1539,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                       <div className="st-todo-summary-cats">
                         <div className="st-todo-section-label">Categories</div>
                         <div className="st-todo-section-pills">
-                          {cats.map(c => (
-                            <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
-                          ))}
+                          {isMobile
+                            ? <CategoryPills mask={categoryStringToMask(r.category)} />
+                            : cats.map(c => (
+                                <span key={c} className="st-pill-tag" style={{ background: CATEGORY_COLORS[c] || GRAY, color: "var(--t-btn-fg)" }}>{c}</span>
+                              ))}
                         </div>
                       </div>
                     )}
@@ -1791,6 +1801,7 @@ function orderPlanPills(active, deleted) {
 }
 
 export default function Stats({ setToast, onNavigateToGroup, returnContext, onConsumeReturnContext }) {
+  const isMobile = useIsMobile();
   const [activePlans,    setActivePlans]   = useState([]);
   const [deletedPlans,   setDeletedPlans]  = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
@@ -1947,12 +1958,10 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
             <h2>Stats</h2>
           </div>
           {totals?.earliest && (
-            <span className="hdr-context">
-              {[
-                `${fmtTime(totals.deckMins + totals.todoMins)} study time`,
-                recordDays !== null ? plural(recordDays, "day") : null,
-              ].filter(Boolean).join(" · ")}
-            </span>
+            <HdrInfo items={[
+              `${fmtTime(totals.deckMins + totals.todoMins)} study time`,
+              recordDays !== null ? plural(recordDays, "day") : null,
+            ]} />
           )}
         </div>
         <div className="st-body">
@@ -2001,11 +2010,17 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               { label: "Total Cards Studied", value: metrics.totalCardsStudied, color: "var(--t-blue)" },
             ]} />
             <MetricCard label="Todos Done"    value={metrics.todosDone}     color="var(--t-yellow)" />
-            <MetricCard faces={[
+            <MetricCard faces={isMobile ? [
+              { label: "Deck Time", value: fmtTime(metrics.studyMins), color: "var(--t-time)" },
+              { label: "Todo Time", value: fmtTime(metrics.todoMins), color: "var(--t-time)" },
+            ] : [
               { label: "Deck Time", value: fmtTime(metrics.studyMins), color: "var(--t-time)" },
               { label: "Todo Time", value: fmtTime(metrics.todoMins), color: "var(--t-time)" },
               { label: "Total Time", value: fmtTime(metrics.studyMins + metrics.todoMins), color: "var(--t-time)" },
             ]} />
+            {isMobile && (
+              <MetricCard label="Total Time" value={fmtTime(metrics.studyMins + metrics.todoMins)} color="var(--t-time)" />
+            )}
             <MetricCard
               label="Avg. Daily Time"
               value={metrics.avgDailyStudy !== null ? fmtTime(Math.round(metrics.avgDailyStudy)) : "-"}

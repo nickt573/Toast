@@ -224,3 +224,12 @@
 
 .nb-page-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .nb-page-title-row .nb-page-title { flex: 1; margin-bottom: 0; }
+
+.t-mobile .landing-card--notebook .landing-card-stats { align-items: center; }
+.t-mobile .landing-card--notebook .nb-newpage-btn { flex: 0 0 auto; }
+.t-mobile .nb-card-body .dk-new-card-checks { display: contents; }
+.t-mobile .nb-card-creator { width: calc(100% - 20px); }
+.t-mobile .nb-card-body .dk-new-card-checkrow { flex-wrap: wrap; }
+.t-mobile .nb-page-meta-edit { flex-wrap: wrap; }
+.t-mobile .nb-page-title-input { flex: 1 1 100%; }
+.t-mobile .nb-page-desc-input { flex: 1 1 auto; min-width: 120px; }

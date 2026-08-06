@@ -329,7 +329,7 @@ export default function ToGo({ setToast }) {
             )}
           </section>
 
-          <section className="togo-card">
+          <section className="togo-card togo-close-card">
             <h3>When Toast closes...</h3>
             <div className="togo-choices">
               {CLOSE_OPTIONS.map(o => (

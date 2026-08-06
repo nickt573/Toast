@@ -53,6 +53,16 @@
 .st-legend { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--t-text-2); margin-left: auto; }
 .st-legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 3px; }
 
+/* inline legend is desktop-hidden; on the phone it sits left of the date arrows */
+.st-range-nav { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.st-range-legend { display: none; }
+.st-range-legend .st-legend { margin-left: 0; }
+.st-range-dates { display: inline-flex; align-items: center; gap: 6px; }
+.st-range-datetext { font-size: 11px; color: var(--t-text-3); font-variant-numeric: tabular-nums; }
+.st-range-when { font-size: 11px; color: var(--t-text-3); }
+/* contents so the wrapped legend keeps its header margin-left:auto on desktop */
+.st-header-legend-movable, .st-bydeck-legend { display: contents; }
+
 /* The todo history filters, a panel of labelled fields. Each field is a quiet label over its
    controls, the same shape a todo's Categories and Resources sections wear, so the eye lands
    on a group at a time rather than a wall of pills and inputs */
@@ -353,3 +363,41 @@
 /* Sits under its own tab via a measured left and top, clamped inside the bar, never reflows */
 .st-plan-del-confirm { position: absolute; z-index: 20; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 6px 8px; background: var(--t-surface); border-radius: var(--t-r); box-shadow: var(--t-shadow-card); font-size: 12px; color: var(--t-text-2); }
 .st-plan-del-confirm button { padding: 4px 11px; font-size: 12px; }
+
+.t-mobile .st-metrics { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+/* smaller value text so long times stay on one line */
+.t-mobile .st-metric-value { font-size: 18px; }
+
+/* legend rides the date-nav row on the phone, arrows on the right */
+.t-mobile .st-legend { font-size: 9px; gap: 6px; }
+.t-mobile .st-header-legend-movable { display: none; }
+.t-mobile .st-range-nav { flex-basis: 100%; margin-left: 0; justify-content: space-between; }
+.t-mobile .st-range-legend { display: inline-flex; }
+.t-mobile .st-range-datetext { font-size: 10px; }
+.t-mobile .st-bydeck-legend { display: block; flex-basis: 100%; }
+.t-mobile .st-bydeck-legend .st-legend { margin-left: 0; }
+
+/* compact two-column filters on the phone, the wide fields still span the full row */
+.t-mobile .st-filters { grid-template-columns: 1fr 1fr; align-items: start; }
+.t-mobile .st-field--wide { grid-column: 1 / -1; }
+/* on the phone the date presets drop to their own row, centered under the date boxes */
+.t-mobile .st-pills--date { flex: 1 0 100%; justify-content: center; }
+.t-mobile .st-field .st-dd { width: 100%; }
+
+/* phone: drop the retention + spacer columns, content-size the rest to fit */
+.t-mobile .st-table-scroll { overflow-x: auto; }
+.t-mobile .st-table { table-layout: auto; width: 100%; }
+.t-mobile .st-table col { width: auto; }
+.t-mobile .st-table th:nth-child(4),
+.t-mobile .st-table th:nth-child(5),
+.t-mobile .st-table td[data-label="Retention"],
+.t-mobile .st-table td.st-td-spacer { display: none; }
+.t-mobile .st-table th,
+.t-mobile .st-table td { padding-left: 5px; padding-right: 5px; }
+/* foot drops its count/time summary (only the window-nav copy) */
+.t-mobile .st-window-nav .st-deck-meta-right { display: none; }
+
+/* actions left, date pager right */
+.t-mobile .st-window-nav { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 12px; }
+.t-mobile .st-window-pager { justify-self: auto; margin-left: auto; }
+.t-mobile .st-window-label { white-space: nowrap; }

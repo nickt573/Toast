@@ -3,9 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="stylesheet" href="/fonts/fonts.css" />
     <title>Toast</title>
+    <!-- Sets .t-mobile on <html> before first paint. Every mobile-only CSS rule is scoped under it. -->
+    <script>
+      (function () {
+        var mq = window.matchMedia("(max-width: 640px)");
+        var apply = function () { document.documentElement.classList.toggle("t-mobile", mq.matches); };
+        apply();
+        mq.addEventListener("change", apply);
+      })();
+    </script>
   </head>
 
   <body>

@@ -81,17 +81,21 @@ export function FrequencyPicker({ frequency, onChange }) {
 // Solid colored category pills, matching the todo stats table header. With showAll the whole
 // category set renders and the ones missing from the mask grey out, so a summary stays put
 // while its unused or finished categories read as inactive
-export function CategoryPills({ mask, style, small = false, abbrev = false, showAll = false, dotSize = 20 }) {
+export function CategoryPills({ mask, style, className, small = false, abbrev = false, showAll = false, dotSize = 20 }) {
     const cats = showAll ? CATEGORIES : CATEGORIES.filter(({ bit }) => mask & bit);
     if (cats.length === 0) return null;
+    // On the phone every text pill becomes a circle. The picker menus use CategoryPicker, not this.
+    const onMobile = typeof document !== "undefined" && document.documentElement.classList.contains("t-mobile");
+    const asDot = abbrev || onMobile;
+    const dot = abbrev ? dotSize : (small ? 14 : 18);
     return (
-        <span style={{ display: "inline-flex", gap: small ? 3 : (abbrev ? 8 : 5), flexWrap: "wrap", ...style }}>
+        <span className={className} style={{ display: "inline-flex", gap: asDot ? (small ? 4 : 6) : 5, flexWrap: "wrap", ...style }}>
             {cats.map(({ label, bit, color }) => {
                 const active = (mask & bit) !== 0;
                 const fill = active ? color : "var(--t-panel-fill)";
                 const fg = active ? "var(--t-btn-fg)" : "var(--t-silver)";
-                return abbrev ? (
-                    <svg key={label} width={dotSize} height={dotSize} viewBox="0 0 20 20"
+                return asDot ? (
+                    <svg key={label} width={dot} height={dot} viewBox="0 0 20 20"
                         style={{ flexShrink: 0, display: "block" }}>
                         <title>{label}</title>
                         <circle cx="10" cy="10" r="10" fill={fill} />
