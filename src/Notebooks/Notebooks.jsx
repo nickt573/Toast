@@ -782,7 +782,9 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
     // back until we've landed on the wanted page rather than flashing the first one
     const [awaitingInitial, setAwaitingInitial] = useState(!!initialPageId);
     const [editing, setEditing] = useState(false);
-    const [dateOn, setDateOn] = useState("");
+    const [showSearch, setShowSearch] = useState(false);
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
     const [today,  setToday] = useState(null);
     const [isNew, setIsNew] = useState(false);
     const [editTitle, setEditTitle] = useState("");
@@ -817,13 +819,14 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 p.title.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q)
             );
         }
-        if (dateOn) pages = pages.filter(p => p.created_date === dateOn);
+        if (dateFrom) pages = pages.filter(p => p.created_date && p.created_date >= dateFrom);
+        if (dateTo) pages = pages.filter(p => p.created_date && p.created_date <= dateTo);
         return pages;
-    }, [allPages, query, dateOn]);
+    }, [allPages, query, dateFrom, dateTo]);
 
     // Filter changes start over at page one, and editing must not reset the index or you
     // wouldn't stay on the saved page
-    useEffect(() => { setPageIndex(0); }, [query, dateOn]);
+    useEffect(() => { setPageIndex(0); }, [query, dateFrom, dateTo]);
 
     useEffect(() => {
         setPageIndex((prev) => Math.min(prev, Math.max(0, filteredPages.length - 1)));
@@ -858,7 +861,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         setIsNew(true); setEditing(true);
     }
 
-    async function savePage(contentJson) {
+    async function savePage(contentJson, isAutosave = false) {
         const title = editTitle.trim() || "Untitled";
         const contentStr = JSON.stringify(rewriteContentForSave(contentJson));
         try {
@@ -874,7 +877,8 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 });
                 setAllPages((prev) => [...prev, newPage]);
                 // Clear both filters so the new page can't be filtered out from under you
-                setQuery(""); setDateOn(""); setPendingPageId(newPage.id); setToast("Page created.");
+                setQuery(""); setDateFrom(""); setDateTo(""); setPendingPageId(newPage.id);
+                if (!isAutosave) setToast("Page created.");
             } else {
                 await loggedInvoke("update_page", {
                     page: {
@@ -892,7 +896,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 ));
                 // Follow the page if a retitle moved it within the current filter
                 setPendingPageId(currentPage.id);
-                setToast("Page saved.");
+                if (!isAutosave) setToast("Page saved.");
             }
             setEditing(false); setIsNew(false);
             // Recordings replaced mid-edit stay on disk until now, and the database is
@@ -909,7 +913,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
             const hasContent = !isContentEmpty(draft) || editDesc.trim() || editAudioFile;
             if (!editTitle.trim() && !hasContent) {
                 await onCancel();
-            } else if (!(await savePage(draft))) {
+            } else if (!(await savePage(draft, true))) {
                 return;
             }
         }
@@ -951,26 +955,33 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
 
     return (
         <div className="nb-pages-root">
-            <div className="nb-pages-header">
+            <div className="detail-title-band detail-title-band--notebook">
                 {returnTo ? (
                     <button className="quiet" onClick={() => handleBack(onReturnToOrigin)}>← Back to {returnTo.label}</button>
                 ) : (
                     <button className="quiet" onClick={() => handleBack(onBack)}>← Back</button>
                 )}
-                <h2>{notebook.name}</h2>
+                <div className="detail-title detail-title--notebook">{notebook.name}</div>
                 <span className="hdr-context">{allPages.length.toLocaleString()} page{allPages.length !== 1 ? "s" : ""}</span>
+                {!editing && allPages.length > 1 && (
+                    <button onClick={() => setShowSearch(s => !s)}>
+                        Search <span className="t-caret">{showSearch ? "▾" : "▸"}</span>
+                    </button>
+                )}
                 {!editing && <button onClick={startNew}>+ New Page</button>}
             </div>
 
-            {!editing && allPages.length > 1 && (
+            {!editing && showSearch && allPages.length > 1 && (
                 <div className="nb-search">
                     <input type="text" placeholder="Search pages by title or description…" value={query}
                         onChange={(e) => { setQuery(e.target.value); }} />
                     {today && (
                         <div className="nb-date-filter">
                             <span>Created:</span>
-                            <input type="date" value={dateOn} onChange={e => setDateOn(e.target.value)} />
-                            {dateOn && <button className="nb-date-clear" title="Clear" onClick={() => setDateOn("")}>×</button>}
+                            <input type="date" value={dateFrom} max={dateTo || today} onChange={e => setDateFrom(e.target.value)} />
+                            <span className="nb-date-dash">-</span>
+                            <input type="date" value={dateTo} min={dateFrom || undefined} max={today} onChange={e => setDateTo(e.target.value)} />
+                            {(dateFrom || dateTo) && <button className="nb-date-clear" title="Clear" onClick={() => { setDateFrom(""); setDateTo(""); }}>×</button>}
                         </div>
                     )}
                 </div>
