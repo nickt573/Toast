@@ -1407,7 +1407,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                 >
                                     <div className="hp-plan-card-top">
                                         <div className="hp-plan-name-row">
-                                            {isDone && <span className="hp-plan-check">✓</span>}
+                                            {isDone && <span className="hp-plan-check" />}
                                             <div className="hp-plan-name">{plan.name}</div>
                                         </div>
                                         {streakInfo?.streak > 0 && (
@@ -1423,7 +1423,7 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                                 <span className="hp-stat-lbl">{(counts?.todos ?? 0) == 1 ? "todo due" : "todos due"}</span>
                                             </div>
                                             <div className="hp-plan-detail">
-                                                <CategoryPills mask={counts?.todoCategories ?? 0} abbrev showAll dotSize={26} />
+                                                <CategoryPills mask={counts?.todoCategories ?? 0} abbrev showAll dotSize={23} />
                                             </div>
                                         </div>
                                         <div className="hp-plan-stat-divider" />

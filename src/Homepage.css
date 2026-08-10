@@ -147,12 +147,24 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-plan-card.has-due:hover,
 .hp-plan-card.is-done:hover { --t-stripe: var(--t-stripe-hi); }
 .hp-plan-check {
-  color: var(--t-green);
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 1;
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--t-green);
   flex-shrink: 0;
   user-select: none;
+}
+.hp-plan-check::after {
+  content: "";
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -55%) rotate(45deg);
 }
 .hp-plan-card-top {
   display: flex;
@@ -162,7 +174,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 }
 .hp-plan-name-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
@@ -199,7 +211,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* The split beneath each count, card New/Review/Cram boxes and todo category circles, both in
    the app's own solid-chip vocabulary */
 .hp-plan-detail { margin-top: 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
-.hp-plan-mini { font-size: 14px; font-weight: 700; color: var(--t-accent-fg); border-radius: var(--t-r-btn); padding: 4px 11px; font-variant-numeric: tabular-nums; }
+.hp-plan-mini { font-size: 13px; font-weight: 700; color: var(--t-accent-fg); border-radius: var(--t-r-btn); padding: 3px 10px; font-variant-numeric: tabular-nums; }
 .hp-plan-mini--new    { background: var(--t-new); }
 .hp-plan-mini--review { background: var(--t-review); }
 .hp-plan-mini--cram   { background: var(--t-plum); }
