@@ -186,8 +186,8 @@ export function ItemBar({ name, family, url, onOpen, pageNumber = null, dead = f
   return (
     <div className={`st-item-bar st-item-bar--${family}${dead ? " st-item-bar--dead" : ""}`}>
       <span className="st-item-bar-name">{name}</span>
-      {pageNumber != null && <span className="nbtag-badge">p.{pageNumber}</span>}
       {clickable && <span className="t-open-arrow st-item-bar-arrow" onClick={open}>↗</span>}
+      {pageNumber != null && <span className="nbtag-badge">p.{pageNumber}</span>}
     </div>
   );
 }
