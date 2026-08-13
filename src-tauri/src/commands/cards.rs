@@ -10,6 +10,57 @@ pub fn create_card(card: NewCard, state: tauri::State<AppState>) -> Result<Card,
     })
 }
 
+/// The phone's file picker hands the webview bytes rather than a path the backend can copy,
+/// so the card and page editors send the raw bytes here. The extension is read from the bytes
+/// since a picked content URI carries no reliable name, then the file lands in its media folder
+/// as a stored relative path the normal save keeps as is.
+#[tauri::command]
+pub fn save_media_bytes(
+    data: Vec<u8>,
+    kind: String,
+    state: tauri::State<AppState>,
+) -> Result<String, String> {
+    let (subdir, ext) = match kind.as_str() {
+        "image" => ("cards/images", sniff_image_ext(&data)),
+        "audio" => ("cards/audio", sniff_audio_ext(&data)),
+        "page-image" => ("pages/images", sniff_image_ext(&data)),
+        other => return Err(format!("unknown media kind: {other}")),
+    };
+    let dir = state.app_dir.join(subdir);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let filename = format!("{}.{ext}", uuid::Uuid::new_v4());
+    std::fs::write(dir.join(&filename), &data).map_err(|e| e.to_string())?;
+    Ok(format!("{subdir}/{filename}"))
+}
+
+fn sniff_image_ext(b: &[u8]) -> &'static str {
+    if b.starts_with(&[0x89, b'P', b'N', b'G']) {
+        "png"
+    } else if b.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "jpg"
+    } else if b.starts_with(b"GIF8") {
+        "gif"
+    } else if b.len() >= 12 && &b[0..4] == b"RIFF" && &b[8..12] == b"WEBP" {
+        "webp"
+    } else {
+        "png"
+    }
+}
+
+fn sniff_audio_ext(b: &[u8]) -> &'static str {
+    if b.len() >= 12 && &b[0..4] == b"RIFF" && &b[8..12] == b"WAVE" {
+        "wav"
+    } else if b.starts_with(b"OggS") {
+        "ogg"
+    } else if b.starts_with(b"ID3") || (b.len() >= 2 && b[0] == 0xFF && (b[1] & 0xE0) == 0xE0) {
+        "mp3"
+    } else if b.len() >= 8 && &b[4..8] == b"ftyp" {
+        "m4a"
+    } else {
+        "mp3"
+    }
+}
+
 #[tauri::command]
 pub fn get_cards(deck_id: i64, state: tauri::State<AppState>) -> Result<Vec<Card>, String> {
     let mut conn = state.conn.lock().unwrap();

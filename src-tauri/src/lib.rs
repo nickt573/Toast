@@ -119,6 +119,7 @@ pub fn run() {
             commands::groups::update_notebook,
             commands::groups::delete_notebook,
             commands::cards::create_card,
+            commands::cards::save_media_bytes,
             commands::cards::get_cards,
             commands::cards::update_card,
             commands::cards::delete_card,
