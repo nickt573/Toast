@@ -215,12 +215,11 @@
 .nb-card-creator.open .nb-card-body { display: block; flex: 1; min-height: 0; overflow-y: scroll; }
 /* The form and its fields come from the shared .dk-new-card rules, the same as the deck
    creator. Only this wrapper is notebook-specific. */
-/* This panel is wider than the deck pane, so all five checks fit on one line and the
-   Add Card button takes the line under them. */
-.nb-card-body .dk-new-card-actions { grid-template-columns: 1fr; }
-.nb-card-body .dk-new-card-checks { display: flex; align-items: center; column-gap: 12px; min-width: 0; }
+/* Wider than the deck pane, so the checks and Add Card button share one line */
+.nb-card-body .dk-new-card-actions { grid-template-columns: 1fr max-content; align-items: center; }
+.nb-card-body .dk-new-card-checks { display: flex; align-items: center; flex-wrap: wrap; column-gap: 12px; row-gap: 8px; min-width: 0; }
 .nb-card-body .dk-new-card-checkrow:first-child { grid-column: auto; }
-.nb-card-body .dk-new-card-actions button.primary { grid-column: 1; grid-row: 2; justify-self: end; }
+.nb-card-body .dk-new-card-actions button.primary { grid-column: 2; grid-row: 1; justify-self: end; }
 
 .nb-page-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .nb-page-title-row .nb-page-title { flex: 1; margin-bottom: 0; }
