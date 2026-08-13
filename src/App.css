@@ -677,7 +677,7 @@ textarea { overflow-y: scroll; }
   border-radius: var(--t-r); box-shadow: 0 4px 16px rgba(0,0,0,0.16);
 }
 .t-add-menu-title { font-size: 13px; font-weight: 600; color: var(--t-title); }
-.t-add-menu input:focus { border-color: var(--hdr-btn, var(--t-accent)); }
+.t-add-menu input:focus { border-color: var(--t-accent); box-shadow: 0 0 0 1px var(--t-accent); }
 .t-add-menu-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .t-add-menu button.primary { background: var(--hdr-btn, var(--t-accent)); border-color: var(--hdr-btn, var(--t-accent)); }
 .t-add-menu button.primary:hover { filter: brightness(0.92); }
