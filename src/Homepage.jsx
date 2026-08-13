@@ -442,6 +442,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
     const [categoryMap, setCategoryMap] = useState(DEFAULT_CATEGORY());
     const [today, setToday] = useState("");
     const [date, setDate] = useState("");
+    const [search, setSearch] = useState("");
 
     useEffect(() => {
         loggedInvoke("get_current_date")
@@ -501,6 +502,8 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
     }
 
     if (mode === "choose") {
+        const q = search.trim().toLowerCase();
+        const shownTodos = q ? todos.filter(t => (t.text || "").toLowerCase().includes(q)) : todos;
         return (
             <div className="hp-overlay">
                 {/* Keyed per mode, reusing the scrolled node skews the short prescreen */}
@@ -509,8 +512,11 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                     <button className="primary" onClick={startBlank}>+ Create My Own</button>
                     <div>
                         <div className="hp-popup-label">Or choose an existing todo</div>
+                        <input value={search} onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search todos"
+                            style={{ width: "100%", marginBottom: 8 }} />
                         <div className="hp-free-todo-list">
-                            {todos.map(t => (
+                            {shownTodos.map(t => (
                                 <button key={t.id} className="hp-free-todo-option" title={t.text} onClick={() => pickTodo(t)}>
                                     <span className="hp-free-todo-text">{t.text}</span>
                                     <CategoryPills mask={t.category ?? 64} small />
