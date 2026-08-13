@@ -1059,12 +1059,12 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         return (
                             <div key={todo.id} className={`hp-todo-row${todo.is_done ? " done" : ""}${todo.is_skipped ? " skipped" : ""}`}>
                                 <div className="hp-todo-head">
-                                    <input type="checkbox" checked={todo.is_done}
-                                        disabled={todo.is_skipped}
-                                        onChange={() => handleTodoCheck(todo)}
-                                        className="hp-todo-check"
-                                        style={{ cursor: todo.is_skipped ? "default" : "pointer" }} />
                                     <div className={`hp-todo-text${todo.is_done ? " done" : ""}`}>
+                                        <input type="checkbox" checked={todo.is_done}
+                                            disabled={todo.is_skipped}
+                                            onChange={() => handleTodoCheck(todo)}
+                                            className="hp-todo-check"
+                                            style={{ cursor: todo.is_skipped ? "default" : "pointer" }} />
                                         {todo.text}
                                     </div>
                                     {!todo.is_done && (
@@ -1108,11 +1108,13 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                             return (
                                 <div key={ex.id} className="hp-todo-row done">
                                     <div className="hp-todo-head">
-                                        <input type="checkbox" checked
-                                            onChange={() => handleUncheckExtra(ex)}
-                                            className="hp-todo-check"
-                                            style={{ cursor: "pointer" }} />
-                                        <div className="hp-todo-text done">{ex.text}</div>
+                                        <div className="hp-todo-text done">
+                                            <input type="checkbox" checked
+                                                onChange={() => handleUncheckExtra(ex)}
+                                                className="hp-todo-check"
+                                                style={{ cursor: "pointer" }} />
+                                            {ex.text}
+                                        </div>
                                     </div>
                                     <div className="todo-section">
                                         <div className="todo-section-label">Categories</div>

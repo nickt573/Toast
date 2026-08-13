@@ -358,9 +358,10 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   margin-bottom: var(--t-list-gap);
 }
 .hp-todo-row:last-child { margin-bottom: 0; }
-/* Checkbox, name and skip button share one line, centred against each other */
-.hp-todo-head { display: flex; align-items: center; gap: 10px; }
-.hp-todo-check { flex-shrink: 0; margin: 0; }
+/* Name and skip button sit on the first line, the skip pairs with that line even when the name wraps */
+.hp-todo-head { display: flex; align-items: flex-start; gap: 10px; }
+/* The checkbox rides inline as the name's first character, so wrapped lines fall back under it */
+.hp-todo-check { vertical-align: middle; margin: 0 10px 0 0; }
 
 /* Prescreen todo list, no inner scroll so the whole popup scrolls instead */
 /* Half-height option rows, so they keep the tighter gap the standard lists moved off of */
@@ -410,8 +411,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   --t-stripe-hi: var(--t-yellow-bdr);
 }
 .hp-todo-row.skipped .hp-todo-text,
-.hp-todo-row.skipped .todo-section,
-.hp-todo-row.skipped input[type="checkbox"] {
+.hp-todo-row.skipped .todo-section {
   opacity: 0.5;
 }
 /* A skipped row stays put, no hover lift, so it keeps reading as set aside */
