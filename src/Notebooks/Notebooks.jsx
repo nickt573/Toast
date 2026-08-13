@@ -390,7 +390,7 @@ function AudioControls({ audioFile, audio }) {
                 ) : (
                     <button className="nb-tb-btn record recording" onClick={audio.resumeRecording}>▶ Resume</button>
                 )}
-                <button className="nb-tb-btn" onClick={audio.stopRecording}>■ Stop</button>
+                <button className="nb-tb-btn stop" onClick={audio.stopRecording}>■ Stop</button>
             </>
         );
     }
