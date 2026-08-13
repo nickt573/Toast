@@ -124,12 +124,15 @@ export function stripAudioTags(html) {
 
 // AudioPlayer
 
-export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
+export function AudioPlayer({ path, style, buttonClassName = "audio-btn", seekable = false }) {
     const [src, setSrc] = useState(null);
     const [playing, setPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
     const [failed, setFailed] = useState(false);
+    const [duration, setDuration] = useState(0);
+    const [current, setCurrent] = useState(0);
     const audioRef = useRef(null);
+    const trackRef = useRef(null);
 
     useEffect(() => {
         if (!path) return;
@@ -140,6 +143,8 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
         }[ext] ?? "audio/mpeg";
         setLoading(true);
         setFailed(false);
+        setDuration(0);
+        setCurrent(0);
         // Played through a blob url, since data uris never reach webkit's media pipeline
         // on Linux while blob urls work everywhere
         let objectUrl = null;
@@ -180,6 +185,28 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
         }
     }
 
+    function seekToClientX(clientX) {
+        const track = trackRef.current, audio = audioRef.current;
+        if (!track || !audio || !duration) return;
+        const rect = track.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        const t = ratio * duration;
+        audio.currentTime = t;
+        setCurrent(t);
+    }
+
+    function handleSeekPointerDown(e) {
+        e.preventDefault();
+        seekToClientX(e.clientX);
+        const move = (ev) => seekToClientX(ev.clientX);
+        const up = () => {
+            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointerup", up);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+    }
+
     if (failed) {
         return (
             <div style={{ fontSize: 12, color: "var(--t-text-3)", textAlign: "center", ...style }}>
@@ -199,7 +226,23 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn" }) {
                     onPause={() => setPlaying(false)}
                     onEnded={() => setPlaying(false)}
                     onError={() => setFailed(true)}
+                    onLoadedMetadata={() => { const d = audioRef.current?.duration; setDuration(Number.isFinite(d) ? d : 0); }}
+                    onTimeUpdate={() => setCurrent(audioRef.current?.currentTime ?? 0)}
                 />
+            )}
+            {seekable && src && (
+                <div
+                    ref={trackRef}
+                    className={`audio-seek${duration ? "" : " disabled"}`}
+                    onPointerDown={duration ? handleSeekPointerDown : undefined}
+                    role="slider"
+                    aria-label="Seek audio"
+                    aria-valuemin={0}
+                    aria-valuemax={Math.round(duration) || 0}
+                    aria-valuenow={Math.round(current)}
+                >
+                    <div className="audio-seek-fill" style={{ width: `${duration ? Math.min(100, (current / duration) * 100) : 0}%` }} />
+                </div>
             )}
             <button onClick={handleToggle} disabled={!src || loading} className={buttonClassName}>
                 <span style={{ fontSize: "1.1em" }}>{playing ? "⏸" : "▶"}</span>

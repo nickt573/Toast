@@ -397,7 +397,7 @@ function AudioControls({ audioFile, audio }) {
     if (audioFile) {
         return (
             <>
-                <AudioPlayer path={audioFile} buttonClassName="audio-btn sm" />
+                <AudioPlayer path={audioFile} buttonClassName="audio-btn sm" seekable />
                 <button className="nb-tb-btn danger" onClick={audio.deleteAudio}>Delete Audio</button>
             </>
         );
@@ -1024,7 +1024,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                     <div className="nb-page-title-row">
                                         <div className="nb-page-title">{currentPage.title}</div>
                                         {currentPage.audio_file && (
-                                            <AudioPlayer path={currentPage.audio_file} buttonClassName="audio-btn sm" />
+                                            <AudioPlayer path={currentPage.audio_file} buttonClassName="audio-btn sm" seekable />
                                         )}
                                         <button onClick={() => startEdit(currentPage)}>Edit</button>
                                         <ConfirmDelete onConfirm={deletePage} />

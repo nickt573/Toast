@@ -217,6 +217,13 @@ button.audio-btn:hover { background: var(--t-surface); border-color: var(--t-tex
 button.audio-btn:active { background: var(--t-surface); filter: brightness(0.95); transform: none; box-shadow: none; }
 /* Compact variant for dense rows like the notebook toolbar */
 button.audio-btn.sm { padding: 2px 10px; font-size: 12px; border-radius: var(--t-r-btn); gap: 5px; flex-shrink: 0; }
+
+/* Scrub bar left of the notebook play button. Fill and knob share one position so they
+   never drift the way a native range's inset thumb does. */
+.audio-seek { position: relative; width: 130px; height: 6px; flex-shrink: 0; border-radius: 999px; background: var(--t-border-2); cursor: pointer; touch-action: none; }
+.audio-seek.disabled { cursor: default; opacity: 0.5; }
+.audio-seek-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; background: var(--t-plum); pointer-events: none; }
+.audio-seek-fill::after { content: ""; position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 11px; height: 11px; border-radius: 50%; background: var(--t-plum); }
 button.btn-blue  { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-accent-fg); }
 button.btn-blue:hover  { border-color: var(--t-blue); background: var(--t-blue); color: var(--t-accent-fg); filter: brightness(0.93); }
 
