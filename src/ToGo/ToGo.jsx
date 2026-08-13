@@ -63,7 +63,7 @@ function EyeIcon({ open }) {
 }
 
 // IDs are bearer credentials, masked by default and copyable without revealing.
-function MaskedId({ id, onCopied }) {
+function MaskedId({ id, onCopied, action }) {
   const [shown, setShown] = useState(false);
 
   return (
@@ -88,6 +88,7 @@ function MaskedId({ id, onCopied }) {
           <path d="M5 15V5a2 2 0 0 1 2-2h10" />
         </svg>
       </button>
+      {action}
     </div>
   );
 }
@@ -97,6 +98,8 @@ export default function ToGo({ setToast }) {
   const [pullId, setPullId] = useState("");
   const [pullShown, setPullShown] = useState(false);
   const [busy, setBusy] = useState("");
+  // Which code is pulling, so only its own button reads Pulling
+  const [pullingKey, setPullingKey] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editingLabel, setEditingLabel] = useState("");
 
@@ -128,7 +131,7 @@ export default function ToGo({ setToast }) {
     }
   }
 
-  async function pull(raw) {
+  async function pull(raw, key) {
     if (busy) return;
     const id = raw.trim();
     if (!UUID_RE.test(id)) {
@@ -137,6 +140,7 @@ export default function ToGo({ setToast }) {
     }
 
     setBusy("Pulling…");
+    setPullingKey(key ?? id);
     togoLock.active = true;
     try {
       const slot = await loggedInvoke("slot_exists", { id });
@@ -166,6 +170,7 @@ export default function ToGo({ setToast }) {
     } finally {
       togoLock.active = false;
       setBusy("");
+      setPullingKey(null);
     }
   }
 
@@ -230,11 +235,16 @@ export default function ToGo({ setToast }) {
               Push saves everything (decks, notebooks, plans, and stats) to the ID below. 
               Keep it safe!
             </p>
-            <MaskedId id={cfg.instance_id} onCopied={copied} />
+            <MaskedId
+              id={cfg.instance_id}
+              onCopied={copied}
+              action={
+                <button className="primary" onClick={push} disabled={!!busy}>
+                  {busy === "Pushing…" ? busy : "Push"}
+                </button>
+              }
+            />
             <div className="togo-row">
-              <button className="primary" onClick={push} disabled={!!busy}>
-                {busy === "Pushing…" ? busy : "Push"}
-              </button>
               <span className="togo-meta">
                 {cfg.last_push ? `Last pushed ${timeAgo(cfg.last_push)}` : "Never pushed"}
               </span>
@@ -255,7 +265,7 @@ export default function ToGo({ setToast }) {
                 spellCheck={false}
                 autoComplete="off"
                 onChange={e => setPullId(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && pull(pullId)}
+                onKeyDown={e => e.key === "Enter" && pull(pullId, "input")}
               />
               <button
                 className="togo-icon-btn"
@@ -265,8 +275,8 @@ export default function ToGo({ setToast }) {
               >
                 <EyeIcon open={pullShown} />
               </button>
-              <button className="danger" onClick={() => pull(pullId)} disabled={!!busy || !pullId}>
-                {busy === "Pulling…" ? busy : "Pull"}
+              <button className="danger" onClick={() => pull(pullId, "input")} disabled={!!busy || !pullId}>
+                {pullingKey === "input" ? "Pulling…" : "Pull"}
               </button>
             </div>
             <p className="togo-note togo-warn">
@@ -302,8 +312,8 @@ export default function ToGo({ setToast }) {
                     )}
                     <MaskedId id={r.id} onCopied={copied} />
                     <span className="togo-meta">pulled {timeAgo(r.pulled_at)}</span>
-                    <button className="danger togo-btn-sm" onClick={() => pull(r.id)} disabled={!!busy}>
-                      {busy === "Pulling…" ? busy : "Pull"}
+                    <button className="danger togo-btn-sm" onClick={() => pull(r.id, r.id)} disabled={!!busy}>
+                      {pullingKey === r.id ? "Pulling…" : "Pull"}
                     </button>
                     <button
                       className="togo-icon-btn"
