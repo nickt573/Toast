@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip, NotebookPageTag } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
@@ -1794,6 +1794,12 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [activePlans,    setActivePlans]   = useState([]);
   const [deletedPlans,   setDeletedPlans]  = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
+  // Deleted plan whose tab × is awaiting delete confirmation
+  const [confirmDelId,   setConfirmDelId]  = useState(null);
+  const [confirmPos,     setConfirmPos]    = useState({ left: 0, top: 0 });
+  const planBarRef   = useRef(null);
+  const activePillRef = useRef(null);
+  const confirmRef   = useRef(null);
   const [groupStats,     setGroupStats]    = useState([]);
   const [deckResets,     setDeckResets]    = useState([]);
   const [todoStats,      setTodoStats]     = useState([]);
@@ -1914,6 +1920,25 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
 
   const planPills = orderPlanPills(activePlans, deletedPlans);
 
+  // Sit the confirm just under its own tab (not the whole wrapped bar) and clamp its left
+  // inside the bar so neither edge runs off screen
+  useLayoutEffect(() => {
+    if (!confirmDelId) return;
+    const place = () => {
+      const pill = activePillRef.current, bar = planBarRef.current, pop = confirmRef.current;
+      if (!pill || !bar || !pop) return;
+      // Right edge of the confirm lines up with the tab's right edge
+      const left = pill.offsetLeft + pill.offsetWidth - pop.offsetWidth;
+      setConfirmPos({
+        left: Math.max(0, Math.min(left, bar.clientWidth - pop.offsetWidth)),
+        top: pill.offsetTop + pill.offsetHeight + 6,
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [confirmDelId]);
+
   return (
     <>
       <div className="st-root">
@@ -1931,22 +1956,36 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           )}
         </div>
         <div className="st-body">
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 16 }}>
-            <div className="st-plan-bar" style={{ flex: 1, marginBottom: 0 }}>
-              {planPills.map(p => (
+          <div className="st-plan-bar" ref={planBarRef}>
+            {planPills.map(p => {
+              const canDelete = p.dead === "deleted" && selectedPlanId === p.id;
+              return (
                 <button
                   key={p.deleted ? `d-${p.id}` : p.id}
+                  ref={canDelete ? activePillRef : null}
                   className={`st-pill${p.dead ? ` st-pill-dead st-pill-dead--${p.dead}` : ""}${selectedPlanId === p.id ? " active" : ""}`}
-                  onClick={() => setSelectedPlanId(p.id)}
+                  onClick={() => { setSelectedPlanId(p.id); setConfirmDelId(null); }}
                 >
                   {p.name}
+                  {canDelete && (
+                    <span
+                      className="st-pill-x"
+                      role="button"
+                      title="Delete all stats for this plan"
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelId(p.id); }}
+                    >
+                      ×
+                    </span>
+                  )}
                 </button>
-              ))}
-              {!loading && planPills.length === 0 && <span style={{ color: "var(--t-text-3)", fontSize: 13 }}>No plans yet.</span>}
-            </div>
-            {selectedPlanId && planDeleted && (
-              <div style={{ flexShrink: 0 }}>
-                <ConfirmDelete label="Delete All Stats" onConfirm={() => deleteDeletedPlan(selectedPlanId)} />
+              );
+            })}
+            {!loading && planPills.length === 0 && <span style={{ color: "var(--t-text-3)", fontSize: 13 }}>No plans yet.</span>}
+            {confirmDelId && selectedPlanId === confirmDelId && planDeleted && (
+              <div className="st-plan-del-confirm" ref={confirmRef} style={{ left: confirmPos.left, top: confirmPos.top }}>
+                <span>Delete all stats?</span>
+                <button className="danger" onClick={() => { deleteDeletedPlan(confirmDelId); setConfirmDelId(null); }}>Delete</button>
+                <button className="quiet" onClick={() => setConfirmDelId(null)}>Cancel</button>
               </div>
             )}
           </div>

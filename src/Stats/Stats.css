@@ -21,7 +21,7 @@
 .st-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--hdr-title-stat); }
 .st-body { flex: 1; overflow-y: scroll; padding: 15px calc(var(--t-page-pad) - 10px) 20px var(--t-page-pad); }
 
-.st-plan-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+.st-plan-bar { position: relative; display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
 
 /* Seven metric cards capped narrow so they read square rather than as long bars, spread
    edge to edge to line up with the panel below */
@@ -343,3 +343,10 @@
 .st-pill-dead--archived { --dead-pill: #CDC3BE; --dead-pill-h: #BFB3AD; --dead-pill-a: #B5AAA4; }
 .st-pill-dead--deleted  { --dead-pill: #E5BBAF; --dead-pill-h: #DAA89A; --dead-pill-a: #D09686; }
 .st-pill-dead--merged   { --dead-pill: #CDBBD6; --dead-pill-h: #C2ADCD; --dead-pill-a: #B7A0C4; }
+
+.st-pill-x { margin-left: 7px; font-size: 14px; line-height: 1; opacity: 0.65; }
+.st-pill-x:hover { opacity: 1; }
+
+/* Sits under its own tab via a measured left and top, clamped inside the bar, never reflows */
+.st-plan-del-confirm { position: absolute; z-index: 20; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; padding: 6px 8px; background: var(--t-surface); border-radius: var(--t-r); box-shadow: var(--t-shadow-card); font-size: 12px; color: var(--t-text-2); }
+.st-plan-del-confirm button { padding: 4px 11px; font-size: 12px; }
