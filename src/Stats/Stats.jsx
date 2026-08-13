@@ -1408,7 +1408,7 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
               placeholder="0"
               inputMode="numeric"
             />
-            <span className="st-affix">min</span>
+            <span className="st-affix st-affix--min">min</span>
           </div>
         </div>
         <div className="st-field">
