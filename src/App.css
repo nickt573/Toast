@@ -224,6 +224,13 @@ button.btn-blue:hover  { border-color: var(--t-blue); background: var(--t-blue);
 label:has(input[type="checkbox"]),
 input[type="checkbox"] + label { user-select: none; }
 
+/* Block selection everywhere but the surfaces you type into */
+body { -webkit-user-select: none; user-select: none; }
+input, textarea, .ProseMirror, .st-todo-notes {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Universal inputs, quiet ruled boxes, no glow ring */
 input, textarea, select {
   font-family: inherit;
