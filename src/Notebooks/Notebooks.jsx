@@ -238,7 +238,7 @@ function NotebookList({ setToast, onOpenNotebook }) {
                                     onBlur={() => confirmEdit(nb.id)} />
                             ) : (
                                 <>
-                                    <span className="nb-notebook-name">{nb.name}</span>
+                                    <span className="landing-card-name">{nb.name}</span>
                                     <div className="landing-card-stats">
                                         <span className="landing-stat landing-stat--page">
                                             <b>{pageCounts[nb.id] ?? 0}</b>

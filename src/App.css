@@ -929,7 +929,7 @@ textarea { overflow-y: scroll; }
 .landing-card--notebook { --t-stripe: var(--t-plum-stripe);   --t-stripe-hi: var(--t-plum-lt); }
 .landing-card-body { flex: 1; min-width: 0; }
 .landing-card-body > input { width: 100%; box-sizing: border-box; }
-.landing-card-name { font-family: var(--t-font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.01em; color: var(--t-title); }
+.landing-card-name { display: block; font-family: var(--t-font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.01em; color: var(--t-title); }
 .landing-card-meta { font-size: 11px; color: var(--t-text-3); margin-top: 2px; }
 .landing-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 

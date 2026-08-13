@@ -2,7 +2,6 @@
 .nb-root { display: flex; flex-direction: column; height: 100%; }
 
 /* .nb-list is styled with the other landing lists in App.css */
-.nb-notebook-name { font-family: var(--t-font-head); font-weight: 800; font-size: 26px; letter-spacing: -0.01em; color: var(--t-title); }
 .nb-notebook-name-input { flex: 1; }
 /* Merge panel extends the landing header so the two read as one band */
 /* The panel is the bottom of the header stack while it is open, so the shadow is its

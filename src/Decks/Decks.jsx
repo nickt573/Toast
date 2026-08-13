@@ -404,7 +404,7 @@ function DeckList({ setToast, onOpenDeck }) {
                   onBlur={() => confirmEdit(deck.id)} />
               ) : (
                 <>
-                  <span className="dk-deck-name">{deck.name}</span>
+                  <span className="landing-card-name">{deck.name}</span>
                   <div className="landing-card-stats">
                     <span className="landing-stat landing-stat--card">
                       <b>{cardCounts[deck.id] ?? 0}</b>
