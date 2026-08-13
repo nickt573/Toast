@@ -847,7 +847,7 @@ textarea { overflow-y: scroll; }
 .plan-todo-form,
 .plan-todo-row,
 .plan-todo-edit {
-  --t-stripe-u: 12px;
+  --t-stripe-u: 15px;
   /* Keeps content clear of the bars, the leftmost sitting 6 units in plus a unit of air,
      and it scales with --t-stripe-u so half size rows get a half size gutter */
   --t-stripe-gutter: calc(7 * var(--t-stripe-u));
@@ -883,6 +883,10 @@ textarea { overflow-y: scroll; }
    has to be here too or it would out-specify the size and the bars would jump */
 .hp-free-todo-option,
 .hp-free-todo-option:hover { --t-stripe-u: 6px; }
+
+/* Chips inside an expanded todo stat keep the smaller unit */
+.st-todo-expanded .st-resource-card,
+.st-todo-expanded .st-item-bar { --t-stripe-u: 12px; }
 
 /* The New and Review readouts sit just inside the bars, each a solid box in its own family
    color with white numerals so the number carries the weight of a count */
