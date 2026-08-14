@@ -71,14 +71,42 @@ pub async fn push_package(
     }
     let id = cfg.instance_id;
 
-    // Scoped because the guard isn't Send and must not be held across an await
-    let (_tmp, zip_path) = {
+    // Scoped because the guard isn't Send and must not be held across an await. The
+    // cleanup runs first so the fingerprint describes the media the database actually
+    // references, not leftovers.
+    let media_id = {
         let conn = state.conn.lock().unwrap();
         let _ = delete::cleanup_orphaned_media(&conn, &app_dir);
-        togo::bundle(&app_dir, &conn, &id)?
+        togo::media_fingerprint(&app_dir)
     };
 
-    togo::upload(&zip_path, &id).await?;
+    // Media the slot already holds doesn't need sending again, which is the difference
+    // between a second and a minute. Anything else and the whole package goes, as before.
+    let unchanged = togo::remote_media_id(&id).await? == Some(media_id.clone());
+
+    let (_tmp, zip_path) = {
+        let conn = state.conn.lock().unwrap();
+        if unchanged {
+            togo::bundle_db(&conn, &id, &media_id)?
+        } else {
+            togo::bundle(&app_dir, &conn, &id, &media_id)?
+        }
+    };
+
+    if unchanged {
+        togo::upload_db(&zip_path, &id).await?;
+    } else {
+        // Completing the package clears both companions, so they're written back after it
+        // and the fingerprint last of all
+        togo::upload(&zip_path, &id).await?;
+        let (_db_tmp, db_zip) = {
+            let conn = state.conn.lock().unwrap();
+            togo::bundle_db(&conn, &id, &media_id)?
+        };
+        togo::upload_db(&db_zip, &id).await?;
+        togo::upload_media_id(&id, &media_id).await?;
+    }
+    log::info!("push: media {}", if unchanged { "unchanged" } else { "sent" });
 
     let now = chrono::Local::now().to_rfc3339();
     let mut cfg = togo::load_config(&app_dir)?;
@@ -93,12 +121,34 @@ pub async fn pull_package(id: String, state: tauri::State<'_, AppState>) -> Resu
     let id = valid_id(&id)?;
     let app_dir = state.app_dir.clone();
 
-    let (_tmp, zip_path) = togo::download(&id).await?;
+    // If the slot's media is the media already sitting here, the database is the only
+    // thing worth fetching. Anything else and the whole package comes down, as before.
+    let slot_db = togo::download_db(&id).await?;
+    let mut done = false;
 
-    {
-        let mut conn = state.conn.lock().unwrap();
-        togo::restore(&app_dir, &zip_path, &mut conn)?;
+    if let Some((_, db_zip)) = slot_db.as_ref() {
+        let media_id = togo::package_media_id(db_zip)?;
+        if !media_id.is_empty() && media_id == togo::media_fingerprint(&app_dir) {
+            let mut conn = state.conn.lock().unwrap();
+            togo::restore_db_only(&app_dir, db_zip, &mut conn)?;
+            done = true;
+        }
     }
+
+    if !done {
+        let (_tmp, zip_path) = togo::download(&id).await?;
+        {
+            let mut conn = state.conn.lock().unwrap();
+            togo::restore(&app_dir, &zip_path, &mut conn)?;
+        }
+        // The package's own database is only as new as the last push that sent media, so
+        // any database-only pushes since then are laid over the media it just restored
+        if let Some((_, db_zip)) = slot_db.as_ref() {
+            let mut conn = state.conn.lock().unwrap();
+            togo::restore_db_only(&app_dir, db_zip, &mut conn)?;
+        }
+    }
+    log::info!("pull: media {}", if done { "unchanged" } else { "fetched" });
 
     // The pull already succeeded, failing to record it must not fail it
     if let Err(e) = togo::load_config(&app_dir).and_then(|mut cfg| {

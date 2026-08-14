@@ -153,8 +153,10 @@ pub fn sweep_stale_temp() {
 // Transport
 
 const PART_BYTES: usize = 50 * 1024 * 1024;
-const MAX_PACKAGE_BYTES: u64 = 1024 * 1024 * 1024;
-const MAX_UNPACKED_BYTES: u64 = 4 * 1024 * 1024 * 1024;
+// Parts stay at 50 MB because a Worker request body is capped at 100 MB; the ceiling
+// comes from how many of them a package may have, and R2 allows far more than we use
+const MAX_PACKAGE_BYTES: u64 = 5 * 1024 * 1024 * 1024;
+const MAX_UNPACKED_BYTES: u64 = 20 * 1024 * 1024 * 1024;
 
 #[derive(Deserialize)]
 struct StartMpu {
@@ -246,7 +248,7 @@ pub async fn upload(zip_path: &Path, id: &str) -> Result<(), String> {
         let part = match sent {
             Ok(r) if r.status().is_success() => r.json::<UploadedPart>().await.map_err(network_err),
             Ok(r) if r.status() == reqwest::StatusCode::PAYLOAD_TOO_LARGE => {
-                Err("Your Toast is too large to push (over 1 GB).".to_string())
+                Err("Your Toast is too large to push (over 5 GB).".to_string())
             }
             Ok(r) if r.status() == reqwest::StatusCode::TOO_MANY_REQUESTS => {
                 Err(throttle_msg(r).await)
@@ -276,7 +278,7 @@ pub async fn upload(zip_path: &Path, id: &str) -> Result<(), String> {
     if !res.status().is_success() {
         let status = res.status();
         let msg = if status == reqwest::StatusCode::PAYLOAD_TOO_LARGE {
-            "Your Toast is too large to push (over 1 GB).".into()
+            "Your Toast is too large to push (over 5 GB).".into()
         } else if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
             throttle_msg(res).await
         } else {
@@ -286,6 +288,96 @@ pub async fn upload(zip_path: &Path, id: &str) -> Result<(), String> {
         return Err(msg);
     }
     Ok(())
+}
+
+/// The media set the slot's package was built from, or None if the slot has no companion
+/// to say. None simply means the next push sends everything.
+pub async fn remote_media_id(id: &str) -> Result<Option<String>, String> {
+    let res = reqwest::Client::new()
+        .get(format!("{}/p/{id}/media-id", endpoint()))
+        .send()
+        .await
+        .map_err(network_err)?;
+
+    if res.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return Err(throttle_msg(res).await);
+    }
+    if !res.status().is_success() {
+        return Ok(None);
+    }
+    Ok(res.text().await.ok().map(|s| s.trim().to_string()))
+}
+
+/// Sends the database on its own, for when the slot's media already matches
+pub async fn upload_db(zip_path: &Path, id: &str) -> Result<(), String> {
+    let bytes = fs::read(zip_path).map_err(|e| e.to_string())?;
+    let res = reqwest::Client::new()
+        .put(format!("{}/p/{id}/db", endpoint()))
+        .body(bytes)
+        .send()
+        .await
+        .map_err(network_err)?;
+
+    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return Err(throttle_msg(res).await);
+    }
+    if !res.status().is_success() {
+        return Err(format!("Push failed ({}).", res.status()));
+    }
+    Ok(())
+}
+
+/// Written last of all, so the slot never claims media it doesn't have
+pub async fn upload_media_id(id: &str, media_id: &str) -> Result<(), String> {
+    let res = reqwest::Client::new()
+        .put(format!("{}/p/{id}/media-id", endpoint()))
+        .body(media_id.to_string())
+        .send()
+        .await
+        .map_err(network_err)?;
+
+    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return Err(throttle_msg(res).await);
+    }
+    if !res.status().is_success() {
+        return Err(format!("Push failed ({}).", res.status()));
+    }
+    Ok(())
+}
+
+/// The slot's database on its own, or None when it only has a whole package to offer
+pub async fn download_db(id: &str) -> Result<Option<(tempfile::TempDir, PathBuf)>, String> {
+    let mut res = reqwest::Client::new()
+        .get(format!("{}/p/{id}/db", endpoint()))
+        .send()
+        .await
+        .map_err(network_err)?;
+
+    if res.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return Err(throttle_msg(res).await);
+    }
+    if !res.status().is_success() {
+        return Ok(None);
+    }
+
+    let tmp = togo_tempdir()?;
+    let zip_path = tmp.path().join("database.zip");
+    let mut file = fs::File::create(&zip_path).map_err(|e| e.to_string())?;
+    let mut written: u64 = 0;
+    while let Some(chunk) = res.chunk().await.map_err(network_err)? {
+        written += chunk.len() as u64;
+        if written > MAX_PACKAGE_BYTES {
+            return Err("That package is too large to pull.".into());
+        }
+        file.write_all(&chunk).map_err(|e| e.to_string())?;
+    }
+    Ok(Some((tmp, zip_path)))
 }
 
 /// Downloads that id's package to a temp file
@@ -369,6 +461,98 @@ pub struct Manifest {
     pub instance_id: String,
     pub app_date: String,
     pub created_at: String,
+    /// Which media set this package was built from. Empty on packages written before
+    /// there was such a thing, which just means every pull of one fetches the media.
+    #[serde(default)]
+    pub media_id: String,
+}
+
+/// Identifies the media set without reading a byte of it. Filenames are UUIDs handed out
+/// once and never reused, so a name appearing on both sides is the same file; sizes and
+/// the count are carried alongside the hash so a collision would have to clear three
+/// hurdles at once.
+pub fn media_fingerprint(app_dir: &Path) -> String {
+    let mut names: Vec<(String, u64)> = Vec::new();
+    for subdir in MEDIA_SUBDIRS {
+        let Ok(entries) = fs::read_dir(app_dir.join(subdir)) else {
+            continue; // a fresh install may not have every media dir
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+            names.push((format!("{subdir}/{}", entry.file_name().to_string_lossy()), size));
+        }
+    }
+    names.sort();
+
+    // FNV-1a, chosen because it's a dozen lines and gives the same answer on every machine
+    let mut hash: u64 = 0xcbf29ce484222325;
+    let mut total: u64 = 0;
+    for (name, size) in &names {
+        total += size;
+        for byte in name.as_bytes().iter().chain(size.to_le_bytes().iter()) {
+            hash ^= *byte as u64;
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+    }
+    format!("{}:{}:{:016x}", names.len(), total, hash)
+}
+
+fn build_manifest(
+    conn: &Connection,
+    instance_id: &str,
+    media_id: &str,
+) -> Result<Manifest, String> {
+    Ok(Manifest {
+        format: MANIFEST_FORMAT,
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
+        schema_version: db::SCHEMA_VERSION,
+        instance_id: instance_id.to_string(),
+        app_date: scheduling::get_date(conn).map_err(|e| e.to_string())?,
+        created_at: chrono::Local::now().to_rfc3339(),
+        media_id: media_id.to_string(),
+    })
+}
+
+/// The database on its own, for a push whose media the slot already has. Small enough to
+/// go up in one request, which is the entire point of it.
+pub fn bundle_db(
+    conn: &Connection,
+    instance_id: &str,
+    media_id: &str,
+) -> Result<(tempfile::TempDir, PathBuf), String> {
+    let tmp = togo_tempdir()?;
+
+    let snapshot = tmp.path().join("database.db");
+    conn.execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()])
+        .map_err(|e| format!("Could not snapshot the database: {e}"))?;
+
+    let manifest = build_manifest(conn, instance_id, media_id)?;
+
+    let zip_path = tmp.path().join("database.zip");
+    let file = fs::File::create(&zip_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let opts: zip::write::SimpleFileOptions = Default::default();
+
+    zip.start_file::<_, ()>("manifest.json", opts)
+        .map_err(|e| e.to_string())?;
+    zip.write_all(
+        serde_json::to_string_pretty(&manifest)
+            .map_err(|e| e.to_string())?
+            .as_bytes(),
+    )
+    .map_err(|e| e.to_string())?;
+
+    zip.start_file::<_, ()>("database.db", opts)
+        .map_err(|e| e.to_string())?;
+    zip.write_all(&fs::read(&snapshot).map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok((tmp, zip_path))
 }
 
 /// Zips a database snapshot plus the media trees, and the temp dir in the result owns the
@@ -377,6 +561,7 @@ pub fn bundle(
     app_dir: &Path,
     conn: &Connection,
     instance_id: &str,
+    media_id: &str,
 ) -> Result<(tempfile::TempDir, PathBuf), String> {
     let tmp = togo_tempdir()?;
 
@@ -385,14 +570,7 @@ pub fn bundle(
     conn.execute("VACUUM INTO ?1", [snapshot.to_string_lossy().as_ref()])
         .map_err(|e| format!("Could not snapshot the database: {e}"))?;
 
-    let manifest = Manifest {
-        format: MANIFEST_FORMAT,
-        app_version: env!("CARGO_PKG_VERSION").to_string(),
-        schema_version: db::SCHEMA_VERSION,
-        instance_id: instance_id.to_string(),
-        app_date: scheduling::get_date(conn).map_err(|e| e.to_string())?,
-        created_at: chrono::Local::now().to_rfc3339(),
-    };
+    let manifest = build_manifest(conn, instance_id, media_id)?;
 
     let zip_path = tmp.path().join("package.zip");
     let file = fs::File::create(&zip_path).map_err(|e| e.to_string())?;
@@ -491,17 +669,9 @@ fn read_manifest(zip_path: &Path, stage: &Path) -> Result<Manifest, String> {
     Ok(manifest)
 }
 
-/// Validates a package, then swaps it in and reopens the connection against it, destructively
-/// on success, and app_date is deliberately left as it came for the staleness check below
-pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result<(), String> {
-    // Staged inside app_dir, since the swap renames below can't cross filesystems and the
-    // system temp dir often lives on another one
-    let staged = tempfile::Builder::new()
-        .prefix(".togo-staging")
-        .tempdir_in(app_dir)
-        .map_err(|e| e.to_string())?;
-    let manifest = read_manifest(zip_path, staged.path())?;
-
+/// Every reason a package can be refused, shared by both kinds of pull so neither can
+/// quietly grow laxer than the other
+fn validate_manifest(manifest: &Manifest, conn: &Connection) -> Result<(), String> {
     // Newer packages are refused, older ones are migrated by init_schema below
     if manifest.format > MANIFEST_FORMAT {
         return Err("This package was made by a newer version of Toast. Update Toast on this machine to pull it.".into());
@@ -532,21 +702,98 @@ pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result
             manifest.app_date, local_date
         ));
     }
+    Ok(())
+}
 
-    // Fail before destroying anything, and migrations run here on the staged db so a
-    // failure can't strand a half-migrated live one
-    let staged_db = staged.path().join("database.db");
-    {
-        let probe = Connection::open(&staged_db)
-            .map_err(|_| "Package database can't be opened.".to_string())?;
-        let ok: String = probe
-            .query_row("PRAGMA integrity_check", [], |r| r.get(0))
-            .map_err(|e| e.to_string())?;
-        if ok != "ok" {
-            return Err("Package database is corrupt.".into());
-        }
-        db::init_schema(&probe, app_dir).map_err(|e| e.to_string())?;
+/// Fail before destroying anything, and migrations run here on the staged db so a failure
+/// can't strand a half-migrated live one
+fn prepare_staged_db(staged: &Path, app_dir: &Path) -> Result<(), String> {
+    let probe = Connection::open(staged.join("database.db"))
+        .map_err(|_| "Package database can't be opened.".to_string())?;
+    let ok: String = probe
+        .query_row("PRAGMA integrity_check", [], |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+    if ok != "ok" {
+        return Err("Package database is corrupt.".into());
     }
+    db::init_schema(&probe, app_dir).map_err(|e| e.to_string())
+}
+
+/// The media set a package was built from, so a pull can tell whether it already has it
+pub fn package_media_id(zip_path: &Path) -> Result<String, String> {
+    let staged = tempfile::Builder::new()
+        .prefix(TEMP_PREFIX)
+        .tempdir()
+        .map_err(|e| e.to_string())?;
+    Ok(read_manifest(zip_path, staged.path())?.media_id)
+}
+
+/// Swaps in a database whose media this machine already holds, leaving the media trees
+/// exactly where they are. Same refusals as a full pull, and the same bracketing: the db
+/// moves aside first and back last, which is what recover_interrupted_swap keys on.
+pub fn restore_db_only(
+    app_dir: &Path,
+    zip_path: &Path,
+    conn: &mut Connection,
+) -> Result<(), String> {
+    let staged = tempfile::Builder::new()
+        .prefix(".togo-staging")
+        .tempdir_in(app_dir)
+        .map_err(|e| e.to_string())?;
+    let manifest = read_manifest(zip_path, staged.path())?;
+
+    validate_manifest(&manifest, conn)?;
+    prepare_staged_db(staged.path(), app_dir)?;
+
+    // Close the live connection first, Windows won't rename a file with an open handle
+    let old = std::mem::replace(
+        conn,
+        Connection::open_in_memory().map_err(|e| e.to_string())?,
+    );
+    drop(old);
+
+    let rollback = app_dir.join(".togo-rollback");
+    let _ = fs::remove_dir_all(&rollback);
+    fs::create_dir_all(&rollback).map_err(|e| e.to_string())?;
+
+    let swap = || -> std::io::Result<()> {
+        let live = app_dir.join("database.db");
+        if live.exists() {
+            fs::rename(&live, rollback.join("database.db"))?;
+        }
+        fs::rename(staged.path().join("database.db"), &live)
+    };
+
+    if let Err(e) = swap() {
+        log::error!("togo restore failed mid-swap: {e}");
+        let saved = rollback.join("database.db");
+        if saved.exists() {
+            let _ = fs::rename(&saved, app_dir.join("database.db"));
+        }
+        *conn = Connection::open(app_dir.join("database.db")).map_err(|e| e.to_string())?;
+        return Err("Pull failed; your data was left untouched.".into());
+    }
+
+    let _ = fs::remove_dir_all(&rollback);
+
+    *conn = Connection::open(app_dir.join("database.db"))
+        .map_err(|e| format!("Pull succeeded, but the database couldn't be reopened ({e}). Restart Toast."))?;
+    Ok(())
+}
+
+/// Validates a package, then swaps it in and reopens the connection against it, destructively
+/// on success, and app_date is deliberately left as it came for the staleness check below
+pub fn restore(app_dir: &Path, zip_path: &Path, conn: &mut Connection) -> Result<(), String> {
+    // Staged inside app_dir, since the swap renames below can't cross filesystems and the
+    // system temp dir often lives on another one
+    let staged = tempfile::Builder::new()
+        .prefix(".togo-staging")
+        .tempdir_in(app_dir)
+        .map_err(|e| e.to_string())?;
+    let manifest = read_manifest(zip_path, staged.path())?;
+
+    validate_manifest(&manifest, conn)?;
+    prepare_staged_db(staged.path(), app_dir)?;
 
     // Close the live connection first, Windows won't rename a file with an open handle
     let old = std::mem::replace(
@@ -654,6 +901,65 @@ mod tests {
         (dir, conn)
     }
 
+    #[test]
+    fn fingerprint_tracks_the_media_set() {
+        let (dir, _conn) = make_app("2026-07-14");
+        let original = media_fingerprint(dir.path());
+
+        // Same files, same answer, however many times it's asked
+        assert_eq!(original, media_fingerprint(dir.path()));
+
+        fs::write(dir.path().join("cards/audio/new.mp3"), b"AUDIO").unwrap();
+        let added = media_fingerprint(dir.path());
+        assert_ne!(original, added, "adding a file must change the fingerprint");
+
+        fs::remove_file(dir.path().join("cards/audio/new.mp3")).unwrap();
+        assert_eq!(original, media_fingerprint(dir.path()), "removing it must undo that");
+
+        // Same name, different bytes: the size is in there for exactly this
+        fs::write(dir.path().join("cards/images/a.png"), b"PNGDATA-LONGER").unwrap();
+        assert_ne!(original, media_fingerprint(dir.path()));
+    }
+
+    #[test]
+    fn db_only_restore_leaves_media_alone() {
+        let (src, conn) = make_app("2026-07-14");
+        let (_tmp, zip) = bundle_db(&conn, "a", &media_fingerprint(src.path())).unwrap();
+
+        let (dst, mut dconn) = make_app("2026-07-14");
+        dconn.execute("DELETE FROM card", []).unwrap();
+        fs::write(dst.path().join("cards/images/keep.png"), b"KEEP").unwrap();
+
+        restore_db_only(dst.path(), &zip, &mut dconn).unwrap();
+
+        let front: String = dconn
+            .query_row("SELECT front FROM card WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(front, "f", "the database must have been swapped in");
+        assert_eq!(
+            fs::read(dst.path().join("cards/images/keep.png")).unwrap(),
+            b"KEEP",
+            "media must be untouched by a database-only pull"
+        );
+        assert!(dst.path().join("cards/images/a.png").exists());
+    }
+
+    #[test]
+    fn db_only_restore_refuses_what_a_full_pull_would() {
+        // Both pulls share validate_manifest, and this is what proves it
+        let (src, conn) = make_app("2026-07-20");
+        let (_tmp, zip) = bundle_db(&conn, "a", &media_fingerprint(src.path())).unwrap();
+
+        let (dst, mut dconn) = make_app("2026-07-14");
+        let err = restore_db_only(dst.path(), &zip, &mut dconn).unwrap_err();
+        assert!(err.contains("from the future"), "{err}");
+
+        let n: i64 = dconn
+            .query_row("SELECT COUNT(*) FROM card", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(n, 1, "a refused pull must leave local data alone");
+    }
+
     /// Rewrites a field in the package's manifest, repacking the zip
     fn tamper(zip_path: &Path, edit: impl Fn(&mut Manifest)) -> PathBuf {
         let staged = tempfile::tempdir().unwrap();
@@ -680,7 +986,7 @@ mod tests {
     #[test]
     fn round_trips_cards_and_media() {
         let (src, conn) = make_app("2026-07-14");
-        let (_tmp, zip) = bundle(src.path(), &conn, "instance-a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "instance-a", &media_fingerprint(src.path())).unwrap();
 
         let (dst, mut dconn) = make_app("2026-07-14");
         dconn.execute("DELETE FROM card", []).unwrap();
@@ -703,7 +1009,7 @@ mod tests {
         // The pulled date must survive, since update_date ticks the SRS forward by the gap
         // to today and overwriting it here would skip the rollover
         let (src, conn) = make_app("2026-07-10");
-        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
 
         let (dst, mut dconn) = make_app("2026-07-14");
         restore(dst.path(), &zip, &mut dconn).unwrap();
@@ -716,7 +1022,7 @@ mod tests {
     fn accepts_older_and_equal_dates() {
         for pkg_date in ["2026-07-10", "2026-07-14"] {
             let (src, conn) = make_app(pkg_date);
-            let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+            let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
             let (dst, mut dconn) = make_app("2026-07-14");
             assert!(restore(dst.path(), &zip, &mut dconn).is_ok(), "{pkg_date}");
         }
@@ -725,7 +1031,7 @@ mod tests {
     #[test]
     fn rejects_future_dated_package() {
         let (src, conn) = make_app("2026-07-20");
-        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
 
         let (dst, mut dconn) = make_app("2026-07-14");
         let err = restore(dst.path(), &zip, &mut dconn).unwrap_err();
@@ -741,7 +1047,7 @@ mod tests {
     #[test]
     fn rejects_newer_app_version() {
         let (src, conn) = make_app("2026-07-14");
-        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
         let bad = tamper(&zip, |m| m.app_version = "9.9.9".into());
 
         let (dst, mut dconn) = make_app("2026-07-14");
@@ -752,7 +1058,7 @@ mod tests {
     #[test]
     fn rejects_newer_schema() {
         let (src, conn) = make_app("2026-07-14");
-        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
         let bad = tamper(&zip, |m| m.schema_version = db::SCHEMA_VERSION + 1);
 
         let (dst, mut dconn) = make_app("2026-07-14");
@@ -762,7 +1068,7 @@ mod tests {
     #[test]
     fn rejects_newer_format() {
         let (src, conn) = make_app("2026-07-14");
-        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
         let bad = tamper(&zip, |m| m.format = MANIFEST_FORMAT + 1);
 
         let (dst, mut dconn) = make_app("2026-07-14");
@@ -774,7 +1080,7 @@ mod tests {
     #[test]
     fn accepts_older_version_package() {
         let (src, conn) = make_app("2026-07-14");
-        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
         let old = tamper(&zip, |m| {
             m.app_version = "0.9.0".into();
             m.schema_version = 1;
@@ -791,7 +1097,7 @@ mod tests {
     #[test]
     fn rejects_unreadable_version() {
         let (src, conn) = make_app("2026-07-14");
-        let (_tmp, zip) = bundle(src.path(), &conn, "a").unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, "a", &media_fingerprint(src.path())).unwrap();
         let bad = tamper(&zip, |m| m.app_version = "garbage".into());
 
         let (dst, mut dconn) = make_app("2026-07-14");
@@ -854,17 +1160,58 @@ mod tests {
         // Forcing the multi-part upload path is overkill here since the worker was already
         // proven at size, so this just proves the wiring
         fs::write(src.path().join("cards/audio/big.wav"), vec![7u8; 3 * 1024 * 1024]).unwrap();
-        let (_tmp, zip) = bundle(src.path(), &conn, &id).unwrap();
+        let (_tmp, zip) = bundle(src.path(), &conn, &id, &media_fingerprint(src.path())).unwrap();
 
         assert!(slot_info(&id).await.unwrap().is_none(), "slot should start empty");
+        assert!(remote_media_id(&id).await.unwrap().is_none(), "no fingerprint yet");
+
+        let media_id = media_fingerprint(src.path());
         upload(&zip, &id).await.expect("upload");
+        let (_db_tmp, db_zip) = bundle_db(&conn, &id, &media_id).unwrap();
+        upload_db(&db_zip, &id).await.expect("upload db");
+        upload_media_id(&id, &media_id).await.expect("upload media id");
+
         let info = slot_info(&id).await.unwrap().expect("slot should now exist");
         println!("uploaded {} bytes to {id}", info.size);
 
+        // The slot now agrees about its media, which is what lets a push skip it
+        assert_eq!(remote_media_id(&id).await.unwrap().as_deref(), Some(media_id.as_str()));
+
+        // A database-only push: no package touched, and the fingerprint survives it
+        let (_hot_tmp, hot_zip) = bundle_db(&conn, &id, &media_id).unwrap();
+        upload_db(&hot_zip, &id).await.expect("db-only push");
+        assert_eq!(
+            remote_media_id(&id).await.unwrap().as_deref(),
+            Some(media_id.as_str()),
+            "a database-only push must leave the media fingerprint standing"
+        );
+
+        // Pulling onto a machine that already has this media should take the fast path
+        let (fast, mut fconn) = make_app("2026-07-14");
+        fs::write(fast.path().join("cards/audio/big.wav"), vec![7u8; 3 * 1024 * 1024]).unwrap();
+        fconn.execute("DELETE FROM card", []).unwrap();
+        let (_f_tmp, f_db) = download_db(&id).await.expect("download db").expect("db present");
+        assert_eq!(
+            package_media_id(&f_db).unwrap(),
+            media_fingerprint(fast.path()),
+            "identical media on both sides must compare equal"
+        );
+        restore_db_only(fast.path(), &f_db, &mut fconn).expect("db-only restore");
+        let fast_front: String = fconn
+            .query_row("SELECT front FROM card WHERE id = 1", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(fast_front, "f");
+
+        // And a machine without the media falls back to the whole package
         let (_dtmp, pulled) = download(&id).await.expect("download");
 
         let (dst, mut dconn) = make_app("2026-07-14");
         dconn.execute("DELETE FROM card", []).unwrap();
+        assert_ne!(
+            package_media_id(&pulled).unwrap(),
+            media_fingerprint(dst.path()),
+            "different media must not compare equal"
+        );
         restore(dst.path(), &pulled, &mut dconn).expect("restore");
 
         let front: String = dconn

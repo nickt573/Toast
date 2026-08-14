@@ -2,13 +2,21 @@ import { Limiter } from "./limiter.js";
 
 // Toast to Go: one package slot per instance UUID, push overwrites, pull reads.
 // Uploads are multipart because a Worker request body is capped at 100 MB.
+//
+// A slot also carries two small companions. `db` holds the database on its own and
+// `media-id` fingerprints the media set the package was built from. A push whose media
+// still matches sends only `db`, which is the difference between a second and a minute.
+// Completing a whole-package upload clears both, so they can never describe a package
+// that is no longer there.
 
 const UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const MAX_PART_BYTES = 55 * 1024 * 1024;
-const MAX_PARTS = 20;
-const MAX_TOTAL_BYTES = 1024 * 1024 * 1024;
+const MAX_PARTS = 100;
+const MAX_TOTAL_BYTES = 5 * 1024 * 1024 * 1024;
+const MAX_DB_BYTES = 96 * 1024 * 1024;
+const MAX_MEDIA_ID_BYTES = 256;
 
 const json = (body, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -41,6 +49,18 @@ export default {
         const rest = seg.slice(2);
 
         if (rest.length === 0) return handleObject(request, env, key);
+        if (rest.length === 1 && rest[0] === "db") {
+            return handleCompanion(request, env, `${key}/db`, MAX_DB_BYTES, "application/zip");
+        }
+        if (rest.length === 1 && rest[0] === "media-id") {
+            return handleCompanion(
+                request,
+                env,
+                `${key}/media-id`,
+                MAX_MEDIA_ID_BYTES,
+                "text/plain"
+            );
+        }
         if (rest[0] === "mpu") {
             if (rest.length === 1 && request.method === "POST") {
                 const soft = await env.UPLOAD_IP_LIMIT.limit({ key: ip });
@@ -89,6 +109,31 @@ async function handleObject(request, env, key) {
         headers.set("content-length", String(obj.size));
         headers.set("etag", obj.httpEtag);
         return new Response(obj.body, { status: 200, headers });
+    }
+
+    return err(405, "Method not allowed");
+}
+
+/// The database and the media fingerprint, both small enough to send in one request
+async function handleCompanion(request, env, objectKey, maxBytes, contentType) {
+    if (request.method === "GET") {
+        const obj = await env.PACKAGES.get(objectKey);
+        if (!obj) return err(404, "Not found");
+
+        const headers = new Headers();
+        headers.set("content-type", contentType);
+        headers.set("content-length", String(obj.size));
+        headers.set("etag", obj.httpEtag);
+        return new Response(obj.body, { status: 200, headers });
+    }
+
+    if (request.method === "PUT") {
+        if (!request.body) return err(400, "Empty body");
+        const declared = Number(request.headers.get("content-length") ?? 0);
+        if (declared > maxBytes) return err(413, "Too large");
+
+        await env.PACKAGES.put(objectKey, request.body);
+        return json({});
     }
 
     return err(405, "Method not allowed");
@@ -144,6 +189,10 @@ async function handleMultipart(request, env, key, rest) {
             await env.PACKAGES.delete(key);
             return err(413, "Package is too large");
         }
+        // A fresh package outdates whatever the companions described. The pusher writes
+        // them again straight after; anything else pulling meanwhile reads the package
+        // itself, which is whole on its own.
+        await env.PACKAGES.delete([`${key}/db`, `${key}/media-id`]);
         return json({});
     }
 

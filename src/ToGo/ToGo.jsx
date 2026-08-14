@@ -214,7 +214,7 @@ export default function ToGo({ setToast }) {
       {busy && (
         <BusyOverlay
           title={busy === "Pulling…" ? "Pulling from Toast to Go…" : "Pushing to Toast to Go…"}
-          note="This can take a bit, hang tight. Please don't shut down your computer."
+          note="This can take a few minutes, especially the first time. Please don't shut down your computer."
         />
       )}
       <header className="togo-header">
