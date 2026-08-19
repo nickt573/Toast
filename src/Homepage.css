@@ -194,6 +194,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   user-select: none;
 }
 .hp-streak-chip.at-risk { background: var(--t-amber); color: var(--t-accent-fg); }
+.hp-plan-card-top .hp-streak-chip { font-size: 11px; padding: 4px 9px; }
 .hp-plan-idle-note {
   margin-top: 12px;
   font-size: 12px;
@@ -261,8 +262,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   align-items: center;
 }
 .hp-plan-back-streak .hp-streak-chip {
-  font-size: 13px;
-  padding: 5px 12px;
+  font-size: 11px;
+  padding: 4px 9px;
   margin-top: 0;
 }
 .hp-plan-back h2 {
