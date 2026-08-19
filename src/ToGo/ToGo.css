@@ -46,9 +46,11 @@
   color: var(--t-text);
   overflow-x: auto;
   white-space: nowrap;
+  -webkit-user-select: text;
+  user-select: text;
 }
 /* Same metrics masked or revealed, so toggling doesn't reflow the row */
-.togo-id-value.masked { color: var(--t-placeholder); user-select: none; }
+.togo-id-value.masked { color: var(--t-placeholder); -webkit-user-select: none; user-select: none; }
 
 .togo-input {
   flex: 1;
