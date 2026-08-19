@@ -386,7 +386,7 @@ function AudioControls({ audioFile, audio }) {
         return (
             <>
                 {!audio.paused ? (
-                    <button className="nb-tb-btn record recording" onClick={audio.pauseRecording}>⏸ Pause</button>
+                    <button className="nb-tb-btn record recording pause" onClick={audio.pauseRecording}>⏸ Pause</button>
                 ) : (
                     <button className="nb-tb-btn record recording" onClick={audio.resumeRecording}>▶ Resume</button>
                 )}

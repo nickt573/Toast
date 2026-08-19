@@ -121,8 +121,9 @@
 .nb-tb-btn.active, .nb-tb-btn.active:hover { background: color-mix(in srgb, var(--t-plum) 72%, #000); border-color: color-mix(in srgb, var(--t-plum) 72%, #000); color: var(--t-btn-fg); filter: none; }
 .nb-tb-btn.record, .nb-tb-btn.record:hover,
 .nb-tb-btn.stop, .nb-tb-btn.stop:hover { background: var(--t-red); border-color: var(--t-red); color: var(--t-btn-fg); }
-/* Pause and resume ride the homepage timer blue, distinct from the red record and stop */
+/* Resume rides the homepage timer blue and Pause its amber, distinct from the red record and stop */
 .nb-tb-btn.record.recording, .nb-tb-btn.record.recording:hover { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-btn-fg); }
+.nb-tb-btn.record.recording.pause, .nb-tb-btn.record.recording.pause:hover { background: var(--t-amber); border-color: var(--t-amber); color: var(--t-accent-fg); }
 .nb-tb-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .nb-tb-sep { width: 1px; background: var(--t-border); margin: 0 3px; align-self: stretch; flex-shrink: 0; }
 
