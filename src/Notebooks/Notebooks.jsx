@@ -965,7 +965,11 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 <span className="hdr-context">{allPages.length.toLocaleString()} page{allPages.length !== 1 ? "s" : ""}</span>
                 {!editing && allPages.length > 1 && (
                     <button onClick={() => setShowSearch(s => !s)}>
-                        Search <span className="t-caret">{showSearch ? "▾" : "▸"}</span>
+                        <svg className="nb-search-glass" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                            <circle cx="10.5" cy="10.5" r="7" />
+                            <line x1="15.5" y1="15.5" x2="21" y2="21" />
+                        </svg>
+                        Search
                     </button>
                 )}
                 {!editing && <button onClick={startNew}>+ New Page</button>}

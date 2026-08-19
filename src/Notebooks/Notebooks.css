@@ -36,6 +36,7 @@
   z-index: 1;
   box-shadow: var(--t-shadow-hdr);
 }
+.nb-search-glass { vertical-align: -2px; margin-right: 5px; }
 .nb-search input { border-color: var(--t-plum-bdr); }
 .nb-search input:focus { border-color: var(--t-accent); }
 .nb-search > input { flex: 1; min-width: 0; background: var(--t-surface); }
