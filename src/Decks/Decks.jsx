@@ -592,24 +592,20 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     const correct = cardLog.filter(e => (e.grade >= 2 && e.old_tier != 0)).length;
     const isReview = cardLog.some(e => e.old_tier != 0);
     const retention = Math.round((correct / retentionTotal) * 100);
-    // A card's whole tier-0 life counts as one sighting per day no matter how many times
-    // it comes back that day, while every review at tier 1 and up counts on its own
-    const newDays = new Set(cardLog.filter(e => e.old_tier == 0).map(e => e.graded_at)).size;
-    const total = newDays + retentionTotal;
     const last = cardLog[0]?.graded_at;
     return (
       <div className="dk-card-log">
         <span>
           {form.tier === 0 ? <span className="dk-log-new">New</span> : <span className="dk-log-review">Review</span>}
           {` · Review retention: ${isReview ? retention + "%" : "N/A"}`}
-          {total === 1 ? ` · Seen ${total} time` : ` · Seen ${total} times`}
+          {isReview && (retentionTotal === 1 ? ` · Reviewed ${retentionTotal} time` : ` · Reviewed ${retentionTotal} times`)}
           {form.tier >= 1 && ` · Tier ${form.tier}`}
         </span>
         {last && <span className="dk-log-last">Last seen: {last}</span>}
       </div>
     );
   })() : (
-    <div className="dk-card-log"><span><span className="dk-log-new">New</span> · Unseen</span></div>
+    <div className="dk-card-log"><span><span className="dk-log-new">New</span></span><span className="dk-log-last">Unseen</span></div>
   );
 
   if (previewing) {
