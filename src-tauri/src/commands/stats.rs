@@ -29,26 +29,6 @@ pub fn get_group_stats(
     read::get_group_stats(plan_id, &conn).map_err(|e| e.to_string())
 }
 
-#[derive(serde::Serialize)]
-pub struct RecordTotals {
-    deck_mins: f64,
-    todo_mins: f64,
-    earliest: Option<String>,
-}
-
-/// What the stats header speaks for, the whole record and every plan at once
-#[tauri::command]
-pub fn get_record_totals(state: tauri::State<AppState>) -> Result<RecordTotals, String> {
-    let conn = state.conn.lock().unwrap();
-    let (deck_mins, todo_mins, earliest) =
-        read::get_record_totals(&conn).map_err(|e| e.to_string())?;
-    Ok(RecordTotals {
-        deck_mins,
-        todo_mins,
-        earliest,
-    })
-}
-
 #[tauri::command]
 pub fn get_plan_resets(
     plan_id: i64,

@@ -47,10 +47,6 @@ function fmtTime(minutes) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-function plural(n, word) {
-  return `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`;
-}
-
 // Formats a logged amount with its unit, empty unless both are present
 function fmtUnit(value, name) {
   if (value === null || value === undefined || !name) return "";
@@ -1810,7 +1806,6 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [allGroups,      setAllGroups]     = useState([]);
   const [planDecks,      setPlanDecks]     = useState([]);
   const [planResources,  setPlanResources] = useState([]);
-  const [totals,         setTotals]        = useState(null);
   // Units are global, so the todo filter's spelling search can reach every alternate name a
   // unit carries, not only the ones that happen to appear in this plan's logged rows
   const [allUnits,       setAllUnits]      = useState([]);
@@ -1828,7 +1823,6 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
       setDeletedPlans(dp);
       setAllGroups(gs);
       setAllUnits(units);
-      loadTotals();
       const firstId = returnContext?.selectedPlanId ?? orderPlanPills(ps, dp)[0]?.id ?? null;
       setSelectedPlanId(firstId);
       if (returnContext) onConsumeReturnContext();
@@ -1865,17 +1859,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
     }).catch(e => { logError("catch", e); setToast("Failed to load stats.", "error"); });
   };
 
-  // The header speaks for the whole record, so the backend sums across every plan, and the
-  // oldest first record sets the day count even after that plan is put down
-  const loadTotals = () => {
-    loggedInvoke("get_record_totals")
-      .then(t => setTotals({ deckMins: t.deck_mins, todoMins: t.todo_mins, earliest: t.earliest }))
-      .catch(e => logError("catch", e));
-  };
-
   const refreshStats = () => {
     loadStats(selectedPlanId);
-    loadTotals();
   };
 
   const deleteDeletedPlan = async (planId) => {
@@ -1888,7 +1873,6 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
         const next = orderPlanPills(activePlans, dp)[0]?.id ?? null;
         setSelectedPlanId(next);
       }
-      loadTotals();
       setToast("Plan stats deleted.");
     } catch(e) {
       logError("catch", e);
@@ -1914,7 +1898,11 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const planDormant = planDeleted || planDisabled;
   const metrics = computeMetrics(counted(groupStats), todoStats);
   const totalDays = totalPlanDays(groupStats, todoStats, today, planDormant);
-  const recordDays = totals?.earliest && today ? daysBetween(totals.earliest, today) + 1 : null;
+  // Deck and todo minutes logged today for the selected plan, archived deck rows left out
+  const todayMins = today
+    ? counted(groupStats).filter(r => r.date === today).reduce((s, r) => s + r.time_spent_minutes, 0)
+      + todoStats.filter(r => r.date === today).reduce((s, r) => s + r.time_spent_minutes, 0)
+    : 0;
   const retColor = metrics.avgRetention !== null ? retentionColor(metrics.avgRetention) : GRAY;
   const atRisk = streakInfo.streak > 0 && !streakInfo.studied_today;
 
@@ -1946,12 +1934,9 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           <div style={{ flex: 1 }}>
             <h2>Stats</h2>
           </div>
-          {totals?.earliest && (
+          {selectedPlanId && today && (
             <span className="hdr-context">
-              {[
-                `${fmtTime(totals.deckMins + totals.todoMins)} study time`,
-                recordDays !== null ? plural(recordDays, "day") : null,
-              ].filter(Boolean).join(" · ")}
+              {fmtTime(todayMins)} spent today
             </span>
           )}
         </div>

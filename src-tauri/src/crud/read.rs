@@ -530,22 +530,6 @@ pub fn get_group_stats(plan_id: i64, conn: &Connection) -> Result<Vec<GroupStat>
     .collect()
 }
 
-/// Deck minutes, todo minutes and the first logged day across the whole record rather than
-/// one plan, where archived lines are left out of the time but still date the record
-pub fn get_record_totals(conn: &Connection) -> Result<(f64, f64, Option<String>)> {
-    conn.query_row(
-        r#"
-        SELECT
-            (SELECT COALESCE(SUM(time_spent_minutes), 0) FROM group_stats WHERE is_archived = FALSE),
-            (SELECT COALESCE(SUM(time_spent_minutes), 0) FROM todo_stats),
-            (SELECT MIN(date) FROM (SELECT date FROM group_stats
-                                    UNION ALL SELECT date FROM todo_stats))
-        "#,
-        [],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )
-}
-
 /// Every reset belonging to a deck this plan has lines for, and since a reset is deck-wide
 /// the same one goes to every plan the deck was studied in to draw its own boundary
 pub fn get_plan_resets(plan_id: i64, conn: &Connection) -> Result<Vec<DeckReset>> {
