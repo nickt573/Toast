@@ -110,8 +110,16 @@
    always present so its space is held, only dimmed when no filter is on */
 .st-count-box { margin-left: auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 26px; box-sizing: border-box; padding: 0 10px; border-radius: var(--t-r-btn); background: var(--t-stat); border: 1px solid var(--t-stat); color: var(--t-accent-fg); font-size: 12px; font-weight: 600; white-space: nowrap; user-select: none; }
 .st-count-box.off { opacity: 0.5; }
-/* Capped so a long unit name can't push the chip onto a new line */
-.st-count-unit { display: inline-block; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+/* Pills hold their one line and the count chip absorbs the squeeze by
+   truncating its unit, so neither wraps to a new line */
+.st-field--cats .st-field-row { flex-wrap: nowrap; }
+.st-field--cats .st-pills { flex: 0 0 auto; }
+.st-field--cats .st-count-box { flex: 0 1 auto; min-width: 0; }
+/* Capped so a long unit name can't push the chip onto a new line, with the
+   parens held out of the truncation so the closing one always shows */
+.st-count-unit { display: inline-flex; align-items: baseline; max-width: 120px; min-width: 0; vertical-align: bottom; }
+.st-count-paren { flex: none; }
+.st-count-unit-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .st-pills { display: flex; gap: 5px; flex-wrap: wrap; }
 /* The day of week pills lose some side padding so all eight fit on one line */

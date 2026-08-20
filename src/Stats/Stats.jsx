@@ -1478,7 +1478,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                 <>
                   <span className="st-count-sep">·</span>
                   {visibleUnits.toLocaleString()}{" "}
-                  <span className="st-count-unit" title={unitName}>({unitName})</span>
+                  <span className="st-count-unit" title={unitName}>
+                    <span className="st-count-paren">(</span>
+                    <span className="st-count-unit-name">{unitName}</span>
+                    <span className="st-count-paren">)</span>
+                  </span>
                 </>
               )}
             </span>
