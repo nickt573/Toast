@@ -792,6 +792,8 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
     const [editContent, setEditContent] = useState(null);
     const [editAudioFile, setEditAudioFile] = useState(null);
     const liveContentRef = useRef(null);
+    const editingRef = useRef(false);
+    const exitRef = useRef(() => {});
 
     useEffect(() => {
         loadPages();
@@ -799,6 +801,9 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
     }, [notebook.id]);
 
     useEffect(() => { if (startNewOnOpen) startNew(); }, []);
+
+    // Leaving the notebook by any route saves an open edit, matching the Back button
+    useEffect(() => () => exitRef.current(), []);
 
     // Opened from a tagged todo, land on that page once the list loads. A page since deleted
     // just isn't found, so it stays on the first, which is the wanted fallback
@@ -852,12 +857,14 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         catch { /* unreadable content edits as blank */ }
         setEditContent(parsed);
         liveContentRef.current = parsed;
+        editingRef.current = true;
         setIsNew(false); setEditing(true);
     }
 
     function startNew() {
         setEditTitle(""); setEditDesc(""); setEditContent(null); setEditAudioFile(null);
         liveContentRef.current = null;
+        editingRef.current = true;
         setIsNew(true); setEditing(true);
     }
 
@@ -898,6 +905,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 setPendingPageId(currentPage.id);
                 if (!isAutosave) setToast("Page saved.");
             }
+            editingRef.current = false;
             setEditing(false); setIsNew(false);
             // Recordings replaced mid-edit stay on disk until now, and the database is
             // authoritative so orphans are safe to sweep
@@ -908,7 +916,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
 
     // Back autosaves, and an entirely empty untitled page is discarded instead of saved
     async function handleBack(navigate) {
-        if (editing) {
+        if (editingRef.current) {
             const draft = liveContentRef.current;
             const hasContent = !isContentEmpty(draft) || editDesc.trim() || editAudioFile;
             if (!editTitle.trim() && !hasContent) {
@@ -948,6 +956,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
     }
 
     async function onCancel() {
+        editingRef.current = false;
         setEditing(false);
         setIsNew(false);
         await loggedInvoke("cleanup_orphaned_media");
