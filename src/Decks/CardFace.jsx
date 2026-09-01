@@ -133,9 +133,26 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn", seekab
     const [current, setCurrent] = useState(0);
     const audioRef = useRef(null);
     const trackRef = useRef(null);
+    const objectUrlRef = useRef(null);
+    const wantPlayRef = useRef(false);
 
+    // The clip is fetched and decoded only on the first Play, so opening or editing a page
+    // that has audio stays snappy instead of paying to read a file it may never play
     useEffect(() => {
-        if (!path) return;
+        setSrc(null);
+        setPlaying(false);
+        setFailed(false);
+        setLoading(false);
+        setDuration(0);
+        setCurrent(0);
+        wantPlayRef.current = false;
+        return () => {
+            if (objectUrlRef.current) { URL.revokeObjectURL(objectUrlRef.current); objectUrlRef.current = null; }
+        };
+    }, [path]);
+
+    async function loadSrc() {
+        if (!path || src || loading) return;
         const ext = (path.split(".").pop() ?? "").toLowerCase();
         const mime = {
             mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", opus: "audio/ogg",
@@ -143,39 +160,34 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn", seekab
         }[ext] ?? "audio/mpeg";
         setLoading(true);
         setFailed(false);
-        setDuration(0);
-        setCurrent(0);
-        // Played through a blob url, since data uris never reach webkit's media pipeline
-        // on Linux while blob urls work everywhere
-        let objectUrl = null;
-        let cancelled = false;
-        loggedInvoke("read_audio_b64", { path })
-            .then(b64 => {
-                if (cancelled) return;
-                if (b64.length === 0) {
-                    // such as recordings from builds whose recorder emitted no data
-                    setFailed(true);
-                    setLoading(false);
-                    return;
-                }
-                const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-                objectUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
-                setSrc(objectUrl);
-                setLoading(false);
-            })
-            .catch(e => {
-                logError("read_audio_b64", e);
-                if (!cancelled) { setFailed(true); setLoading(false); }
-            });
-        return () => {
-            cancelled = true;
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-            setSrc(null);
-            setPlaying(false);
-        };
-    }, [path]);
+        try {
+            const b64 = await loggedInvoke("read_audio_b64", { path });
+            // such as recordings from builds whose recorder emitted no data
+            if (b64.length === 0) { setFailed(true); setLoading(false); return; }
+            const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+            // Played through a blob url, since data uris never reach webkit's media pipeline
+            // on Linux while blob urls work everywhere
+            const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+            objectUrlRef.current = url;
+            setSrc(url);
+            setLoading(false);
+        } catch (e) {
+            logError("read_audio_b64", e);
+            setFailed(true);
+            setLoading(false);
+        }
+    }
+
+    // The click that kicked off the load starts playback once the clip is wired up
+    useEffect(() => {
+        if (src && wantPlayRef.current) {
+            wantPlayRef.current = false;
+            audioRef.current?.play().catch(e => { logError("audio_play", e); setFailed(true); });
+        }
+    }, [src]);
 
     function handleToggle() {
+        if (!src) { wantPlayRef.current = true; loadSrc(); return; }
         const audio = audioRef.current;
         if (!audio) return;
         if (playing) {
@@ -214,7 +226,6 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn", seekab
             </div>
         );
     }
-    if (!src && !loading) return null;
 
     return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, ...style }}>
@@ -230,7 +241,7 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn", seekab
                     onTimeUpdate={() => setCurrent(audioRef.current?.currentTime ?? 0)}
                 />
             )}
-            {seekable && src && (
+            {seekable && (
                 <div
                     ref={trackRef}
                     className={`audio-seek${duration ? "" : " disabled"}`}
@@ -244,7 +255,7 @@ export function AudioPlayer({ path, style, buttonClassName = "audio-btn", seekab
                     <div className="audio-seek-fill" style={{ width: `${duration ? Math.min(100, (current / duration) * 100) : 0}%` }} />
                 </div>
             )}
-            <button onClick={handleToggle} disabled={!src || loading} className={buttonClassName}>
+            <button onClick={handleToggle} disabled={loading} className={buttonClassName}>
                 <span style={{ fontSize: "1.1em" }}>{playing ? "⏸" : "▶"}</span>
                 <span>{loading ? "Loading..." : playing ? "Pause" : "Play"}</span>
             </button>
