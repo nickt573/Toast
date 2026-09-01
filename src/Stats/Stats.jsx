@@ -765,7 +765,7 @@ function ArchiveButton({ rows, onArchive, label = "Archive" }) {
 // How many days of sessions one page of a deck's table covers
 const WINDOW_DAYS = 14;
 
-function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted, setToast }) {
+function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, filtersOpen, onDeleted, setToast }) {
   const [deckFilter, setDeckFilter]   = useState("all");
   const [expanded, setExpanded]       = useState({});
   // How many windows back from the newest session each deck card is paged, 0 being the
@@ -864,7 +864,8 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
   }
 
   return (
-    <div>
+    <div className="st-decks-sessions">
+      {filtersOpen && (
       <div className="st-pills" style={{ marginBottom: 12 }}>
         <button className={`st-pill${activeFilter === "all" ? " active" : ""}`} onClick={() => setDeckFilter("all")}>All</button>
         {/* Read the name off the same row the deck's card does, since a rename or merge
@@ -883,6 +884,7 @@ function DeckSessionsTab({ groupStats, deckResets, planDecks, planId, onDeleted,
           );
         })}
       </div>
+      )}
 
       {visibleKeys.map(cardId => {
         const deckRows = byDeck[cardId];
@@ -1183,7 +1185,7 @@ function FilterDropdown({ label, active, groups, value, onSelect, className }) {
   );
 }
 
-function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResources, allUnits, onOpenDeck }) {
+function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroups, planResources, allUnits, onOpenDeck }) {
   const [catFilter, setCatFilter] = useState(() => new Set(["all"]));
   const [expanded,  setExpanded]  = useState({});
   const [dateFrom,  setDateFrom]  = useState("");
@@ -1359,13 +1361,32 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
   const unitSum = unitName ? visible.reduce((s, r) => s + (r.num_value ?? 0), 0) : null;
   const visibleUnits = unitSum === null ? null : (Number.isInteger(unitSum) ? unitSum : Math.round(unitSum * 100) / 100);
 
+  const countBar = (
+    <span
+      className={`st-count-box${filtersActive ? "" : " off"}`}
+      title="Matching todos out of all completed todos, with their total study time"
+    >
+      {visible.length}/{todoStats.length} <span className="st-count-label">todos</span>
+      <span className="st-count-sep">·</span>
+      {fmtTime(visibleMinutes)}
+      {unitName && (
+        <>
+          <span className="st-count-sep">·</span>
+          {visibleUnits.toLocaleString()}{" "}
+          <span className="st-count-unit" title={unitName}>
+            <span className="st-count-paren">(</span>
+            <span className="st-count-unit-name">{unitName}</span>
+            <span className="st-count-paren">)</span>
+          </span>
+        </>
+      )}
+    </span>
+  );
+
   return (
     <div>
-      <div className="st-filters">
-        {/* Each control group wears a quiet label the way a todo's Categories and Resources
-            sections do. The panel is one grid, the wide date and search fields share the
-            first column, the two dropdowns stack in the middle column so the rows line up,
-            and the category pills take the full-width bottom row */}
+      {filtersOpen && (
+        <div className="st-filters">
         <div className="st-field">
           <div className="st-field-label">Date range</div>
           <div className="st-field-row">
@@ -1470,25 +1491,11 @@ function TodosTab({ todoStats, today, onDeleted, setToast, allGroups, planResour
                 );
               })}
             </div>
-            <span className={`st-count-box${filtersActive ? "" : " off"}`} title="Matching todos out of all completed todos, with their total study time">
-              {visible.length}/{todoStats.length} <span className="st-count-label">todos</span>
-              <span className="st-count-sep">·</span>
-              {fmtTime(visibleMinutes)}
-              {unitName && (
-                <>
-                  <span className="st-count-sep">·</span>
-                  {visibleUnits.toLocaleString()}{" "}
-                  <span className="st-count-unit" title={unitName}>
-                    <span className="st-count-paren">(</span>
-                    <span className="st-count-unit-name">{unitName}</span>
-                    <span className="st-count-paren">)</span>
-                  </span>
-                </>
-              )}
-            </span>
+            {countBar}
           </div>
         </div>
-      </div>
+        </div>
+        )}
 
       <div className="st-todo-list">
         {visible.length === 0
@@ -1805,6 +1812,10 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
   const [todoStats,      setTodoStats]     = useState([]);
   const [streakInfo,     setStreakInfo]    = useState({ streak: 0, studied_today: false, longest: 0 });
   const [contentTab,     setContentTab]    = useState(() => returnContext?.contentTab ?? "decks");
+  // Each tab's filter area hides until its tab is double-clicked, tracked per side so switching
+  // tabs keeps whichever was left open
+  const [decksFilterOpen, setDecksFilterOpen] = useState(false);
+  const [todosFilterOpen, setTodosFilterOpen] = useState(false);
   const [today,          setToday]         = useState(null);
   const [loading,        setLoading]       = useState(true);
   const [allGroups,      setAllGroups]     = useState([]);
@@ -2031,8 +2042,16 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           <ChartPanel groupStats={groupStats} todoStats={todoStats} today={today} />
 
           <div className="st-tabs">
-            <button className={`st-tab st-tab--decks${contentTab === "decks" ? " active" : ""}`} onClick={() => setContentTab("decks")}>Decks</button>
-            <button className={`st-tab st-tab--todos${contentTab === "todos" ? " active" : ""}`} onClick={() => setContentTab("todos")}>Todos</button>
+            <button className={`st-tab st-tab--decks${contentTab === "decks" ? " active" : ""}`}
+              onClick={() => contentTab === "decks" ? setDecksFilterOpen(o => !o) : setContentTab("decks")}
+              title="Click again to show filters">
+              Decks<span className="st-tab-caret">{contentTab === "decks" ? (decksFilterOpen ? "▾" : "▸") : ""}</span>
+            </button>
+            <button className={`st-tab st-tab--todos${contentTab === "todos" ? " active" : ""}`}
+              onClick={() => contentTab === "todos" ? setTodosFilterOpen(o => !o) : setContentTab("todos")}
+              title="Click again to show filters">
+              Todos<span className="st-tab-caret">{contentTab === "todos" ? (todosFilterOpen ? "▾" : "▸") : ""}</span>
+            </button>
           </div>
 
           {contentTab === "decks" && (
@@ -2041,6 +2060,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
               deckResets={deckResets}
               planDecks={planDecks}
               planId={selectedPlanId}
+              filtersOpen={decksFilterOpen}
               onDeleted={refreshStats}
               setToast={setToast}
             />
@@ -2049,6 +2069,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
             <TodosTab
               todoStats={todoStats}
               today={today}
+              filtersOpen={todosFilterOpen}
               onDeleted={refreshStats}
               setToast={setToast}
               allGroups={allGroups}

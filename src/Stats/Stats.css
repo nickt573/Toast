@@ -56,8 +56,8 @@
 /* The todo history filters, a panel of labelled fields. Each field is a quiet label over its
    controls, the same shape a todo's Categories and Resources sections wear, so the eye lands
    on a group at a time rather than a wall of pills and inputs */
-/* wears the darker yellow off a todo stat table's top band so the white inputs read as raised on it */
-.st-filters { margin: 0 0 16px; padding: 14px 16px; background: var(--st-todo-band-2); border: 1px solid var(--t-border); border-radius: var(--t-r); box-shadow: 0 1px 0 rgba(74,58,61,0.13), 0 2px 6px -3px rgba(74,58,61,0.20); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px 18px; align-items: end; }
+/* wears a light yellow off a todo stat table's top band so the white inputs read as raised on it */
+.st-filters { margin: 0 0 12px; padding: 14px 16px; background: var(--t-surface-4); border: none; border-radius: var(--t-r); box-shadow: var(--t-shadow-sm); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px 18px; align-items: end; }
 .st-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .st-field-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); white-space: nowrap; }
 .st-field-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -85,6 +85,7 @@
 /* the warm primary ink so it reads on the yellow rather than the grey the quiet affix wears */
 .st-affix--min { color: var(--t-text); }
 .st-filters .st-pill { height: 26px; display: inline-flex; align-items: center; }
+.st-filters .st-field-label { font-size: 12px; }
 
 .st-dd { position: relative; flex-shrink: 0; }
 /* Fixed width so a long selected name truncates instead of resizing the box */
@@ -132,12 +133,17 @@
 .st-pill--name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 .st-pill.active { background: var(--t-stat); color: var(--t-accent-fg); border-color: var(--t-stat); }
 .st-pill:hover:not(.active) { background: var(--st-pill-h); border-color: var(--st-pill-h); }
+/* The deck half wears its family blue on a selected filter, not the stats orange */
+.st-decks-sessions .st-pill.active:not(.st-pill-dead) { background: var(--t-blue); border-color: var(--t-blue); color: var(--t-accent-fg); }
 
 /* Tabs, a flat underline and no border, the same as the nav tabs */
-.st-tabs { display: flex; gap: 0; margin-bottom: 16px; }
-.st-tab { position: relative; padding: 7px 15px; border: none; background: none; font-size: 16px; cursor: pointer; color: var(--t-text-3); font-family: inherit; font-weight: 600; box-shadow: none; transition: none; }
+.st-tabs { display: flex; gap: 0; margin-bottom: 8px; }
+.st-tab { position: relative; padding: 7px 8px; border: none; background: none; font-size: 16px; cursor: pointer; color: var(--t-text-3); font-family: inherit; font-weight: 600; box-shadow: none; transition: none; }
 .st-tab:hover, .st-tab:active { background: none; color: var(--t-text-3); border-color: transparent; box-shadow: none; filter: none; transform: none; }
 .st-tab.active, .st-tab.active:hover { color: var(--t-text); }
+/* Marks the active tab as a handle for its filters. Its slot is reserved on every tab so the
+   caret fills in on the active one without nudging the label */
+.st-tab-caret { display: inline-block; width: 8px; margin-left: 2px; font-size: 12px; text-align: center; color: var(--t-text-3); }
 .st-tab.active::after {
   content: '';
   position: absolute;
@@ -263,9 +269,9 @@
 .st-todo-list { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 /* Day sections, where a labeled rule replaces per-row dates */
 .st-day-group { display: flex; flex-direction: column; gap: var(--t-list-gap); }
-.st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 11px; font-weight: 700; color: var(--t-label); user-select: none; }
-/* The rules take the date's own ink watered down, so they read as the same mark without shouting */
-.st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 2px; background: color-mix(in srgb, var(--t-label) 45%, var(--t-bg)); }
+/* The group's own 12px gap sits below the date, so a negative bottom margin claws most of it
+   back and drops the date snug over its first todo, with the breathing room kept above instead */
+.st-day-divider { display: flex; justify-content: center; gap: 10px; margin: 6px 0 -8px; font-size: 12px; font-weight: 700; color: var(--t-label); user-select: none; }
 .st-day-group:first-child .st-day-divider { margin-top: 0; }
 /* Todo rows wear the yellow todos wear everywhere else, unframed like a deck card */
 .st-todo-row { background: var(--t-surface); border: none; border-radius: var(--t-r); overflow: hidden; box-shadow: var(--t-shadow-sm); }
