@@ -51,31 +51,52 @@
   margin-top: 0;
 }
 .nb-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
+.nb-date-filter > span:first-of-type { font-weight: 600; }
 .nb-date-dash { color: var(--t-text-3); }
 .nb-date-clear { font-size: 13px; line-height: 1; padding: 0 2px; border: none; background: none; box-shadow: none; color: var(--t-text-3); cursor: pointer; }
 .nb-date-clear:hover { background: none; box-shadow: none; color: var(--t-text); }
 
 .nb-page-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; background: var(--t-bg); }
+/* The whole page scrolls here, so the sheet grows down like a document rather than the text
+   scrolling inside a fixed white box. The scrollbar is hidden so it never eats width on one
+   side, which would slide the centred sheet off from the card panel docked below it */
+.nb-page-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; }
+.nb-page-scroll::-webkit-scrollbar { display: none; }
 .nb-page-meta { padding: 10px 20px 0; max-width: 820px; margin: 0 auto; width: 100%; box-sizing: border-box; flex-shrink: 0; }
-.nb-page-title { font-family: var(--t-font-head); font-size: 21px; font-weight: 700; margin: 0 0 4px; color: var(--t-text); }
-.nb-page-meta-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
-.nb-page-meta-row .nb-page-description { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
-.nb-page-meta-row .nb-page-date { flex-shrink: 0; margin: 0 0 0 auto; white-space: nowrap; }
-.nb-page-description { font-size: 13px; color: var(--t-text-2); margin: 0 0 6px; line-height: 1.5; }
-.nb-page-date { font-size: 11px; line-height: 19.5px; color: var(--t-text-3); margin: 0 0 12px; }
+/* Title on its own line, description on the next, each wrapping across as many lines as it
+   needs like a paragraph rather than truncating */
+.nb-page-heading { margin: 0 0 8px; }
+.nb-page-heading .nb-page-title { font-family: var(--t-font-head); font-size: 21px; font-weight: 700; color: var(--t-text); line-height: 1.3; }
+.nb-page-heading .nb-page-description { font-size: 13px; color: var(--t-text-2); line-height: 1.5; margin-top: 4px; }
+/* Date on the left, actions on the right, always their own row snug above the divider
+   however tall the heading grew */
+.nb-page-meta-row { display: flex; align-items: center; gap: 14px; margin: 0 0 8px; }
+.nb-page-date { font-size: 11px; color: var(--t-text-3); white-space: nowrap; }
+.nb-page-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .nb-page-divider { border: none; border-top: 1px solid var(--t-border); margin: 0 0 6px; }
+/* Audio takes its own line under the divider, the bar filling the width with Play on the end */
+.nb-page-audio { margin: 8px 0 4px; }
+.nb-page-audio .audio-seek { flex: 1; width: auto; }
 /* Edit-mode title/description: inputs side by side with Save/Cancel inline, no separate action bar */
 .nb-page-meta-edit { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
 .nb-page-meta-edit button { flex-shrink: 0; }
 .nb-page-title-input { flex: 1; min-width: 0; font-family: var(--t-font-head); font-size: 14px; font-weight: 700; color: var(--t-text); }
 .nb-page-desc-input { flex: 1.6; min-width: 0; font-size: 13px; color: var(--t-text-2); }
 
-.nb-editor-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; max-width: 820px; margin: 0 auto 6px; width: 100%; box-sizing: border-box; padding: 0 20px; min-height: 0; }
+.nb-editor-wrap { flex: 1 0 auto; display: flex; flex-direction: column; max-width: 820px; margin: 0 auto 6px; width: 100%; box-sizing: border-box; padding: 0 20px; }
 .nb-view-content .nb-editor-wrap { max-width: 100%; padding: 0; }
-/* The page itself: a sheet of paper, crisp edge instead of a boxed border */
-.nb-editor-scroll { flex: 1; overflow-y: scroll; scrollbar-gutter: stable both-edges; padding-bottom: 16px; border: none; border-radius: var(--t-r); padding: 12px 16px; background: var(--t-surface); margin-top: 0; box-shadow: var(--t-shadow-sm); }
-.nb-view-content .nb-editor-scroll { border: none; border-radius: var(--t-r); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); margin-top: 0; }
+/* The page itself: a sheet of paper that grows with its content, with a floor so an empty
+   page still shows a full sheet rather than collapsing */
+.nb-editor-scroll { flex: 1 0 auto; overflow: visible; min-height: 320px; border: none; border-radius: var(--t-r); padding: 12px 16px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); }
+.nb-view-content .nb-editor-scroll { border: none; border-radius: var(--t-r); padding: 18px 22px; background: var(--t-surface); box-shadow: var(--t-shadow-sm); }
 
+/* The title, prompts and toolbar ride at the top of the scrolling page so both the heading
+   and formatting stay in reach however far down you've scrolled */
+/* Sits below the header tier's z-index so the header's drop shadow falls over it instead of
+   being cut into a hard block, while still riding above the sheet content scrolling under it */
+.nb-toolstack { position: sticky; top: 0; z-index: 1; background: var(--t-bg); }
+/* In the stack the heading drops its own column inset, so it lines up with the toolbar and sheet */
+.nb-toolstack .nb-page-meta { max-width: none; margin: 0; padding: 8px 0 0; }
 /* Toolbar: no-wrap so groups stay together */
 .nb-toolbar {
   display: flex;
@@ -181,26 +202,28 @@
 /* Edit body: also the clip/positioning frame for the card panel */
 .nb-edit-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; position: relative; }
 
-/* Card creator: when open it detaches into an absolute overlay anchored to the bottom */
-.nb-card-creator { position: relative; flex-shrink: 0; max-width: 780px; width: calc(100% - 40px); margin: 8px auto 12px; box-sizing: border-box; }
+/* Card creator: a drawer below the page's scroll and outside it, so it never rides the scroll
+   or pulls up at the bottom. It sits in the sheet's column, connected to the bottom whether
+   closed or open, its bottom edge square against that border */
+.nb-card-creator { position: relative; z-index: 5; flex-shrink: 0; max-width: 800px; width: calc(100% - 24px); margin: 0 auto; box-sizing: border-box; }
 .nb-card-creator.open {
-  position: absolute; left: 0; right: 0; bottom: 6px; margin: 0 auto;
   display: flex; flex-direction: column;
   background: var(--t-surface-2);
-  border: 1px solid var(--t-border); border-radius: var(--t-r);
+  border: 1px solid var(--t-border); border-bottom: none;
+  border-radius: var(--t-r) var(--t-r) 0 0;
   box-shadow: var(--t-shadow-lg);
-  overflow: hidden; z-index: 5;
+  overflow: hidden;
 }
 
-/* The handle: docked bar when closed, panel header when open. Closed, it keeps the same
-   rounded top corners it has as the open panel's header, and rounds its bottoms to match. */
+/* The handle: docked bar when closed, panel header when open, with rounded top corners. It runs
+   wider than the page sheet so its rounding sits clear of the sheet's edges. */
 .nb-card-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   cursor: pointer; user-select: none;
   padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--t-label);
   background: var(--t-surface-4);
   border: none;
-  border-radius: var(--t-r);
+  border-radius: var(--t-r) var(--t-r) 0 0;
   box-shadow: var(--t-shadow-sm);
 }
 .nb-card-toggle:hover { filter: brightness(0.97); }
@@ -223,6 +246,19 @@
 .nb-card-body .dk-new-card-checks { display: flex; align-items: center; flex-wrap: wrap; column-gap: 12px; row-gap: 8px; min-width: 0; }
 .nb-card-body .dk-new-card-checkrow:first-child { grid-column: auto; }
 .nb-card-body .dk-new-card-actions button.primary { grid-column: 2; grid-row: 1; justify-self: end; }
-
-.nb-page-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.nb-page-title-row .nb-page-title { flex: 1; margin-bottom: 0; }
+/* The deck picker is a full-width dropdown button, styled like the ones on the stats filter
+   panels: input-toned box, label on the left and a caret on the right, holding its look on hover */
+.nb-card-body .dk-new-card-row .unit-picker { flex: 1; min-width: 0; }
+.nb-card-body .unit-picker-control { width: 100%; }
+.nb-card-body .unit-picker-select {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 6px;
+  width: 100%; height: 26px; box-sizing: border-box; padding: 0 10px;
+  font-size: 12px; font-weight: 400;
+  border: 1px solid var(--t-border-2); border-radius: var(--t-r-input);
+  background: var(--t-surface); color: var(--t-text-3); box-shadow: none;
+}
+.nb-card-body .unit-picker-select:hover { background: var(--t-surface); border-color: var(--t-accent-bdr); color: var(--t-text-3); filter: none; box-shadow: none; }
+.nb-card-body .unit-picker-select.has-unit,
+.nb-card-body .unit-picker-select.has-unit:hover { color: var(--t-text); }
+.nb-card-body .unit-picker-select-label { max-width: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.nb-card-body .unit-picker-caret { color: var(--t-text-3); font-size: 10px; flex-shrink: 0; }

@@ -409,7 +409,7 @@ function AudioControls({ audioFile, audio }) {
 
 // Page Editor
 
-export function PageEditor({ content, onChange, editable, audioFile, onAudioChange }) {
+export function PageEditor({ header, content, onChange, editable, audioFile, onAudioChange }) {
     const [linkPrompt, setLinkPrompt] = useState(false);
     const [linkText, setLinkText] = useState("");
     const [linkUrl, setLinkUrl] = useState("");
@@ -545,7 +545,8 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
     return (
         <div className="nb-editor-wrap">
             {editable && (
-                <>
+                <div className="nb-toolstack">
+                    {header}
                     {linkPrompt && (
                         <div className="nb-inline-prompt">
                             <input type="text" autoFocus
@@ -651,7 +652,7 @@ export function PageEditor({ content, onChange, editable, audioFile, onAudioChan
                         <button className="nb-tb-btn" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()}>↪</button>
                     </div>
                     </div>
-                </>
+                </div>
             )}
             <div className={`nb-editor-scroll${!editable ? " nb-view-content" : ""}`} onClick={handleViewClick}>
                 <EditorContent editor={editor} />
@@ -718,7 +719,6 @@ function CardCreatorPanel({ setToast }) {
             <label>Deck</label>
             <SelectMenu value={deckId} onChange={(v) => setDeckId(v)}
                 placeholder="Select a deck…"
-                emptyOption={{ value: null, label: "Select a deck…" }}
                 emptyHint="No decks yet"
                 options={decks.map((d) => ({ value: d.id, label: d.name }))} />
         </div>
@@ -749,7 +749,7 @@ function CardCreatorPanel({ setToast }) {
 
 // Editable page wrapper
 
-function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioChange, onDraft }) {
+function EditablePageEditor({ header, initialContent, initialAudioFile, onSave, onAudioChange, onDraft }) {
     const [contentJson, setContentJson] = useState(initialContent ?? null);
 
     useEffect(() => {
@@ -760,6 +760,7 @@ function EditablePageEditor({ initialContent, initialAudioFile, onSave, onAudioC
 
     return (
         <PageEditor
+            header={header}
             content={initialContent ?? null}
             onChange={(json) => { setContentJson(json); onDraft?.(json); }}
             editable={true}
@@ -927,6 +928,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
         }
         navigate();
     }
+    exitRef.current = () => handleBack(() => {});
 
     async function deletePage() {
         if (!currentPage) return;
@@ -1004,24 +1006,28 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                 {editing ? (
                     <>
                         <div className="nb-edit-body">
-                            <div className="nb-page-meta">
-                                <div className="nb-page-meta-edit">
-                                    <input className="nb-page-title-input" placeholder="Title…" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === "Enter") window.dispatchEvent(new CustomEvent("nb-save-request")); if (e.key === "Escape") onCancel(); }} />
-                                    <input className="nb-page-desc-input" placeholder="Description (optional)…" value={editDesc} onChange={(e) => setEditDesc(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === "Enter") window.dispatchEvent(new CustomEvent("nb-save-request")); if (e.key === "Escape") onCancel(); }} />
-                                    <button className="primary" onClick={() => window.dispatchEvent(new CustomEvent("nb-save-request"))}>Save</button>
-                                    <button onClick={onCancel}>Cancel</button>
-                                </div>
-                                <hr className="nb-page-divider" />
+                            <div className="nb-page-scroll">
+                                <EditablePageEditor
+                                    header={
+                                        <div className="nb-page-meta">
+                                            <div className="nb-page-meta-edit">
+                                                <input className="nb-page-title-input" placeholder="Title…" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === "Enter") window.dispatchEvent(new CustomEvent("nb-save-request")); if (e.key === "Escape") onCancel(); }} />
+                                                <input className="nb-page-desc-input" placeholder="Description (optional)…" value={editDesc} onChange={(e) => setEditDesc(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === "Enter") window.dispatchEvent(new CustomEvent("nb-save-request")); if (e.key === "Escape") onCancel(); }} />
+                                                <button className="primary" onClick={() => window.dispatchEvent(new CustomEvent("nb-save-request"))}>Save</button>
+                                                <button onClick={onCancel}>Cancel</button>
+                                            </div>
+                                            <hr className="nb-page-divider" />
+                                        </div>
+                                    }
+                                    initialContent={editContent}
+                                    initialAudioFile={editAudioFile}
+                                    onSave={savePage}
+                                    onAudioChange={setEditAudioFile}
+                                    onDraft={(json) => { liveContentRef.current = json; }}
+                                />
                             </div>
-                            <EditablePageEditor
-                                initialContent={editContent}
-                                initialAudioFile={editAudioFile}
-                                onSave={savePage}
-                                onAudioChange={setEditAudioFile}
-                                onDraft={(json) => { liveContentRef.current = json; }}
-                            />
                             <CardCreatorPanel setToast={setToast} />
                         </div>
                     </>
@@ -1032,27 +1038,29 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                         ) : filteredPages.length === 0 ? (
                             <div className="nb-no-match">No pages match your filters.</div>
                         ) : currentPage ? (
-                            <>
+                            <div className="nb-page-scroll">
                                 <div className="nb-page-meta">
-                                    <div className="nb-page-title-row">
-                                        <div className="nb-page-title">{currentPage.title}</div>
-                                        {currentPage.audio_file && (
-                                            <AudioPlayer path={currentPage.audio_file} buttonClassName="audio-btn sm" seekable />
+                                    <div className="nb-page-meta-row">
+                                        {currentPage.created_date && (
+                                            <span className="nb-page-date">Created {formatDate(currentPage.created_date)}</span>
                                         )}
-                                        <button onClick={() => startEdit(currentPage)}>Edit</button>
-                                        <ConfirmDelete onConfirm={deletePage} />
+                                        <span className="nb-page-actions">
+                                            <button onClick={() => startEdit(currentPage)}>Edit</button>
+                                            <ConfirmDelete onConfirm={deletePage} />
+                                        </span>
                                     </div>
-                                    {(currentPage.description || currentPage.created_date) && (
-                                        <div className="nb-page-meta-row">
-                                            {currentPage.description && (
-                                                <span className="nb-page-description">{currentPage.description}</span>
-                                            )}
-                                            {currentPage.created_date && (
-                                                <span className="nb-page-date">Created {formatDate(currentPage.created_date)}</span>
-                                            )}
+                                    <div className="nb-page-heading">
+                                        <div className="nb-page-title">{currentPage.title}</div>
+                                        {currentPage.description && (
+                                            <div className="nb-page-description">{currentPage.description}</div>
+                                        )}
+                                    </div>
+                                    <hr className="nb-page-divider" />
+                                    {currentPage.audio_file && (
+                                        <div className="nb-page-audio">
+                                            <AudioPlayer path={currentPage.audio_file} buttonClassName="audio-btn sm" seekable style={{ width: "100%", justifyContent: "flex-start" }} />
                                         </div>
                                     )}
-                                    <hr className="nb-page-divider" />
                                 </div>
                                 <PageEditor
                                     content={getDisplayContent(currentPage)}
@@ -1060,7 +1068,7 @@ function PageView({ setToast, notebook, onBack, returnTo, onReturnToOrigin, star
                                     editable={false}
                                     audioFile={currentPage.audio_file ?? null}
                                 />
-                            </>
+                            </div>
                         ) : null}
                         {!awaitingInitial && filteredPages.length > 0 && (
                             <div className="nb-page-nav">
