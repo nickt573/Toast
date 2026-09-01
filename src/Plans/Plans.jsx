@@ -239,7 +239,6 @@ function SrsSection({ planId, setToast, onNavigateToGroup }) {
                     <SelectMenu value={selectedGroupId}
                         onChange={(v) => setSelectedGroupId(v)}
                         placeholder="Select a deck"
-                        emptyOption={{ value: null, label: "Select a deck" }}
                         emptyHint="No decks to link"
                         options={unassigned.filter(g => g.group_type === "deck").map(g => ({ value: g.id, label: g.name }))} />
                     <div className="plan-srs-settings-fields">
