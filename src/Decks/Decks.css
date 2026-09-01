@@ -75,6 +75,7 @@
 .dk-sort-cycle .dk-sort-dir:active { background: var(--t-blue); }
 
 .dk-date-filter { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--t-text-2); flex-wrap: nowrap; flex-shrink: 0; }
+.dk-date-filter > span:first-of-type { font-weight: 600; font-size: 11px; }
 .dk-date-filter input[type="date"] { font-size: 12px; padding: 2px 4px; }
 /* Windows renders a wide calendar icon inside date inputs, pushing the filter onto its own
    line, so shrink it to fit the row */
