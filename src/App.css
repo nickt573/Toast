@@ -647,7 +647,7 @@ textarea { overflow-y: scroll; }
 .landing-hdr { display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 var(--t-page-pad); background: var(--t-surface); flex-shrink: 0; position: relative; z-index: 5; box-shadow: var(--t-shadow-hdr); }
 .landing-hdr--plan     { --hdr-band: color-mix(in srgb, var(--t-accent) 64%, #fff); --hdr-btn: var(--t-accent-h); --hdr-title: var(--hdr-title-plan); background: var(--hdr-band); }
 .landing-hdr--deck     { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); --hdr-title: var(--hdr-title-deck); background: var(--hdr-band); }
-.landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); --hdr-title: var(--hdr-title-notebook); background: var(--hdr-band); }
+.landing-hdr--notebook { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 55%, #fff); --hdr-btn: var(--t-plum); --hdr-title: var(--hdr-title-notebook); background: var(--hdr-band); }
 .landing-hdr h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; flex: 1; color: var(--hdr-title, var(--t-title)); }
 /* The detail word bar keeps the family ink and hands its shadow to the name row below it */
 .landing-hdr--detail { z-index: 1; box-shadow: none; }
@@ -987,7 +987,7 @@ textarea { overflow-y: scroll; }
 .detail-title-band { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 8px var(--t-page-pad); flex-shrink: 0; background: var(--band); position: relative; z-index: 2; box-shadow: var(--t-shadow-hdr); }
 .detail-title-band--plan     { --band: color-mix(in srgb, var(--t-accent) 42%, #fff);     --hdr-btn: var(--t-accent-h); }
 .detail-title-band--deck     { --band: color-mix(in srgb, var(--t-blue-bdr) 24%, #fff);   --hdr-btn: var(--t-blue-btn); }
-.detail-title-band--notebook { --band: color-mix(in srgb, var(--t-plum-bdr) 22%, #fff);   --hdr-btn: var(--t-plum); }
+.detail-title-band--notebook { --band: color-mix(in srgb, var(--t-plum-bdr) 32%, #fff);   --hdr-btn: var(--t-plum); }
 /* The back button and any actions on the row wear the family colour, the plan pill keeps its caramel */
 .detail-title-band > button:not(.primary):not(.danger):not(.dk-cards-plan),
 .detail-title-band > div > button { background: var(--hdr-btn); border-color: var(--hdr-btn); color: var(--t-accent-fg); box-shadow: none; }
