@@ -869,8 +869,8 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
           <div className="dk-new-card-checkrow">
             <div className={`dk-new-card-check${createFlipped ? "" : " disabled"}`}>
               <input type="checkbox" id="nc_flip_media" checked={flipMedia} disabled={!createFlipped} onChange={(e) => setFlipMedia(e.target.checked)} />
-              <label htmlFor="nc_flip_media">Swap media</label>
-              <Tip text="Swap the front image and audio with the back image and audio on the flipped copy of this card." />
+              <label htmlFor="nc_flip_media">Flip media</label>
+              <Tip text="Flip the front image and audio with the back image and audio on the flipped copy of this card. By default the media is not flipped." />
             </div>
             <div className={`dk-new-card-check${createFlipped ? "" : " disabled"}`}>
               <input type="checkbox" id="nc_flip_priority" checked={flipPriorityAdd} disabled={!createFlipped} onChange={(e) => setFlipPriorityAdd(e.target.checked)} />
