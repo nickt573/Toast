@@ -60,7 +60,7 @@ export default function App() {
     try {
       await loggedInvoke("update_date");
       setRefreshDayCount(c => c + 1);
-      showToast("Day refreshed.");
+      showToast("Date refreshed.");
     } catch (e) {
       logError("refreshDay", e);
       showToast("Failed to refresh day.", "error");

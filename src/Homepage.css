@@ -51,7 +51,8 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   gap: 12px;
   margin-bottom: 16px;
 }
-.hp-refresh-day { flex-shrink: 0; margin-top: 4px; }
+.hp-refresh-day { flex-shrink: 0; margin-top: 4px; display: inline-flex; align-items: center; gap: 6px; }
+.hp-refresh-icon { flex: none; }
 /* Golden when a refresh would actually advance the app day */
 .hp-refresh-day.stale { background: var(--t-yellow); border-color: var(--t-yellow); color: #FFFDF7; }
 .hp-refresh-day.stale:hover { background: #C9941F; border-color: #C9941F; color: #FFFDF7; }
