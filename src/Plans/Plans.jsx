@@ -906,7 +906,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                                     : (summaries[plan.id]?.decks ?? 0) > 0
                                         ? "Unlink this plan's decks before disabling it"
                                         : "Disable this plan, hiding it from the homepage"}>
-                                {plan.is_disabled ? "Disabled" : "Enabled"}
+                                {plan.is_disabled ? "Enable" : "Disable"}
                             </button>
                         )}
                         <div className="landing-card-body">
