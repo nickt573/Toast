@@ -124,6 +124,7 @@ function DeckList({ setToast, onOpenDeck }) {
   const [mergeName, setMergeName] = useState("");
   const [mergeReset, setMergeReset] = useState(false);
   const [mergeArchive, setMergeArchive] = useState(false);
+  const [mergeAppend, setMergeAppend] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [creating, setCreating] = useState(false);
 
@@ -253,7 +254,8 @@ function DeckList({ setToast, onOpenDeck }) {
     setMergeDeckB(decks.length > 1 ? decks[1].id : null);
     setMergeName("");
     setMergeReset(false);
-    setMergeStats(false);
+    setMergeArchive(false);
+    setMergeAppend(false);
   };
 
   const confirmMerge = async () => {
@@ -269,6 +271,7 @@ function DeckList({ setToast, onOpenDeck }) {
         archiveSources: mergeReset && mergeArchive,
         newName: mergeName.trim(),
         reset: mergeReset,
+        append: mergeAppend,
       });
       const [updatedDecks, counts] = await Promise.all([
         loggedInvoke("get_decks"),
@@ -316,6 +319,14 @@ function DeckList({ setToast, onOpenDeck }) {
           <input type="text" placeholder="New deck name..." value={mergeName}
             onChange={(e) => setMergeName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") confirmMerge(); if (e.key === "Escape") setMerging(false); }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--t-text-2)" }}>
+            <span>Card order</span>
+            <SelectMenu value={mergeAppend} onChange={(v) => setMergeAppend(v)}
+              options={[
+                { value: false, label: "Alternate between decks" },
+                { value: true, label: "Append the second deck" },
+              ]} />
+          </div>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer", color: "var(--t-text-2)" }}>
             <input type="checkbox" checked={mergeReset} onChange={(e) => setMergeReset(e.target.checked)} />
             Reset progress on merged cards
@@ -327,7 +338,9 @@ function DeckList({ setToast, onOpenDeck }) {
             </label>
           )}
           <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
-          The two source decks will be deleted after their cards move into the new deck. Cards are ordered in alternating order. If either deck is linked to a plan, that link will be removed. {mergeReset
+          The two source decks will be deleted after their cards move into the new deck. {mergeAppend
+            ? "The second deck's cards follow the first deck's cards."
+            : "Cards alternate between the two decks."} If either deck is linked to a plan, that link will be removed. {mergeReset
             ? "The new deck starts with an empty stats table, and the sources keep their stats unless you archive them."
             : "Past stats move to the new deck, and each plan keeps its own portion. The sources are archived so nothing is counted twice."}
           </div>

@@ -109,6 +109,7 @@ pub fn merge_decks(
     new_name: String,
     reset: bool,
     archive_sources: bool,
+    append: bool,
     conn: &mut Connection,
 ) -> Result<Group> {
     let tx = conn.transaction()?;
@@ -196,20 +197,28 @@ pub fn merge_decks(
         [deck_b_id],
     )?;
 
-    // Assign zipper positions so fill_track alternates cards from the two decks
-    let max_len = a_ids.len().max(b_ids.len());
-    let mut interleaved: Vec<i64> = Vec::with_capacity(a_ids.len() + b_ids.len());
-    for i in 0..max_len {
-        if i < a_ids.len() {
-            interleaved.push(a_ids[i]);
+    // Order the merged cards: append lays deck B's cards after deck A's, zipper alternates them
+    let ordered: Vec<i64> = if append {
+        let mut v = Vec::with_capacity(a_ids.len() + b_ids.len());
+        v.extend_from_slice(&a_ids);
+        v.extend_from_slice(&b_ids);
+        v
+    } else {
+        let max_len = a_ids.len().max(b_ids.len());
+        let mut v = Vec::with_capacity(a_ids.len() + b_ids.len());
+        for i in 0..max_len {
+            if i < a_ids.len() {
+                v.push(a_ids[i]);
+            }
+            if i < b_ids.len() {
+                v.push(b_ids[i]);
+            }
         }
-        if i < b_ids.len() {
-            interleaved.push(b_ids[i]);
-        }
-    }
-    if interleaved.len() > 1 {
+        v
+    };
+    if ordered.len() > 1 {
         let mut stmt = tx.prepare("UPDATE card SET position = ?1 WHERE id = ?2")?;
-        for (p, &card_id) in interleaved.iter().enumerate() {
+        for (p, &card_id) in ordered.iter().enumerate() {
             stmt.execute(rusqlite::params![p as i64, card_id])?;
         }
     }
@@ -878,6 +887,7 @@ mod stat_row_invariant_tests {
                     "merged".into(),
                     matches!(op, Op::MergeReset),
                     false,
+                    false,
                     conn,
                 )
                 .unwrap();
@@ -1092,6 +1102,27 @@ mod stat_row_tests {
             |r| r.get(0),
         )
         .unwrap()
+    }
+
+    fn add_cards(conn: &Connection, deck: i64, fronts: &[&str]) {
+        for f in fronts {
+            conn.execute(
+                "INSERT INTO card (group_id, front, back) VALUES (?1, ?2, '')",
+                rusqlite::params![deck, f],
+            )
+            .unwrap();
+        }
+    }
+
+    // Fronts of a deck's cards in position order, the order a study session draws them
+    fn card_order(conn: &Connection, deck: i64) -> String {
+        conn.prepare("SELECT front FROM card WHERE group_id = ?1 ORDER BY position")
+            .unwrap()
+            .query_map([deck], |r| r.get::<_, String>(0))
+            .unwrap()
+            .filter_map(|r| r.ok())
+            .collect::<Vec<_>>()
+            .join(",")
     }
 
     fn new_in(conn: &Connection, origin: i64, plan: i64) -> i64 {
@@ -1431,7 +1462,7 @@ mod stat_row_tests {
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
 
-        let merged = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        let merged = merge_decks(1, 2, "joint".into(), false, false, false, &mut conn).unwrap();
         assert_eq!(new_in(&conn, merged.id, 1), 8, "5 + 3 on the same day");
     }
 
@@ -1447,7 +1478,7 @@ mod stat_row_tests {
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
 
-        merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        merge_decks(1, 2, "joint".into(), false, false, false, &mut conn).unwrap();
         assert_eq!(archived_split(&conn, 1), (2, 0), "every line, not just the copied ones");
         assert_eq!(archived_split(&conn, 2), (1, 0));
     }
@@ -1462,7 +1493,7 @@ mod stat_row_tests {
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
 
-        merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        merge_decks(1, 2, "joint".into(), false, false, false, &mut conn).unwrap();
         assert_eq!(plan_total(&conn, 1), 8, "the copy counts, the sources don't");
     }
 
@@ -1477,7 +1508,7 @@ mod stat_row_tests {
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
 
-        let merged = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        let merged = merge_decks(1, 2, "joint".into(), false, false, false, &mut conn).unwrap();
         assert_eq!(new_in(&conn, merged.id, 1), 3, "the archived 5 stays behind");
     }
 
@@ -1491,7 +1522,7 @@ mod stat_row_tests {
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
 
-        let merged = merge_decks(1, 2, "joint".into(), true, false, &mut conn).unwrap();
+        let merged = merge_decks(1, 2, "joint".into(), true, false, false, &mut conn).unwrap();
         assert_eq!(rows(&conn, merged.id), 0, "the new deck starts empty");
         assert_eq!(archived_split(&conn, 1), (0, 1), "the caller decides, not the merge");
         assert_eq!(plan_total(&conn, 1), 8, "so the sources keep their stats");
@@ -1510,7 +1541,7 @@ mod stat_row_tests {
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
 
-        let merged = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        let merged = merge_decks(1, 2, "joint".into(), false, false, false, &mut conn).unwrap();
         assert_eq!(new_in(&conn, merged.id, 1), 8, "plan one keeps its own portion");
         assert_eq!(new_in(&conn, merged.id, 2), 4);
     }
@@ -1524,16 +1555,36 @@ mod stat_row_tests {
         add(&mut conn, 2, 1);
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
-        let first = merge_decks(1, 2, "joint".into(), false, false, &mut conn).unwrap();
+        let first = merge_decks(1, 2, "joint".into(), false, false, false, &mut conn).unwrap();
 
         let third = create_deck("deck c".into(), &mut conn).unwrap().id;
         add(&mut conn, third, 1);
         study(&conn, third, 2);
         remove_group_from_plan(third, false, &mut conn).unwrap();
 
-        let second = merge_decks(first.id, third, "joint two".into(), false, false, &mut conn).unwrap();
+        let second = merge_decks(first.id, third, "joint two".into(), false, false, false, &mut conn).unwrap();
         assert_eq!(new_in(&conn, second.id, 1), 10, "8 carried forward plus 2");
         assert_eq!(plan_total(&conn, 1), 10, "and still counted once");
+    }
+
+    #[test]
+    fn t27b_zipper_merge_alternates_the_two_decks() {
+        let mut conn = setup();
+        add_cards(&conn, 1, &["a1", "a2", "a3"]);
+        add_cards(&conn, 2, &["b1", "b2"]);
+
+        let merged = merge_decks(1, 2, "joint".into(), false, false, false, &mut conn).unwrap();
+        assert_eq!(card_order(&conn, merged.id), "a1,b1,a2,b2,a3");
+    }
+
+    #[test]
+    fn t27c_append_merge_lays_the_second_deck_after_the_first() {
+        let mut conn = setup();
+        add_cards(&conn, 1, &["a1", "a2", "a3"]);
+        add_cards(&conn, 2, &["b1", "b2"]);
+
+        let merged = merge_decks(1, 2, "joint".into(), false, false, true, &mut conn).unwrap();
+        assert_eq!(card_order(&conn, merged.id), "a1,a2,a3,b1,b2");
     }
 
     // Deleting
@@ -1728,7 +1779,7 @@ mod stat_row_tests {
         study(&conn, 2, 3);
         remove_group_from_plan(2, false, &mut conn).unwrap();
 
-        let merged = merge_decks(1, 2, "joint".into(), true, true, &mut conn).unwrap();
+        let merged = merge_decks(1, 2, "joint".into(), true, true, false, &mut conn).unwrap();
         assert_eq!(rows(&conn, merged.id), 0, "the new deck still starts empty");
         assert_eq!(archived_split(&conn, 1), (1, 0));
         assert_eq!(archived_split(&conn, 2), (1, 0));
