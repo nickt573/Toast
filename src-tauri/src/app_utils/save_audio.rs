@@ -50,3 +50,57 @@ pub fn save_card_audio_files(src_paths: Vec<String>, app_dir: &Path) -> Result<V
 
     Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn none_and_empty_yield_none() {
+        let app = tempfile::tempdir().unwrap();
+        assert_eq!(save_card_audio_file(None, app.path()).unwrap(), None);
+        assert_eq!(
+            save_card_audio_file(Some(String::new()), app.path()).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn copies_an_external_file_into_cards_audio() {
+        let app = tempfile::tempdir().unwrap();
+        let src = tempfile::tempdir().unwrap();
+        let src_file = src.path().join("clip.mp3");
+        std::fs::write(&src_file, b"id3fake").unwrap();
+
+        let stored = save_card_audio_file(Some(src_file.to_string_lossy().into_owned()), app.path())
+            .unwrap()
+            .expect("a stored path");
+
+        assert!(stored.starts_with("cards/audio/"), "relative under the audio dir: {stored}");
+        assert!(stored.ends_with(".mp3"), "keeps the extension: {stored}");
+        assert_eq!(
+            std::fs::read(app.path().join(&stored)).unwrap(),
+            b"id3fake",
+            "bytes copied verbatim"
+        );
+    }
+
+    #[test]
+    fn an_already_stored_path_is_not_copied_again() {
+        let app = tempfile::tempdir().unwrap();
+        let src = tempfile::tempdir().unwrap();
+        let src_file = src.path().join("clip.wav");
+        std::fs::write(&src_file, b"riff").unwrap();
+
+        let stored = save_card_audio_file(Some(src_file.to_string_lossy().into_owned()), app.path())
+            .unwrap()
+            .unwrap();
+        let count_before = std::fs::read_dir(app.path().join("cards/audio")).unwrap().count();
+
+        // Saving the stored relative path again returns it unchanged and writes no new file
+        let again = save_card_audio_file(Some(stored.clone()), app.path()).unwrap().unwrap();
+        assert_eq!(again, stored);
+        let count_after = std::fs::read_dir(app.path().join("cards/audio")).unwrap().count();
+        assert_eq!(count_before, count_after, "no duplicate copy made");
+    }
+}
