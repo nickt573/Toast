@@ -159,25 +159,20 @@ pub fn get_card(card_id: i64, conn: &Connection) -> Result<Card> {
     )
 }
 
-/// Picks the next card for a study session, preferring a due card other than the one just
-/// shown, then that one again, then the same two steps for cram
+/// Picks the next card for a study session, preferring any due or cram card other than the
+/// one just shown, then falling back to that one again when it is the last card left
 pub fn next_session_card(
     conn: &Connection,
     group_id: i64,
     exclude_id: Option<i64>,
 ) -> Result<Option<Card>> {
-    let attempts: [(&str, bool); 4] = [
-        ("is_due = TRUE", true),
-        ("is_due = TRUE", false),
-        ("is_cram = TRUE", true),
-        ("is_cram = TRUE", false),
-    ];
-    for (pool_clause, use_exclude) in attempts {
+    for use_exclude in [true, false] {
         let exclude = use_exclude && exclude_id.is_some();
         let exclude_clause = if exclude { "AND id != ?2" } else { "" };
         let sql = format!(
             "SELECT {CARD_COLUMNS} FROM card
-             WHERE group_id = ?1 AND {pool_clause} AND is_paused = FALSE {exclude_clause}
+             WHERE group_id = ?1 AND (is_due = TRUE OR is_cram = TRUE)
+               AND is_paused = FALSE {exclude_clause}
              ORDER BY RANDOM() LIMIT 1"
         );
         let result = if exclude {
@@ -845,15 +840,13 @@ mod cram_tests {
         assert!(!get_card(20, &conn).unwrap().is_due, "a crammed card is not due");
         assert_eq!(counts(&conn), (1, 0, 1), "review clears, cram appears");
 
-        // Spamming One More Time on the new card kept it due, and cram must not surface
-        // while a due card remains, even when that card is the one excluded
+        // Cram now interleaves, so with the due card excluded the crammed card surfaces
+        // mid session rather than waiting for the due pool to empty
         grade_item(10, 4, &mut conn).unwrap();
         assert!(get_card(10, &conn).unwrap().is_due, "One More Time keeps the new card due");
-        for _ in 0..8 {
-            let served = next_session_card(&conn, 1, Some(10)).unwrap().unwrap();
-            assert_eq!(served.id, 10, "the lone due card repeats instead of dropping into cram");
-            assert!(served.is_due, "served as a real due card, not cram");
-        }
+        let served = next_session_card(&conn, 1, Some(10)).unwrap().unwrap();
+        assert_eq!(served.id, 20, "cram interleaves while a due card remains");
+        assert!(!served.is_due, "the interleaved cram serving carries is_due = false");
 
         // Clear the new card, so cram is the legitimate next serving and is_due is false,
         // which is what makes the frontend render the cram buttons
@@ -872,7 +865,7 @@ mod cram_tests {
         assert_eq!(counts(&conn), (0, 1, 1), "counts as review AND cram at once");
         let review = next_session_card(&conn, 1, None).unwrap().unwrap();
         assert_eq!(review.id, 20);
-        assert!(review.is_due, "served from the due pool first, as review");
+        assert!(review.is_due, "the card is due again, so it serves as review not cram");
 
         // Rating the review version poorly clears the review but keeps the cram flag
         grade_item(20, 1, &mut conn).unwrap();
