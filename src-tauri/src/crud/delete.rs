@@ -445,6 +445,15 @@ pub fn delete_todo_stat(id: i64, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Deletes many todo history entries at once, unchecking any of today's source todos.
+pub fn bulk_delete_todo_stats(ids: &[i64], conn: &Connection) -> Result<()> {
+    let tx = conn.unchecked_transaction()?;
+    for id in ids {
+        delete_todo_stat(*id, &tx)?;
+    }
+    tx.commit()
+}
+
 // Deletes a whole unit, clearing it off every entry that counted in any of its names, and
 // since an amount can't sit without a unit those entries keep their time but lose the count
 pub fn delete_unit(group_id: i64, conn: &Connection) -> Result<()> {

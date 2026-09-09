@@ -14,6 +14,8 @@
   /* The name on a deck or todo card, its own colour so body ink stays put, deepened past
      --t-title so it reads strongly against the blue and gold bands */
   --st-card-name: #331E10;
+  /* A deeper peach to outline the filter panel and the tabs perched on its top edge */
+  --st-panel-bdr: color-mix(in srgb, var(--t-surface-4) 82%, var(--t-text));
 }
 /* A real orange rather than the peach it used to mix, but muted, so it sits at the same
    strength as the bands on the other pages */
@@ -56,7 +58,7 @@
 /* The todo history filters, a panel of labelled fields. Each field is a quiet label over its
    controls, the same shape a todo's Categories and Resources sections wear, so the eye lands
    on a group at a time rather than a wall of pills and inputs */
-/* wears a light yellow off a todo stat table's top band so the white inputs read as raised on it */
+/* A light peach so the white inputs read as raised on it */
 .st-filters { margin: 0 0 12px; padding: 14px 16px; background: var(--t-surface-4); border: none; border-radius: var(--t-r); box-shadow: var(--t-shadow-sm); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 14px 18px; align-items: end; }
 .st-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .st-field-label { font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-label); white-space: nowrap; }
@@ -122,6 +124,71 @@
 .st-count-paren { flex: none; }
 .st-count-unit-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Mass edit mode: an edit panel taking the filters' place */
+.st-mass-panel { margin: 0 0 12px; padding: 14px 16px; position: relative; background: var(--t-surface-4); border: none; border-radius: var(--t-r); box-shadow: var(--t-shadow-sm); display: flex; flex-direction: column; gap: 12px; }
+.st-mass-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.st-mass-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.st-mass-label { font-size: 12px; font-weight: 700; color: var(--t-label); }
+
+.st-todos-tab .st-filters { position: relative; }
+
+/* A row of action buttons across the top of the panel, above its first field row */
+.st-panel-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.st-filters .st-panel-top { grid-column: 1 / -1; }
+/* The edit button rides the right end of the row */
+.st-edit-toggle { margin-left: auto; }
+.st-done-btn { margin-left: 0; }
+.st-panel-top button {
+  height: 27px; padding: 0 13px; font-size: 12px; font-weight: 600; box-shadow: none;
+  display: inline-flex; align-items: center;
+}
+.st-panel-top button:disabled { opacity: 0.45; }
+/* Primary actions wear the family marigold, deletes their red */
+.st-panel-top button.primary, .st-panel-top .st-edit-toggle, .st-panel-top .st-done-btn { background: var(--t-yellow); border-color: var(--t-yellow); color: var(--t-text); }
+.st-panel-top button.primary:hover, .st-panel-top .st-edit-toggle:hover, .st-panel-top .st-done-btn:hover { background: color-mix(in srgb, var(--t-yellow) 86%, #000); border-color: color-mix(in srgb, var(--t-yellow) 86%, #000); color: var(--t-text); }
+.st-panel-top button.danger { background: var(--t-red-2); border-color: var(--t-red-2); color: var(--t-accent-fg); }
+.st-panel-top button.danger:hover { background: color-mix(in srgb, var(--t-red-2) 88%, #000); border-color: color-mix(in srgb, var(--t-red-2) 88%, #000); color: var(--t-accent-fg); }
+
+/* Find by name, its magnifier riding the right group and its bar pinned top right */
+.st-find { position: relative; display: inline-flex; }
+.st-find .st-find-open { padding: 0 11px; gap: 5px; }
+.st-find .st-find-open.active { background: var(--t-yellow); border-color: var(--t-yellow); color: var(--t-text); }
+.st-find-pop {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--t-surface);
+  border-radius: var(--t-r);
+  box-shadow: var(--t-shadow-card);
+}
+.st-find-grip { display: inline-flex; align-items: center; padding: 0 1px; color: var(--t-text-3); cursor: grab; }
+.st-find-grip:active { cursor: grabbing; color: var(--t-text-2); }
+.st-find-input {
+  height: 28px; width: 180px; box-sizing: border-box; padding: 0 9px;
+  border: 1px solid var(--t-border-2); border-radius: var(--t-r-input);
+  background: var(--t-surface); font-size: 13px; color: var(--t-text);
+}
+.st-find-pop .st-find-nav {
+  height: 28px; min-width: 28px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--t-r-btn); background: transparent; color: var(--t-text-2); font-size: 15px; box-shadow: none;
+}
+.st-find-pop .st-find-nav:hover { background: var(--t-surface-2); color: var(--t-text); }
+.st-find-pop .st-find-nav:disabled { opacity: 0.4; }
+.st-find-pop .st-find-nav:disabled:hover { background: transparent; color: var(--t-text-2); }
+.st-find-count { min-width: 40px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--t-text-3); user-select: none; }
+
+/* Bigger than a form checkbox so the row's caret is easy to miss and the box easy to hit */
+input[type="checkbox"].st-select-check { width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; }
+input[type="checkbox"].st-select-check:checked { background-size: 13px; background-color: var(--t-text-3); border-color: var(--t-text-3); }
+
+/* Todo filter pills highlight in the family marigold, not the stats orange */
+.st-todos-tab .st-pill.active { background: var(--t-yellow); border-color: var(--t-yellow); color: var(--t-text); }
+
 .st-pills { display: flex; gap: 5px; flex-wrap: wrap; }
 /* The day of week pills lose some side padding so all eight fit on one line */
 .st-pills--tight .st-pill { padding: 0 6px; }
@@ -143,7 +210,7 @@
 .st-tab.active, .st-tab.active:hover { color: var(--t-text); }
 /* Marks the active tab as a handle for its filters. Its slot is reserved on every tab so the
    caret fills in on the active one without nudging the label */
-.st-tab-caret { display: inline-block; width: 8px; margin-left: 2px; font-size: 12px; text-align: center; color: var(--t-text-3); }
+.st-tab-caret { display: inline-block; width: 8px; margin-left: 4px; font-size: 12px; text-align: center; color: var(--t-text-3); }
 .st-tab.active::after {
   content: '';
   position: absolute;
@@ -280,6 +347,12 @@
 .st-todo-line { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--st-todo-band-2); }
 .st-todo-text { font-weight: 700; flex: 1; min-width: 0; font-size: 18px; color: var(--st-card-name); overflow-wrap: anywhere; }
 .st-todo-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; padding: 7px 14px; background: var(--st-todo-band); }
+/* The find bar's active match, its top and bottom yellow bands stepped down so the row
+   stands out without recoloring the text */
+.st-todo-row--find .st-todo-collapsed,
+.st-todo-row--find .st-todo-line { background: color-mix(in srgb, var(--st-todo-band-2) 82%, #000); }
+.st-todo-row--find .st-todo-tags,
+.st-todo-row--find .st-todo-foot { background: color-mix(in srgb, var(--st-todo-band) 82%, #000); }
 .st-todo-meta-right { display: inline-flex; gap: 5px; align-items: center; margin-left: auto; }
 /* The unit tab is inline-block rather than flex so ellipsis applies, and the compound
    selector outranks the meta pill's own display */

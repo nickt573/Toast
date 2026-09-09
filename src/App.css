@@ -567,6 +567,7 @@ textarea { overflow-y: scroll; }
 .picker-pill.active-deck     { border-color: var(--t-blue);   background: var(--t-blue);   color: var(--t-accent-fg); }
 .picker-pill.active-notebook { border-color: var(--t-plum);   background: var(--t-plum);   color: var(--t-accent-fg); }
 .picker-pill.active-resource { border-color: var(--t-clay);   background: var(--t-clay);   color: var(--t-accent-fg); }
+.picker-pill.active-remove   { border-color: var(--t-red-2);  background: var(--t-red-2);  color: var(--t-accent-fg); }
 /* Lighter than the caramel confirm buttons so a picked frequency never reads as a CTA */
 .picker-pill.active-accent   { border-color: var(--t-accent-bdr); background: var(--t-accent-bdr); color: var(--t-text); }
 

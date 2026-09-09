@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, Fragment } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, Fragment } from "react";
 import { loggedInvoke, logError } from "../logger";
 import { ResourceCard, ItemBar, GroupTypeBadge, ArchivedBadge, DeckStateBadge, ConfirmDelete, Linkify, Tip, NotebookPageTag } from "../UIUtils";
 import { CategoryPicker, computeCategory, CATEGORIES, CATEGORY_COLOR_BY_LABEL } from "../Plans/PlanUtils";
@@ -1185,6 +1185,13 @@ function FilterDropdown({ label, active, groups, value, onSelect, className }) {
   );
 }
 
+const emptyMassForm = () => ({
+  text: "", date: "", timeSpent: "", numValue: "", variantId: null,
+  addCategoryMap: {}, removeCategoryMap: {},
+  addGroupIds: [], addResourceIds: [],
+  removeGroupKeys: new Set(), removeResourceKeys: new Set(),
+});
+
 function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroups, planResources, allUnits, onOpenDeck }) {
   const [catFilter, setCatFilter] = useState(() => new Set(["all"]));
   const [expanded,  setExpanded]  = useState({});
@@ -1200,6 +1207,26 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
   const [minutesOp, setMinutesOp] = useState(">=");
   const [tagFilter, setTagFilter] = useState(null);
   const [dayFilter, setDayFilter] = useState(() => new Set(["all"]));
+  const [massMode,  setMassMode]  = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [massForm,  setMassForm]  = useState(emptyMassForm);
+  const [excludeMode, setExcludeMode] = useState(false);
+  // Find by name, an edit-only bar that steps through the visible todos one match at a time
+  const [findOpen, setFindOpen] = useState(false);
+  const [findQuery, setFindQuery] = useState("");
+  const [findCurrentId, setFindCurrentId] = useState(null);
+  const [findPos, setFindPos] = useState(null);
+  const findInputRef = useRef(null);
+  const findIndexRef = useRef(0);
+  const prevFindQRef = useRef("");
+  const findPopRef = useRef(null);
+  const findDragRef = useRef(null);
+  const closeFind = () => { setFindOpen(false); setFindQuery(""); setFindCurrentId(null); };
+
+  // Mass mode lives inside the panel, so closing the panel drops out of it and the find bar
+  useEffect(() => {
+    if (!filtersOpen) { setMassMode(false); setSelectedIds(new Set()); setMassForm(emptyMassForm()); closeFind(); }
+  }, [filtersOpen]);
 
   const unitOptions = unitOptionsFrom(todoStats, allUnits);
 
@@ -1228,28 +1255,135 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
   // A hand-picked date no longer matches whatever preset was highlighted
   const editDate = (setter) => (e) => { setter(e.target.value); setPreset(null); };
 
-  let visible = todoStats;
-  if (dateFrom) visible = visible.filter(r => r.date >= dateFrom);
-  if (dateTo)   visible = visible.filter(r => r.date <= dateTo);
-  if (!catFilter.has("all")) visible = visible.filter(r => parseCategories(r.category).some(c => catFilter.has(c)));
-  if (!dayFilter.has("all")) visible = visible.filter(r => dayFilter.has(WEEKDAY_LABELS[new Date(r.date + "T00:00:00").getDay()]));
-  if (unitFilter !== "all") visible = visible.filter(r => r.unit_group_id === unitFilter);
-  if (tagFilter) visible = visible.filter(r => matchTag(r, tagFilter));
+  let matched = todoStats;
+  if (dateFrom) matched = matched.filter(r => r.date >= dateFrom);
+  if (dateTo)   matched = matched.filter(r => r.date <= dateTo);
+  if (!catFilter.has("all")) matched = matched.filter(r => parseCategories(r.category).some(c => catFilter.has(c)));
+  if (!dayFilter.has("all")) matched = matched.filter(r => dayFilter.has(WEEKDAY_LABELS[new Date(r.date + "T00:00:00").getDay()]));
+  if (unitFilter !== "all") matched = matched.filter(r => r.unit_group_id === unitFilter);
+  if (tagFilter) matched = matched.filter(r => matchTag(r, tagFilter));
 
   const minutesNum = minutes === "" ? null : parseInt(minutes, 10);
   if (minutesNum !== null && !Number.isNaN(minutesNum)) {
-    visible = visible.filter(r => minutesOp === ">=" ? r.time_spent_minutes >= minutesNum : r.time_spent_minutes <= minutesNum);
+    matched = matched.filter(r => minutesOp === ">=" ? r.time_spent_minutes >= minutesNum : r.time_spent_minutes <= minutesNum);
   }
 
   const query = search.trim().toLowerCase();
   if (query) {
     const has = s => (s || "").toLowerCase().includes(query);
     const inScope = key => scopes.has("all") || scopes.has(key);
-    visible = visible.filter(r =>
+    matched = matched.filter(r =>
       (inScope("description") && has(r.text)) ||
       (inScope("details") && has(r.details))
     );
   }
+
+  const matchedIds = new Set(matched.map(r => r.id));
+  const visible = excludeMode ? todoStats.filter(r => !matchedIds.has(r.id)) : matched;
+
+  // Find matches are the visible todos whose name holds the query, in list order
+  const findQ = findOpen ? findQuery.trim().toLowerCase() : "";
+  const findMatches = findQ ? visible.filter(r => r.text.toLowerCase().includes(findQ)) : [];
+  const findIndex = findMatches.findIndex(r => r.id === findCurrentId);
+  const findSig = findMatches.map(r => r.id).join(",");
+
+  // Keep the current match valid as the query changes or a matched todo is deleted: a new
+  // query starts at the top, a deletion takes the next todo that slid into the slot
+  useEffect(() => {
+    if (!findOpen) return;
+    if (!findQ || findMatches.length === 0) { prevFindQRef.current = findQ; setFindCurrentId(null); return; }
+    if (prevFindQRef.current !== findQ) {
+      prevFindQRef.current = findQ;
+      findIndexRef.current = 0;
+      setFindCurrentId(findMatches[0].id);
+      return;
+    }
+    if (!findMatches.some(r => r.id === findCurrentId)) {
+      const idx = Math.min(findIndexRef.current, findMatches.length - 1);
+      findIndexRef.current = idx;
+      setFindCurrentId(findMatches[idx].id);
+    }
+  }, [findSig, findOpen, findQ]);
+
+  useEffect(() => { if (findOpen) requestAnimationFrame(() => findInputRef.current?.focus()); }, [findOpen]);
+
+  // Bring the active match into view as the bar steps through
+  useEffect(() => {
+    if (findCurrentId == null) return;
+    document.getElementById(`st-todo-${findCurrentId}`)?.scrollIntoView({ block: "nearest" });
+  }, [findCurrentId]);
+
+  const findGo = (dir) => {
+    const total = findMatches.length;
+    if (!total) return;
+    const nextI = findIndex === -1 ? 0 : (findIndex + dir + total) % total;
+    findIndexRef.current = nextI;
+    setFindCurrentId(findMatches[nextI].id);
+  };
+
+  // Drag the bar anywhere and leave it there: null keeps the default top-right corner,
+  // a set position pins it by its own top left in viewport pixels
+  const onFindDragMove = useCallback((e) => {
+    const d = findDragRef.current;
+    if (!d) return;
+    const x = Math.min(Math.max(e.clientX - d.dx, 0), Math.max(window.innerWidth - d.w, 0));
+    const y = Math.min(Math.max(e.clientY - d.dy, 0), Math.max(window.innerHeight - d.h, 0));
+    setFindPos({ x, y });
+  }, []);
+  const onFindDragEnd = useCallback(() => {
+    findDragRef.current = null;
+    window.removeEventListener("mousemove", onFindDragMove);
+    window.removeEventListener("mouseup", onFindDragEnd);
+  }, [onFindDragMove]);
+  const onFindDragStart = useCallback((e) => {
+    if (e.button !== 0 || !findPopRef.current) return;
+    const rect = findPopRef.current.getBoundingClientRect();
+    findDragRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top, w: rect.width, h: rect.height };
+    window.addEventListener("mousemove", onFindDragMove);
+    window.addEventListener("mouseup", onFindDragEnd);
+    e.preventDefault();
+  }, [onFindDragMove, onFindDragEnd]);
+
+  // The magnifier and its bar, shared by the edit and filter rows since one shows at a time
+  const findControl = (style) => (
+    <div className="st-find" style={style}>
+      <button className={`st-find-open${findOpen ? " active" : ""}`} title="Search by name"
+        onClick={() => (findOpen ? closeFind() : setFindOpen(true))}>
+        <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+          <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+            <circle cx="7" cy="7" r="4.2" /><line x1="10.3" y1="10.3" x2="14" y2="14" />
+          </g>
+        </svg>
+        Search
+      </button>
+      {findOpen && (
+        <div className="st-find-pop" ref={findPopRef}
+          style={findPos ? { top: findPos.y, left: findPos.x, right: "auto" } : undefined}>
+          <span className="st-find-grip" onMouseDown={onFindDragStart} title="Drag to move" aria-hidden="true">
+            <svg width="10" height="16" viewBox="0 0 10 16">
+              <g fill="currentColor">
+                <circle cx="3" cy="4" r="1.2" /><circle cx="7" cy="4" r="1.2" />
+                <circle cx="3" cy="8" r="1.2" /><circle cx="7" cy="8" r="1.2" />
+                <circle cx="3" cy="12" r="1.2" /><circle cx="7" cy="12" r="1.2" />
+              </g>
+            </svg>
+          </span>
+          <input ref={findInputRef} className="st-find-input" placeholder="Find by name" value={findQuery}
+            onChange={e => setFindQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") { e.preventDefault(); findGo(e.shiftKey ? -1 : 1); }
+              else if (e.key === "Escape") { e.preventDefault(); closeFind(); }
+            }} />
+          <span className="st-find-count">
+            {findQuery ? `${findMatches.length ? (findIndex < 0 ? 1 : findIndex + 1) : 0}/${findMatches.length}` : ""}
+          </span>
+          <button className="st-find-nav" onClick={() => findGo(-1)} disabled={!findMatches.length} title="Previous (Shift+Enter)">‹</button>
+          <button className="st-find-nav" onClick={() => findGo(1)} disabled={!findMatches.length} title="Next (Enter)">›</button>
+          <button className="st-find-nav" onClick={closeFind} title="Close (Esc)">✕</button>
+        </div>
+      )}
+    </div>
+  );
 
   const toggle = id => setExpanded(e => ({ ...e, [id]: !e[id] }));
 
@@ -1340,6 +1474,83 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
     } catch (e) { logError("catch", e); setToast("Failed to update entry.", "error"); }
   };
 
+  const enterMass = () => { setMassMode(true); setSelectedIds(new Set()); setMassForm(emptyMassForm()); cancelEdit(); };
+  const exitMass  = () => { setMassMode(false); setSelectedIds(new Set()); setMassForm(emptyMassForm()); closeFind(); };
+  const toggleSelect = id => setSelectedIds(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  const applyMass = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) { setToast("Select at least one todo.", "warn"); return; }
+    const setText = massForm.text.trim() || null;
+    const setDate = massForm.date || null;
+    if (setDate && today && setDate > today) { setToast("An entry can't be dated in the future.", "warn"); return; }
+    let setTime = null;
+    if (massForm.timeSpent !== "") {
+      const t = Math.max(0, Math.round(parseFloat(massForm.timeSpent) || 0));
+      if (t <= 0) { setToast("Please log at least 1 minute.", "warn"); return; }
+      setTime = t;
+    }
+    const unit = resolveUnitPair(massForm.numValue, massForm.variantId);
+    if (unit.error) { setToast(unit.error, "warn"); return; }
+    const addCategoryMask = computeCategory(massForm.addCategoryMap);
+    const removeCategoryMask = computeCategory(massForm.removeCategoryMap);
+
+    // Present links are gathered off the selected rows, live ones removed by id and deleted by name
+    const selectedStats = todoStats.filter(r => selectedIds.has(r.id));
+
+    // A todo must keep a category, so block the whole action rather than partly apply it
+    if (removeCategoryMask !== 0 && selectedStats.some(r =>
+      ((computeCategory(categoryStringToMap(r.category)) | addCategoryMask) & ~removeCategoryMask) === 0)) {
+      setToast("Cannot remove all categories from a todo", "error");
+      return;
+    }
+
+    const removeGroupIds = [], removeGroupNames = [], gSeen = new Set();
+    selectedStats.forEach(r => r.groups.forEach(g => {
+      const key = g.group_id != null ? `id:${g.group_id}` : `name:${g.name}`;
+      if (gSeen.has(key) || !massForm.removeGroupKeys.has(key)) return;
+      gSeen.add(key);
+      if (g.group_id != null) removeGroupIds.push(g.group_id); else removeGroupNames.push(g.name);
+    }));
+    const removeResourceIds = [], removeResourceNames = [], rSeen = new Set();
+    selectedStats.forEach(r => r.resources.forEach(res => {
+      const key = res.resource_id != null ? `id:${res.resource_id}` : `name:${res.name}`;
+      if (rSeen.has(key) || !massForm.removeResourceKeys.has(key)) return;
+      rSeen.add(key);
+      if (res.resource_id != null) removeResourceIds.push(res.resource_id); else removeResourceNames.push(res.name);
+    }));
+
+    const nothing = !setText && !setDate && setTime === null && unit.numValue === null
+      && addCategoryMask === 0 && removeCategoryMask === 0
+      && massForm.addGroupIds.length === 0 && massForm.addResourceIds.length === 0
+      && removeGroupIds.length === 0 && removeGroupNames.length === 0
+      && removeResourceIds.length === 0 && removeResourceNames.length === 0;
+    if (nothing) { setToast("Fill in a field to apply.", "warn"); return; }
+
+    try {
+      await loggedInvoke("bulk_update_todo_stats", {
+        ids, setText, setDate, setTime,
+        setNumValue: unit.numValue, setVariantId: unit.variantId,
+        addCategoryMask, removeCategoryMask,
+        addGroupIds: massForm.addGroupIds, removeGroupIds, removeGroupNames,
+        addResourceIds: massForm.addResourceIds, removeResourceIds, removeResourceNames,
+      });
+      setToast(`${ids.length} ${ids.length === 1 ? "todo" : "todos"} updated.`);
+      onDeleted();
+    } catch (e) { logError("catch", e); setToast("Failed to update todos.", "error"); }
+  };
+
+  const massDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      await loggedInvoke("bulk_delete_todo_stats", { ids });
+      setToast(`${ids.length} ${ids.length === 1 ? "todo" : "todos"} deleted.`);
+      onDeleted();
+      setSelectedIds(new Set());
+    } catch (e) { logError("catch", e); setToast("Failed to delete todos.", "error"); }
+  };
+
   if (todoStats.length === 0) {
     return <div className="empty-bubble" style={{ marginTop: 16 }}>No todo history recorded yet.</div>;
   }
@@ -1353,7 +1564,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
 
   // Any deviation from the untouched defaults counts as filtering, which is when the running
   // tally appears against the full history
-  const filtersActive = !!(dateFrom || dateTo || !catFilter.has("all") || !dayFilter.has("all") || query || unitFilter !== "all" || minutes !== "" || tagFilter);
+  const filtersActive = !!(dateFrom || dateTo || !catFilter.has("all") || !dayFilter.has("all") || query || unitFilter !== "all" || minutes !== "" || tagFilter || excludeMode);
 
   // The tally also carries the matching todos' total time, and the picked unit's summed amount
   const visibleMinutes = visible.reduce((s, r) => s + r.time_spent_minutes, 0);
@@ -1369,7 +1580,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
       {visible.length}/{todoStats.length} <span className="st-count-label">todos</span>
       <span className="st-count-sep">·</span>
       {fmtTime(visibleMinutes)}
-      {unitName && (
+      {unitName && !excludeMode && (
         <>
           <span className="st-count-sep">·</span>
           {visibleUnits.toLocaleString()}{" "}
@@ -1383,10 +1594,177 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
     </span>
   );
 
+  // Decks lead notebooks, each alphabetical, the order used everywhere links are listed
+  const byGroup = (a, b) => (a.group_type === "notebook" ? 1 : 0) - (b.group_type === "notebook" ? 1 : 0)
+    || a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
+  // The links to offer for removal, gathered off the selected rows and deduped, live and deleted alike
+  const selectedStats = todoStats.filter(r => selectedIds.has(r.id));
+  const removeGroupOptions = [];
+  const removeResourceOptions = [];
+  if (massMode) {
+    const gSeen = new Set();
+    selectedStats.forEach(r => r.groups.forEach(g => {
+      const key = g.group_id != null ? `id:${g.group_id}` : `name:${g.name}`;
+      if (gSeen.has(key)) return;
+      gSeen.add(key);
+      removeGroupOptions.push({ key, live: g.group_id != null, name: g.name, group_type: g.group_type });
+    }));
+    removeGroupOptions.sort(byGroup);
+    const rSeen = new Set();
+    selectedStats.forEach(r => r.resources.forEach(res => {
+      const key = res.resource_id != null ? `id:${res.resource_id}` : `name:${res.name}`;
+      if (rSeen.has(key)) return;
+      rSeen.add(key);
+      removeResourceOptions.push({ key, live: res.resource_id != null, name: res.name });
+    }));
+    removeResourceOptions.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  }
+  const toggleMassKey = (field) => (key) => setMassForm(f => {
+    const next = new Set(f[field]);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return { ...f, [field]: next };
+  });
+  const toggleAddId = (field) => (id) => setMassForm(f => ({
+    ...f, [field]: f[field].includes(id) ? f[field].filter(x => x !== id) : [...f[field], id],
+  }));
+  const massInput = { width: "100%", boxSizing: "border-box", padding: "5px 8px", border: "1px solid var(--t-border-2)", background: "var(--t-surface)", color: "var(--t-text)", fontSize: 13 };
+  const n = selectedIds.size;
+
   return (
-    <div>
-      {filtersOpen && (
+    <div className="st-todos-tab">
+      {filtersOpen && massMode && (
+        <div className="st-mass-panel">
+          <div className="st-panel-top">
+            <button className="primary" onClick={applyMass} disabled={n === 0}>Apply ({n})</button>
+            {n > 0
+              ? <ConfirmDelete label={`Delete (${n})`} onConfirm={massDelete} />
+              : <button className="danger" disabled>Delete (0)</button>}
+            <button style={{ marginLeft: "auto" }} onClick={() => setSelectedIds(new Set(visible.map(r => r.id)))}>Select all</button>
+            <button onClick={() => setSelectedIds(new Set())} disabled={n === 0}>Clear</button>
+            {findControl()}
+            <button className="st-done-btn" onClick={exitMass}>Done</button>
+          </div>
+          <div className="st-mass-row">
+            <div className="st-mass-field" style={{ flex: "1 1 200px" }}>
+              <div className="st-mass-label">Description</div>
+              <input style={massInput} placeholder="e.g. Read extra grammar notes" value={massForm.text}
+                onChange={e => setMassForm(f => ({ ...f, text: e.target.value }))} />
+            </div>
+            <div className="st-mass-field" style={{ flex: "0 1 130px" }}>
+              <div className="st-mass-label">Date</div>
+              <input type="date" style={massInput} max={today ?? undefined} value={massForm.date}
+                onChange={e => setMassForm(f => ({ ...f, date: e.target.value }))} />
+            </div>
+            <div className="st-mass-field" style={{ flex: "0 1 110px" }}>
+              <div className="st-mass-label">Time (minutes)</div>
+              <input type="number" min="0" step="1" style={massInput} placeholder="0" value={massForm.timeSpent}
+                onChange={e => setMassForm(f => ({ ...f, timeSpent: e.target.value }))} />
+            </div>
+            <div className="st-mass-field" style={{ flex: "1 1 200px" }}>
+              <div className="st-mass-label">Units</div>
+              <UnitPicker value={massForm.numValue} variantId={massForm.variantId} setToast={setToast}
+                onUnitsChanged={onDeleted}
+                onChange={({ value, variantId }) => setMassForm(f => ({ ...f, numValue: value, variantId }))} />
+            </div>
+          </div>
+
+          <div className="st-mass-row">
+            <div className="st-mass-field" style={{ flex: "1 1 260px" }}>
+              <div className="st-mass-label">Add categories</div>
+              <CategoryPicker categoryMap={massForm.addCategoryMap}
+                onChange={bit => setMassForm(f => ({ ...f, addCategoryMap: { ...f.addCategoryMap, [bit]: !f.addCategoryMap[bit] } }))} />
+            </div>
+            <div className="st-mass-field" style={{ flex: "1 1 260px" }}>
+              <div className="st-mass-label">Remove categories</div>
+              <CategoryPicker categoryMap={massForm.removeCategoryMap}
+                onChange={bit => setMassForm(f => ({ ...f, removeCategoryMap: { ...f.removeCategoryMap, [bit]: !f.removeCategoryMap[bit] } }))} />
+            </div>
+          </div>
+
+          <div className="st-mass-field">
+            <div className="st-mass-label">Add decks / notebooks</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {[...allGroups].sort(byGroup).map(g => {
+                const active = massForm.addGroupIds.includes(g.id);
+                const fam = g.group_type === "notebook" ? " active-notebook" : " active-deck";
+                return (
+                  <label key={g.id} className={`picker-pill${active ? fam : ""}`}>
+                    <input type="checkbox" checked={active} onChange={() => toggleAddId("addGroupIds")(g.id)} style={{ margin: 0 }} />
+                    {g.name}<GroupTypeBadge type={g.group_type} />
+                  </label>
+                );
+              })}
+              {allGroups.length === 0 && <span className="st-dd-hint">No decks or notebooks.</span>}
+            </div>
+          </div>
+
+          {removeGroupOptions.length > 0 && (
+            <div className="st-mass-field">
+              <div className="st-mass-label">Remove decks / notebooks</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {removeGroupOptions.map(o => {
+                  const active = massForm.removeGroupKeys.has(o.key);
+                  return (
+                    <label key={o.key} className={`picker-pill${active ? " active-remove" : ""}${o.live ? "" : " pill-dead"}`}>
+                      <input type="checkbox" checked={active} onChange={() => toggleMassKey("removeGroupKeys")(o.key)} style={{ margin: 0 }} />
+                      {o.name}{o.group_type && <GroupTypeBadge type={o.group_type} />}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="st-mass-field">
+            <div className="st-mass-label">Add resources</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {[...planResources].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })).map(pr => {
+                const active = massForm.addResourceIds.includes(pr.id);
+                return (
+                  <label key={pr.id} className={`picker-pill${active ? " active-resource" : ""}`}>
+                    <input type="checkbox" checked={active} onChange={() => toggleAddId("addResourceIds")(pr.id)} style={{ margin: 0 }} />
+                    {pr.name}
+                  </label>
+                );
+              })}
+              {planResources.length === 0 && <span className="st-dd-hint">No resources.</span>}
+            </div>
+          </div>
+
+          {removeResourceOptions.length > 0 && (
+            <div className="st-mass-field">
+              <div className="st-mass-label">Remove resources</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {removeResourceOptions.map(o => {
+                  const active = massForm.removeResourceKeys.has(o.key);
+                  return (
+                    <label key={o.key} className={`picker-pill${active ? " active-remove" : ""}${o.live ? "" : " pill-dead"}`}>
+                      <input type="checkbox" checked={active} onChange={() => toggleMassKey("removeResourceKeys")(o.key)} style={{ margin: 0 }} />
+                      {o.name}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div style={{ fontSize: 11, color: "var(--t-text-3)", fontStyle: "italic" }}>
+            Blank fields are left as they are.
+          </div>
+        </div>
+      )}
+
+      {!massMode && filtersOpen && (
         <div className="st-filters">
+        <div className="st-panel-top">
+          <div className="st-pills">
+            <button className={`st-pill${!excludeMode ? " active" : ""}`} onClick={() => setExcludeMode(false)}>Include</button>
+            <button className={`st-pill${excludeMode ? " active" : ""}`} onClick={() => setExcludeMode(true)}>Exclude</button>
+          </div>
+          {findControl({ marginLeft: "auto" })}
+          <button className="st-edit-toggle" style={{ marginLeft: 0 }} onClick={enterMass}>Edit</button>
+        </div>
         <div className="st-field">
           <div className="st-field-label">Date range</div>
           <div className="st-field-row">
@@ -1429,7 +1807,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
           </div>
         </div>
         <div className="st-field">
-          <div className="st-field-label">Search</div>
+          <div className="st-field-label">Description / Details</div>
           <div className="st-field-row">
             <input
               className="st-search-input"
@@ -1508,9 +1886,15 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
           const isEditing = editingId === r.id;
           const cats      = parseCategories(r.category);
           return (
-            <div key={r.id} className="st-todo-row">
+            <div key={r.id} id={`st-todo-${r.id}`}
+              className={`st-todo-row${findCurrentId === r.id ? " st-todo-row--find" : ""}`}>
               <div className="st-todo-collapsed" onClick={() => { if (isEditing) cancelEdit(); toggle(r.id); }}>
                 <div className="st-todo-line">
+                  {massMode && (
+                    <input type="checkbox" className="st-select-check" checked={selectedIds.has(r.id)}
+                      onClick={e => e.stopPropagation()}
+                      onChange={() => toggleSelect(r.id)} />
+                  )}
                   <span className="st-todo-text">{r.text}</span>
                   <span className="t-caret">{isOpen ? "▾" : "▸"}</span>
                 </div>
@@ -1951,7 +2335,7 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
           </div>
           {selectedPlanId && today && (
             <span className="hdr-context">
-              {fmtTime(todayMins)} spent today
+              {fmtTime(todayMins)} today · {fmtTime(metrics.studyMins + metrics.todoMins)} total
             </span>
           )}
         </div>

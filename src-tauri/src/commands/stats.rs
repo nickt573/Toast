@@ -123,6 +123,52 @@ pub fn update_todo_stat(
 }
 
 #[tauri::command]
+pub fn bulk_delete_todo_stats(ids: Vec<i64>, state: tauri::State<AppState>) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    delete::bulk_delete_todo_stats(&ids, &conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub fn bulk_update_todo_stats(
+    ids: Vec<i64>,
+    set_text: Option<String>,
+    set_date: Option<String>,
+    set_time: Option<f64>,
+    set_num_value: Option<f64>,
+    set_variant_id: Option<i64>,
+    add_category_mask: i64,
+    remove_category_mask: i64,
+    add_group_ids: Vec<i64>,
+    remove_group_ids: Vec<i64>,
+    remove_group_names: Vec<String>,
+    add_resource_ids: Vec<i64>,
+    remove_resource_ids: Vec<i64>,
+    remove_resource_names: Vec<String>,
+    state: tauri::State<AppState>,
+) -> Result<(), String> {
+    let conn = state.conn.lock().unwrap();
+    update::bulk_update_todo_stats(
+        ids,
+        set_text,
+        set_date,
+        set_time,
+        set_num_value,
+        set_variant_id,
+        add_category_mask,
+        remove_category_mask,
+        add_group_ids,
+        remove_group_ids,
+        remove_group_names,
+        add_resource_ids,
+        remove_resource_ids,
+        remove_resource_names,
+        &conn,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn set_todo_stat_group_page(
     row_id: i64,
     page_id: Option<i64>,

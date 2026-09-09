@@ -171,6 +171,8 @@ pub fn run() {
             commands::stats::set_group_stats_archived,
             commands::stats::delete_todo_stat,
             commands::stats::update_todo_stat,
+            commands::stats::bulk_delete_todo_stats,
+            commands::stats::bulk_update_todo_stats,
             commands::stats::set_todo_stat_group_page,
             commands::stats::get_deleted_plan_ids,
             commands::stats::delete_deleted_plan_stats,

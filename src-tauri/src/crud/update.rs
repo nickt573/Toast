@@ -607,6 +607,65 @@ pub fn set_todo_stat_group_page(
     Ok(())
 }
 
+/// Re-dates a stat to a fresh id at the bottom of its new day, returning the id to keep using.
+fn redate_todo_stat(conn: &Connection, id: i64, old_date: &str, new_date: &str) -> Result<i64> {
+    if old_date == new_date {
+        return Ok(id);
+    }
+    // Defer foreign keys so the join rows can follow the parent to its new id
+    conn.execute_batch("PRAGMA defer_foreign_keys = ON")?;
+    let new_id: i64 =
+        conn.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM todo_stats", [], |r| {
+            r.get(0)
+        })?;
+    conn.execute(
+        "UPDATE todo_stats SET id=?1, date=?2 WHERE id=?3",
+        rusqlite::params![new_id, new_date, id],
+    )?;
+    conn.execute(
+        "UPDATE todo_stat_group SET stat_id=?1 WHERE stat_id=?2",
+        rusqlite::params![new_id, id],
+    )?;
+    conn.execute(
+        "UPDATE todo_stat_resource SET stat_id=?1 WHERE stat_id=?2",
+        rusqlite::params![new_id, id],
+    )?;
+    Ok(new_id)
+}
+
+/// Snapshots a live deck or notebook onto a stat, skipping ones already linked.
+fn add_group_to_stat(
+    conn: &Connection,
+    stat_id: i64,
+    group_id: i64,
+    page_id: Option<i64>,
+) -> Result<()> {
+    conn.execute(
+        r#"
+        INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type, page_id)
+        SELECT ?1, g.id, g.name, g.group_type, ?3 FROM "group" g
+        WHERE g.id = ?2
+          AND NOT EXISTS (SELECT 1 FROM todo_stat_group WHERE stat_id = ?1 AND group_id = ?2)
+        "#,
+        rusqlite::params![stat_id, group_id, page_id],
+    )?;
+    Ok(())
+}
+
+/// Snapshots a live resource onto a stat, skipping ones already linked.
+fn add_resource_to_stat(conn: &Connection, stat_id: i64, resource_id: i64) -> Result<()> {
+    conn.execute(
+        r#"
+        INSERT INTO todo_stat_resource (stat_id, resource_id, resource_name, resource_url, resource_type, resource_notes)
+        SELECT ?1, r.id, r.name, r.url, r."type", r.notes FROM resource r
+        WHERE r.id = ?2
+          AND NOT EXISTS (SELECT 1 FROM todo_stat_resource WHERE stat_id = ?1 AND resource_id = ?2)
+        "#,
+        rusqlite::params![stat_id, resource_id],
+    )?;
+    Ok(())
+}
+
 pub fn update_todo_stat(
     id: i64,
     date: String,
@@ -652,32 +711,7 @@ pub fn update_todo_stat(
     let old_date: String = conn.query_row("SELECT date FROM todo_stats WHERE id=?1", [id], |r| {
         r.get(0)
     })?;
-    // Entries within a day are ordered by id, so handing a re-dated one the next id past
-    // every other row drops it at the bottom of the day it moved to
-    let id = if old_date == date {
-        id
-    } else {
-        // Both join tables point at this id, and their foreign keys are checked statement
-        // by statement, so the children can only follow the parent in here
-        conn.execute_batch("PRAGMA defer_foreign_keys = ON")?;
-        let new_id: i64 =
-            conn.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM todo_stats", [], |r| {
-                r.get(0)
-            })?;
-        conn.execute(
-            "UPDATE todo_stats SET id=?1, date=?2 WHERE id=?3",
-            rusqlite::params![new_id, date, id],
-        )?;
-        conn.execute(
-            "UPDATE todo_stat_group SET stat_id=?1 WHERE stat_id=?2",
-            rusqlite::params![new_id, id],
-        )?;
-        conn.execute(
-            "UPDATE todo_stat_resource SET stat_id=?1 WHERE stat_id=?2",
-            rusqlite::params![new_id, id],
-        )?;
-        new_id
-    };
+    let id = redate_todo_stat(conn, id, &old_date, &date)?;
     // Todo time is stored as whole minutes, the column stays FLOAT
     let time_spent_minutes = time_spent_minutes.round();
     let category_str = category_mask_to_string(category);
@@ -699,29 +733,130 @@ pub fn update_todo_stat(
             rusqlite::params![id, row_id],
         )?;
     }
-    // Only live groups and resources can be added, since the snapshot is pulled from the
-    // source row and the SELECT matches nothing for deleted ids
     for group_id in &add_group_ids {
-        conn.execute(
-            r#"
-            INSERT INTO todo_stat_group (stat_id, group_id, group_name, group_type, page_id)
-            SELECT ?1, g.id, g.name, g.group_type, ?3 FROM "group" g
-            WHERE g.id = ?2
-              AND NOT EXISTS (SELECT 1 FROM todo_stat_group WHERE stat_id = ?1 AND group_id = ?2)
-            "#,
-            rusqlite::params![id, group_id, page_for(&add_group_pages, *group_id)],
-        )?;
+        add_group_to_stat(conn, id, *group_id, page_for(&add_group_pages, *group_id))?;
     }
     for resource_id in &add_resource_ids {
-        conn.execute(
-            r#"
-            INSERT INTO todo_stat_resource (stat_id, resource_id, resource_name, resource_url, resource_type, resource_notes)
-            SELECT ?1, r.id, r.name, r.url, r."type", r.notes FROM resource r
-            WHERE r.id = ?2
-              AND NOT EXISTS (SELECT 1 FROM todo_stat_resource WHERE stat_id = ?1 AND resource_id = ?2)
-            "#,
-            rusqlite::params![id, resource_id],
+        add_resource_to_stat(conn, id, *resource_id)?;
+    }
+    tx.commit()
+}
+
+/// Applies one set of changes to many stats at once. Provided scalar fields overwrite, blank
+/// ones are left alone, categories and links add and remove, and a shared unit sets when paired.
+pub fn bulk_update_todo_stats(
+    ids: Vec<i64>,
+    set_text: Option<String>,
+    set_date: Option<String>,
+    set_time: Option<f64>,
+    set_num_value: Option<f64>,
+    set_variant_id: Option<i64>,
+    add_category_mask: i64,
+    remove_category_mask: i64,
+    add_group_ids: Vec<i64>,
+    remove_group_ids: Vec<i64>,
+    remove_group_names: Vec<String>,
+    add_resource_ids: Vec<i64>,
+    remove_resource_ids: Vec<i64>,
+    remove_resource_names: Vec<String>,
+    conn: &Connection,
+) -> Result<()> {
+    if let Some(ref d) = set_date {
+        if d.is_empty() {
+            return Err(rusqlite::Error::InvalidParameterName("date required".into()));
+        }
+        if *d > get_date(conn)? {
+            return Err(rusqlite::Error::InvalidParameterName(
+                "date can't be in the future".into(),
+            ));
+        }
+    }
+    if matches!(set_time, Some(t) if t < 0.0) {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "time_spent must be >= 0".into(),
+        ));
+    }
+    // A shared unit rides along only when both its amount and name are given, otherwise units hold
+    let set_units = set_num_value.is_some() && set_variant_id.is_some();
+    if set_units {
+        require_unit_pairing(set_num_value, set_variant_id)?;
+    }
+
+    let tx = conn.unchecked_transaction()?;
+    let conn = &tx;
+    for stat_id in &ids {
+        let (cur_date, cur_cat): (String, String) = conn.query_row(
+            "SELECT date, category FROM todo_stats WHERE id=?1",
+            [stat_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
         )?;
+        let new_date = set_date.clone().unwrap_or_else(|| cur_date.clone());
+        let id = redate_todo_stat(conn, *stat_id, &cur_date, &new_date)?;
+
+        if let Some(ref t) = set_text {
+            conn.execute(
+                "UPDATE todo_stats SET text=?1 WHERE id=?2",
+                rusqlite::params![t, id],
+            )?;
+        }
+        if let Some(t) = set_time {
+            conn.execute(
+                "UPDATE todo_stats SET time_spent_minutes=?1 WHERE id=?2",
+                rusqlite::params![t.round(), id],
+            )?;
+        }
+        if set_units {
+            conn.execute(
+                "UPDATE todo_stats SET num_value=?1, variant_id=?2 WHERE id=?3",
+                rusqlite::params![set_num_value, set_variant_id, id],
+            )?;
+        }
+        if add_category_mask != 0 || remove_category_mask != 0 {
+            let mask = category_string_to_mask(&cur_cat);
+            let mut next = (mask | add_category_mask) & !remove_category_mask;
+            // A todo must keep at least one category, so a removal that would empty it is dropped
+            if next == 0 {
+                next = mask;
+            }
+            if next != mask {
+                conn.execute(
+                    "UPDATE todo_stats SET category=?1 WHERE id=?2",
+                    rusqlite::params![category_mask_to_string(next), id],
+                )?;
+            }
+        }
+
+        // Live links go by id, deleted ones by their snapshot name against a null id
+        for gid in &remove_group_ids {
+            conn.execute(
+                "DELETE FROM todo_stat_group WHERE stat_id=?1 AND group_id=?2",
+                rusqlite::params![id, gid],
+            )?;
+        }
+        for name in &remove_group_names {
+            conn.execute(
+                "DELETE FROM todo_stat_group WHERE stat_id=?1 AND group_id IS NULL AND group_name=?2",
+                rusqlite::params![id, name],
+            )?;
+        }
+        for rid in &remove_resource_ids {
+            conn.execute(
+                "DELETE FROM todo_stat_resource WHERE stat_id=?1 AND resource_id=?2",
+                rusqlite::params![id, rid],
+            )?;
+        }
+        for name in &remove_resource_names {
+            conn.execute(
+                "DELETE FROM todo_stat_resource WHERE stat_id=?1 AND resource_id IS NULL AND resource_name=?2",
+                rusqlite::params![id, name],
+            )?;
+        }
+        for gid in &add_group_ids {
+            add_group_to_stat(conn, id, *gid, None)?;
+        }
+        for rid in &add_resource_ids {
+            add_resource_to_stat(conn, id, *rid)?;
+        }
     }
     tx.commit()
 }
@@ -843,22 +978,33 @@ pub fn rename_variant(id: i64, name: &str, conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+const CATEGORY_BITS: [(i64, &str); 7] = [
+    (1, "Reading"),
+    (2, "Writing"),
+    (4, "Speaking"),
+    (8, "Listening"),
+    (16, "Vocabulary"),
+    (32, "Grammar"),
+    (64, "Culture"),
+];
+
 fn category_mask_to_string(mask: i64) -> String {
-    let categories = [
-        (1, "Reading"),
-        (2, "Writing"),
-        (4, "Speaking"),
-        (8, "Listening"),
-        (16, "Vocabulary"),
-        (32, "Grammar"),
-        (64, "Culture"),
-    ];
-    let parts: Vec<&str> = categories
+    let parts: Vec<&str> = CATEGORY_BITS
         .iter()
         .filter(|(bit, _)| mask & bit != 0)
         .map(|(_, name)| *name)
         .collect();
     parts.join(", ")
+}
+
+fn category_string_to_mask(s: &str) -> i64 {
+    s.split(',').fold(0, |mask, part| {
+        let name = part.trim();
+        match CATEGORY_BITS.iter().find(|(_, n)| *n == name) {
+            Some((bit, _)) => mask | bit,
+            None => mask,
+        }
+    })
 }
 
 #[cfg(test)]
