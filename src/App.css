@@ -971,7 +971,7 @@ textarea { overflow-y: scroll; }
 .plan-section-panel { min-width: 0; }
 /* The Decks section keeps a rule between it and the rest, with even space either side of it */
 .plan-section-panel + .plan-section-panel { margin-top: var(--t-section-div); padding-top: var(--t-section-div); border-top: var(--t-bw) solid var(--t-border-2); }
-.plan-col-label { font-family: var(--t-font-head); font-size: 22px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 4px; }
+.plan-col-label { font-family: var(--t-font-head); font-size: 24px; font-weight: 700; letter-spacing: 0.02em; color: var(--t-accent); margin-bottom: 4px; }
 .plan-col-label--resources { margin-top: 12px; }
 .plan-col-label--toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 7px; }
 /* A collapsed section is just its word, so it drops the spacing meant to sit around content */

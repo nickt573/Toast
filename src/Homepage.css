@@ -338,7 +338,7 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-section-label {
   display: block;
   font-family: var(--t-font-head);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--t-accent);
@@ -700,7 +700,7 @@ input[type="checkbox"].hp-todo-check:checked { background-size: 12px; }
   align-items: center;
   gap: 7px;
   font-family: var(--t-font-head);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--t-clay);
