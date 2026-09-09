@@ -138,7 +138,7 @@
   --t-r:             10px;
   --t-r-btn:         4px;
   --t-r-input:       4px;   /* fields you type into stay tight like the controls, a rounded box is something to read and a square-ish one is somewhere to write */
-  --t-r-tab:         5px 5px 1px 1px;   /* index-divider tab badges, a deliberate shape rather than a container */
+  --t-r-tab:         var(--t-r-btn);   /* rounded pill shape shared with the count boxes */
   --t-ease:          0.12s ease;
   /* For things a pointer sweeps across rather than clicks, like a row's bars, slower
      than --t-ease so the change reads as a fade */
