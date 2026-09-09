@@ -42,11 +42,11 @@
 /* The word bar hands its shadow to the name row below it */
 .dk-cards-header { box-shadow: none; }
 .dk-cards-header h2 { margin: 0; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 750; color: var(--hdr-title-deck); }
-/* The plan a deck belongs to, a clickable badge that jumps to that plan, kept the plan caramel rather than the header's deck blue */
-.dk-cards-plan { font-size: 10px; font-weight: 600; color: var(--t-accent-fg); background: var(--t-accent); border: none; border-radius: var(--t-r-tab); padding: 2px 8px; user-select: none; }
-.dk-cards-plan:hover { background: var(--t-accent); border: none; color: var(--t-accent-fg); filter: brightness(0.94); }
-/* The subtle open mark resources wear, a faded small glyph in the pill's own ink */
-.dk-cards-plan-arrow { opacity: 0.55; margin-left: 2px; font-size: 9px; }
+.dk-actions-trigger {
+  width: 28px; height: 28px; padding: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 20px; line-height: 0;
+}
 .dk-cards-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
 .dk-table-pane { flex: 0 0 440px; min-width: 360px; max-width: 52%; border-right: 1px solid var(--t-border-2); display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; background: var(--t-bg); -webkit-user-select: none; user-select: none; }
@@ -215,6 +215,8 @@
    the outer corners */
 .dk-menu-item { padding: 9px 14px; font-size: 13px; background: none; border: none; border-radius: 0; cursor: pointer; text-align: left; width: 100%; color: var(--t-text); box-shadow: none; }
 .dk-menu-item:hover { background: var(--t-surface-2); color: var(--t-text); box-shadow: none; }
+.dk-menu-item--go { display: flex; align-items: center; gap: 5px; }
+.dk-menu-item--go .t-open-arrow { color: inherit; }
 /* Outranks the global danger fill, flat like its siblings with a red tint on hover only */
 .dk-actions-menu .dk-menu-item.danger { background: none; border: none; border-radius: 0; color: var(--t-red); }
 .dk-actions-menu .dk-menu-item.danger:hover { background: var(--t-red-bg); color: var(--t-red); }

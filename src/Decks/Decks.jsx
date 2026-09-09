@@ -900,7 +900,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
 
 // Deck Actions Dropdown
 
-function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearchable, onResetRequest }) {
+function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearchable, onResetRequest, planName, onGoToPlan }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -915,9 +915,12 @@ function DeckActions({ onPauseAll, onUnpauseAll, onAllSearchable, onAllNotSearch
 
   return (
     <div style={{ position: "relative" }} ref={ref}>
-      <button onClick={() => setOpen(o => !o)} title="Deck actions" style={{ letterSpacing: 2 }}>...</button>
+      <button className="dk-actions-trigger" onClick={() => setOpen(o => !o)} title="Deck actions" aria-label="Deck actions">⋯</button>
       {open && (
         <div className="dk-actions-menu">
+          {planName && (
+            <button className="dk-menu-item dk-menu-item--go" onClick={() => act(onGoToPlan)}>Go to Plan<span className="t-open-arrow">↗</span></button>
+          )}
           <button className="dk-menu-item" onClick={() => act(onPauseAll)}>Pause All</button>
           <button className="dk-menu-item" onClick={() => act(onUnpauseAll)}>Unpause All</button>
           <button className="dk-menu-item" onClick={() => act(onAllSearchable)}>All Searchable</button>
@@ -1202,17 +1205,13 @@ function CardView({ setToast, deck, onBack, returnTo, onReturnToOrigin, onNaviga
           <button className="quiet" onClick={onBack}>← Back</button>
         )}
         <div className="detail-title detail-title--deck">{deck.name}</div>
-        {planName && (
-          <button className="dk-cards-plan" title={`Go to ${planName}`}
-            onClick={() => onNavigateToPlan?.({ id: deck.plan_id, name: planName },
-              { menu: "decks", label: deck.name, decksContext: { deck } })}>
-            {planName}<span className="dk-cards-plan-arrow">↗</span>
-          </button>
-        )}
         <span className="hdr-context">{cards.length.toLocaleString()} card{cards.length !== 1 ? "s" : ""}</span>
         <DeckActions onPauseAll={pauseAll} onUnpauseAll={unpauseAll}
           onAllSearchable={() => setAllSearchable(true)} onAllNotSearchable={() => setAllSearchable(false)}
-          onResetRequest={() => setConfirmReset(true)} />
+          onResetRequest={() => setConfirmReset(true)}
+          planName={planName}
+          onGoToPlan={() => onNavigateToPlan?.({ id: deck.plan_id, name: planName },
+            { menu: "decks", label: deck.name, decksContext: { deck } })} />
       </div>
 
       {confirmReset && (
