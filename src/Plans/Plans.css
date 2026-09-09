@@ -1,12 +1,27 @@
 /* Plans subcomponents */
 
-.plan-srs-row { --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt); padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: var(--t-list-gap); }
-.plan-srs-header { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.plan-srs-row {
+  --t-stripe: var(--t-blue-stripe); --t-stripe-hi: var(--t-blue-lt);
+  padding: 12px var(--t-stripe-gutter) 12px 14px; margin-bottom: var(--t-list-gap);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name counts" "name actions";
+  align-items: center;
+  column-gap: 8px; row-gap: 8px;
+}
+/* Settings and remove-confirm push the panel to a full-width second line so the name keeps
+   the whole top row inline with the counts instead of truncating early */
+.plan-srs-row.editing, .plan-srs-row.removing {
+  grid-template-areas: "name counts" "actions actions";
+  align-items: start;
+}
+.plan-srs-row.removing { grid-template-areas: "name counts" "actions actions" "sub sub"; }
+.plan-srs-name-wrap { grid-area: name; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .plan-srs-name { min-width: 0; font-weight: 700; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--t-title); }
-/* The name no longer eats the leftover space, so the counts are what hold the right edge
-   and the arrow can sit against the name it opens */
-.plan-srs-counts { display: flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
-.plan-srs-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin-top: 8px; }
+.plan-srs-counts { grid-area: counts; justify-self: end; display: flex; gap: 6px; }
+.plan-srs-actions { grid-area: actions; justify-self: end; display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.plan-srs-row.editing .plan-srs-actions, .plan-srs-row.removing .plan-srs-actions { justify-self: stretch; }
+.plan-srs-confirm-sub { grid-area: sub; }
 .plan-srs-tip-wrap { display: inline-flex; align-items: center; gap: 2px; }
 /* Settings and remove-confirm expand inline, to the left of the action buttons */
 .plan-srs-settings { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-right: auto; }

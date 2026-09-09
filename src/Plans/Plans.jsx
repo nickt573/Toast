@@ -59,8 +59,8 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
     }, [srsGroups]);
 
     return (
-        <div className="plan-srs-row">
-            <div className="plan-srs-header">
+        <div className={`plan-srs-row${editing ? " editing" : ""}${removing ? " removing" : ""}`}>
+            <div className="plan-srs-name-wrap">
                 <span className="plan-srs-name">{group.name}</span>
                 {onNavigateToGroup && (
                     <span className="t-open-arrow" title={`Open ${group.name}`}
@@ -68,11 +68,11 @@ function SrsGroupRow({ group, scheduler, onClamp, onClampMax, onRemove, loadData
                         ↗
                     </span>
                 )}
-                <span className="plan-srs-counts">
-                    <span className="plan-srs-count plan-srs-count--new">New: {dueCount[0]}/{scheduler.max_new}</span>
-                    <span className="plan-srs-count plan-srs-count--review">Review: {dueCount[1]}/{scheduler.max_review}</span>
-                </span>
             </div>
+            <span className="plan-srs-counts">
+                <span className="plan-srs-count plan-srs-count--new">New: {dueCount[0]}/{scheduler.max_new}</span>
+                <span className="plan-srs-count plan-srs-count--review">Review: {dueCount[1]}/{scheduler.max_review}</span>
+            </span>
             <div className="plan-srs-actions">
                 {editing && (
                     <div className="plan-srs-settings">
