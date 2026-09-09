@@ -35,7 +35,16 @@
 .dk-anki-check { width: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; }
 .dk-anki-check--support { width: 56px; }
 .dk-merge-row { display: flex; gap: 8px; align-items: center; }
-.dk-merge-row select { flex: 1; }
+/* min-width: 0 down the flex chain lets a long name truncate inside its box instead of
+   shoving the row off screen; the label keeps the base overflow/ellipsis */
+.dk-merge-row .unit-picker { flex: 1; min-width: 0; }
+.dk-merge-row .unit-picker-control, .dk-merge-row .unit-picker-select { width: 100%; min-width: 0; }
+.dk-merge-row .unit-picker-select { justify-content: space-between; }
+.dk-merge-row .unit-picker-select-label { max-width: none; min-width: 0; text-align: left; }
+/* The card order chip fills its row, its label truncating rather than stretching the row */
+.dk-order-select { flex: 1; min-width: 0; }
+.dk-order-select .unit-picker-select { width: 100%; min-width: 0; justify-content: space-between; }
+.dk-order-select .unit-picker-select-label { max-width: none; min-width: 0; text-align: left; }
 
 .dk-cards-root { display: flex; flex-direction: column; height: 100%; }
 .dk-cards-header { --hdr-band: color-mix(in srgb, var(--t-blue-bdr) 50%, #fff); --hdr-btn: var(--t-blue-btn); display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 var(--t-page-pad); flex-shrink: 0; background: var(--hdr-band); position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }

@@ -322,6 +322,7 @@ function DeckList({ setToast, onOpenDeck }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--t-text-2)" }}>
             <span>Card order</span>
             <SelectMenu value={mergeAppend} onChange={(v) => setMergeAppend(v)}
+              className="dk-order-select"
               options={[
                 { value: false, label: "Alternate between decks" },
                 { value: true, label: "Append the second deck" },

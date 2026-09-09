@@ -11,7 +11,12 @@
 .nb-merge-panel input:not([type="checkbox"]), .nb-merge-panel select { border-color: var(--t-plum-bdr); }
 .nb-merge-panel input:focus, .nb-merge-panel select:focus { border-color: var(--t-accent); }
 .nb-merge-row { display: flex; gap: 8px; align-items: center; }
-.nb-merge-row select { flex: 1; }
+/* min-width: 0 down the flex chain lets a long name truncate inside its box instead of
+   shoving the row off screen; the label keeps the base overflow/ellipsis */
+.nb-merge-row .unit-picker { flex: 1; min-width: 0; }
+.nb-merge-row .unit-picker-control, .nb-merge-row .unit-picker-select { width: 100%; min-width: 0; }
+.nb-merge-row .unit-picker-select { justify-content: space-between; }
+.nb-merge-row .unit-picker-select-label { max-width: none; min-width: 0; text-align: left; }
 
 .nb-pages-root { display: flex; flex-direction: column; height: 100%; }
 .nb-pages-header { --hdr-band: color-mix(in srgb, var(--t-plum-bdr) 45%, #fff); --hdr-btn: var(--t-plum); display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 var(--t-page-pad); background: var(--hdr-band); flex-shrink: 0; position: relative; z-index: 1; box-shadow: var(--t-shadow-hdr); }
