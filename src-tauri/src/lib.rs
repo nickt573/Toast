@@ -153,6 +153,7 @@ pub fn run() {
             commands::srs::clamp_group,
             commands::srs::max_clamp_group,
             commands::srs::add_group_time,
+            commands::srs::get_group_time_today,
             commands::srs::update_date,
             commands::srs::get_current_date,
             commands::srs::is_day_stale,

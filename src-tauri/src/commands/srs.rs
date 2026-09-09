@@ -78,6 +78,12 @@ pub fn add_group_time(
 }
 
 #[tauri::command]
+pub fn get_group_time_today(group_id: i64, state: tauri::State<AppState>) -> Result<f64, String> {
+    let conn = state.conn.lock().unwrap();
+    scheduling::get_group_time_today(group_id, &conn).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn update_date(state: tauri::State<AppState>) -> Result<(), String> {
     let conn = state.conn.lock().unwrap();
     scheduling::update_date(&conn).map_err(|e| {

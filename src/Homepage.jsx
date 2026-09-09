@@ -189,6 +189,46 @@ function StudyTimer({ planId }) {
 }
 
 
+// Module-level so nav/close can flush it before the study view unmounts
+let deckTimer = null; // { groupId, activeMs, runningSince, savedMs }
+
+function startDeckTimer(groupId) {
+    deckTimer = { groupId, activeMs: 0, runningSince: Date.now(), savedMs: 0 };
+}
+
+function deckTimerActiveMs() {
+    if (!deckTimer) return 0;
+    return deckTimer.activeMs + (deckTimer.runningSince ? Date.now() - deckTimer.runningSince : 0);
+}
+
+function pauseDeckTimer() {
+    if (deckTimer?.runningSince) {
+        deckTimer.activeMs += Date.now() - deckTimer.runningSince;
+        deckTimer.runningSince = null;
+    }
+}
+
+function resumeDeckTimer() {
+    if (deckTimer && !deckTimer.runningSince) deckTimer.runningSince = Date.now();
+}
+
+export async function flushDeckTime() {
+    if (!deckTimer) return;
+    const active = deckTimerActiveMs();
+    const delta = (active - deckTimer.savedMs) / 60000;
+    if (delta <= 0.001) return;
+    deckTimer.savedMs = active;
+    try { await loggedInvoke("add_group_time", { groupId: deckTimer.groupId, minutes: delta }); }
+    catch (e) { logError("catch", e); }
+}
+
+function stopDeckTimer() {
+    pauseDeckTimer();
+    flushDeckTime();
+    deckTimer = null;
+}
+
+
 // Grade Buttons
 
 function GradeButtons({ onGrade, onCramGrade, isCram, card }) {
@@ -636,7 +676,13 @@ function StudySession({ group, onBack, setToast }) {
     const [cramCount, setCramCount] = useState(0);
     const [done, setDone] = useState(false);
     const lastShownId = useRef(null);
-    const lastFlush = useRef(Date.now());
+    // Deck time already logged today, so the timer resumes from it
+    const [baselineMin, setBaselineMin] = useState(0);
+    const [paused, setPaused] = useState(false);
+    const [timerShown, setTimerShown] = useState(true);
+    const [, setTick] = useState(0);
+    // Set when the user pauses by hand, so returning to the window doesn't auto-resume
+    const pausedByUser = useRef(false);
     // Drops re-entrant grades so a double-press can't grade the same card twice
     const grading = useRef(false);
     const isCard = group.group_type === "deck";
@@ -667,10 +713,34 @@ function StudySession({ group, onBack, setToast }) {
         } catch (e) { logError("catch", e); setToast("Failed to fetch next item.", "error"); }
     }
 
+    // Any card action wakes the timer, even one the user paused by hand
+    function autoResume() {
+        if (deckTimer && !deckTimer.runningSince) {
+            resumeDeckTimer();
+            pausedByUser.current = false;
+            setPaused(false);
+            setTick(t => t + 1);
+        }
+    }
+
+    function toggleTimer() {
+        if (deckTimer?.runningSince) {
+            pauseDeckTimer();
+            pausedByUser.current = true;
+            setPaused(true);
+        } else {
+            resumeDeckTimer();
+            pausedByUser.current = false;
+            setPaused(false);
+        }
+        setTick(t => t + 1);
+    }
+
     async function handleFlip() {
         if (!isCard) throw new Error("Attempted Notebook SRS");
         const itemId = card?.id;
         if (!itemId) return;
+        autoResume();
         setFlipped(true);
         try {
             const similar = await loggedInvoke("get_similar_cards", { itemId });
@@ -682,6 +752,7 @@ function StudySession({ group, onBack, setToast }) {
         if (!isCard) throw new Error("Attempted Notebook SRS");
         const itemId = card?.id;
         if (!itemId || grading.current) return;
+        autoResume();
         grading.current = true;
         try {
             await loggedInvoke("grade_item", { itemId, grade });
@@ -695,6 +766,7 @@ function StudySession({ group, onBack, setToast }) {
         if (!isCard) throw new Error("Attempted Notebook SRS");
         const cardId = card?.id;
         if (!cardId || grading.current) return;
+        autoResume();
         grading.current = true;
         try {
             await loggedInvoke("grade_cram", { cardId, keep });
@@ -709,6 +781,7 @@ function StudySession({ group, onBack, setToast }) {
         if (!isCard) throw new Error("Attempted Notebook SRS");
         const cardId = card?.id;
         if (!cardId || grading.current) return;
+        autoResume();
         grading.current = true;
         try {
             const replaced = await loggedInvoke("swap_card", { cardId });
@@ -718,36 +791,37 @@ function StudySession({ group, onBack, setToast }) {
         finally { grading.current = false; }
     }
 
-    async function flushTime() {
-        const now = Date.now();
-        const elapsed = (now - lastFlush.current) / 60000;
-        if (elapsed > 0.1) {
-            lastFlush.current = now;
-            try { await loggedInvoke("add_group_time", { groupId: group.id, minutes: elapsed }); }
-            catch (e) { logError("catch", e); }
-        }
-    }
-
     async function handleBack() {
-        await flushTime();
+        await flushDeckTime();
         onBack();
     }
 
     useEffect(() => {
         fetchNext();
-        // Today's stat row is opened by whichever comes first, this timer flushing or a
-        // grade, so opening the deck and leaving straight away writes nothing
-        const interval = setInterval(flushTime, 20000);
-        const onVisibility = () => { if (document.hidden) flushTime(); };
+        loggedInvoke("get_group_time_today", { groupId: group.id })
+            .then(min => setBaselineMin(min || 0))
+            .catch(e => logError("catch", e));
+        startDeckTimer(group.id);
+        // Autosave, so a crash or an unclean close still keeps most of the session
+        const interval = setInterval(flushDeckTime, 10000);
+        const onVisibility = () => {
+            if (document.hidden) { pauseDeckTimer(); flushDeckTime(); }
+            else if (!pausedByUser.current) resumeDeckTimer();
+        };
         document.addEventListener("visibilitychange", onVisibility);
         return () => {
             clearInterval(interval);
             document.removeEventListener("visibilitychange", onVisibility);
-            // Leaving by the Back button already flushed and a second call is a no-op, so
-            // this covers the ways out that don't, like Home dropping to the dashboard
-            flushTime();
+            stopDeckTimer();
         };
     }, []);
+
+    // Repaint the running total every half second while the timer is live
+    useEffect(() => {
+        if (paused) return;
+        const id = setInterval(() => setTick(t => t + 1), 500);
+        return () => clearInterval(id);
+    }, [paused]);
 
     // WKWebView sometimes drops the repaint after a full card swap, so force a flush
     useEffect(() => {
@@ -780,45 +854,66 @@ function StudySession({ group, onBack, setToast }) {
         return () => window.removeEventListener("keydown", onKey);
     }, [flipped, card, isCramTurn]);
 
+    useEffect(() => {
+        if (done) { pauseDeckTimer(); setPaused(true); flushDeckTime(); }
+    }, [done]);
+
+    const totalSec = Math.floor(baselineMin * 60 + deckTimerActiveMs() / 1000);
+    const th = Math.floor(totalSec / 3600);
+    const tm = Math.floor((totalSec % 3600) / 60);
+    const ts = totalSec % 60;
+    const timerDisplay = th > 0
+        ? `${th}:${String(tm).padStart(2, "0")}:${String(ts).padStart(2, "0")}`
+        : `${tm}:${String(ts).padStart(2, "0")}`;
+    const timer = (
+        <div className="hp-timer" title="Time spent studying this deck today">
+            {timerShown && <span className={`hp-timer-display${!paused ? " running" : ""}`}>{timerDisplay}</span>}
+            <button
+                className={`hp-timer-btn ${paused ? "hp-timer-btn--resume" : "hp-timer-btn--pause"}`}
+                onClick={toggleTimer}>
+                {paused ? "Resume" : "Pause"}
+            </button>
+            <button className="hp-timer-btn" onClick={() => setTimerShown(s => !s)}>
+                {timerShown ? "Hide" : "Show"}
+            </button>
+        </div>
+    );
+
     if (done) {
         return (
-            <div className="hp-session">
+            <div className="hp-detail-root">
+                <div className="detail-title-band detail-title-band--deck">
+                    <button className="quiet" onClick={handleBack}>← Back</button>
+                    <div className="detail-title detail-title--deck">{group.name}</div>
+                </div>
+                <div className="hp-session">
                 <div className="hp-session-inner">
-                    <div className="hp-session-header" style={{ marginBottom: 24 }}>
-                        <button className="quiet" onClick={handleBack}>← Back</button>
-                        <h2>{group.name}</h2>
-                    </div>
                     <div className="hp-done">
                         <div className="hp-done-title">All done for today!</div>
                         <div className="hp-done-sub">Come back tomorrow for more.</div>
                     </div>
+                </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="hp-session">
+        <div className="hp-detail-root">
+            <div className="detail-title-band detail-title-band--deck">
+                <button className="quiet" onClick={handleBack}>← Back</button>
+                <div className="detail-title detail-title--deck">{group.name}</div>
+            </div>
+            <div className="hp-session">
             <div className="hp-session-inner">
-                <div className="hp-session-header">
-                    <button className="quiet" onClick={handleBack}>← Back</button>
-                    <h2>{group.name}</h2>
-                </div>
-
-                {card && (
-                    <div className="hp-session-status">
-                        {isCramTurn
-                            ? <span className="pill pill-cram">Cram</span>
-                            : card.tier > 0
-                                ? <span className="pill pill-review">Review{card.is_overdue === true && " - Overdue"}</span>
-                                : <span className="pill pill-new">New{card.is_overdue === true && " - Overdue"}</span>}
-                        <div className="hp-session-counts">
-                            <span className="pill pill-new" style={{ opacity: currentType === "new" ? 1 : 0.4 }}>New: {newCount}</span>
-                            <span className="pill pill-review" style={{ opacity: currentType === "review" ? 1 : 0.4 }}>Review: {reviewCount}</span>
-                            {cramCount > 0 && <span className="pill pill-cram" style={{ opacity: currentType === "cram" ? 1 : 0.4 }}>Cram: {cramCount}</span>}
-                        </div>
+                <div className="hp-session-status">
+                    <div className="hp-session-counts">
+                        <span className="pill pill-new" style={{ opacity: currentType === "new" ? 1 : 0.4 }}>New: {newCount}</span>
+                        <span className="pill pill-review" style={{ opacity: currentType === "review" ? 1 : 0.4 }}>Review: {reviewCount}</span>
+                        {cramCount > 0 && <span className="pill pill-cram" style={{ opacity: currentType === "cram" ? 1 : 0.4 }}>Cram: {cramCount}</span>}
                     </div>
-                )}
+                    {timer}
+                </div>
 
                 <div className="hp-card-box">
                     {isCard && card && <CardFace card={card} showBack={flipped} />}
@@ -858,6 +953,7 @@ function StudySession({ group, onBack, setToast }) {
                         groupType={group.group_type}
                     />
                 )}
+            </div>
             </div>
         </div>
     );
@@ -1034,20 +1130,18 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
     const atRisk = streakInfo && streakInfo.streak > 0 && !streakInfo.studied_today;
 
     return (
-        <div className="hp-root">
-            <div className="hp-plan-page">
-                <div className="hp-plan-back">
-                    <button className="quiet" onClick={onBack}>← Back</button>
-                    <h2>{plan.name}</h2>
-                    <span className="hp-plan-back-streak">
-                        {streakInfo?.streak > 0 && (
-                            <span className={`hp-streak-chip${atRisk ? " at-risk" : ""}`}>
-                                {streakInfo.streak}d streak{atRisk ? " !" : ""}
-                            </span>
-                        )}
+        <div className="hp-detail-root">
+            <div className="detail-title-band detail-title-band--plan">
+                <button className="quiet" onClick={onBack}>← Back</button>
+                <div className="detail-title detail-title--plan">{plan.name}</div>
+                {streakInfo?.streak > 0 && (
+                    <span className={`hp-streak-badge${atRisk ? " at-risk" : ""}`}>
+                        {streakInfo.streak}d{atRisk ? " !" : ""}
                     </span>
-                </div>
-
+                )}
+            </div>
+            <div className="hp-root">
+            <div className="hp-plan-page">
                 <div className="hp-panel-group">
                 {/* Todos */}
                 <div className="hp-section-panel">
@@ -1238,6 +1332,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                     />
                 )}
             </div>
+            </div>
         </div>
     );
 }
@@ -1425,8 +1520,8 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                             <div className="hp-plan-name">{plan.name}</div>
                                         </div>
                                         {streakInfo?.streak > 0 && (
-                                            <span className={`hp-streak-chip${atRisk ? " at-risk" : ""}`}>
-                                                {streakInfo.streak}d streak{atRisk ? " !" : ""}
+                                            <span className={`hp-streak-badge${atRisk ? " at-risk" : ""}`}>
+                                                {streakInfo.streak}d{atRisk ? " !" : ""}
                                             </span>
                                         )}
                                     </div>

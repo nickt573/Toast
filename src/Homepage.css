@@ -187,15 +187,17 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   line-height: 1.15;
   color: var(--t-title);
 }
-.hp-streak-chip {
-  font-size: 10px; font-weight: 600; padding: 3px 8px;
+.hp-streak-badge {
+  display: inline-flex; align-items: center;
+  padding: 4px 9px;
   border-radius: var(--t-r-tab); border: none;
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
   background: var(--t-green); color: var(--t-accent-fg);
-  white-space: nowrap; flex-shrink: 0; margin-top: 4px;
-  user-select: none;
+  white-space: nowrap; flex-shrink: 0; user-select: none;
 }
-.hp-streak-chip.at-risk { background: var(--t-amber); color: var(--t-accent-fg); }
-.hp-plan-card-top .hp-streak-chip { font-size: 11px; padding: 4px 9px; }
+.hp-streak-badge.at-risk { background: var(--t-amber); color: var(--t-accent-fg); }
+.hp-plan-card-top .hp-streak-badge { margin-top: 4px; }
+.detail-title-band--plan .hp-streak-badge { margin-left: auto; }
 .hp-plan-idle-note {
   margin-top: 12px;
   font-size: 12px;
@@ -229,52 +231,18 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 
 /* Plan study page */
 .hp-plan-page {
-  padding: 24px var(--t-page-pad);
+  padding: var(--t-bar-gap) var(--t-page-pad);
   /* The bar column plus the page padding on each side, so the study bars land at the same
      width as the deck, notebook and plan bars on their landing pages */
   max-width: calc(var(--t-bar-col) + 2 * var(--t-page-pad));
   margin: 0 auto;
 }
 
-.hp-plan-back {
+.hp-detail-root {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.hp-plan-back .quiet {
-  flex: none;
-  background: var(--t-accent-h);
-  border-color: var(--t-accent-h);
-  color: var(--t-accent-fg);
-  box-shadow: none;
-}
-.hp-plan-back .quiet:hover {
-  background: var(--t-accent-h);
-  border-color: var(--t-accent-h);
-  color: var(--t-accent-fg);
-  filter: brightness(0.92);
-}
-.hp-plan-back-streak {
-  flex: none;
-  margin-left: auto;
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-}
-.hp-plan-back-streak .hp-streak-chip {
-  font-size: 11px;
-  padding: 4px 9px;
-  margin-top: 0;
-}
-.hp-plan-back h2 {
-  margin: 0;
-  text-align: left;
-  font-family: var(--t-font-head);
-  font-size: 28px;
-  font-weight: 750;
-  letter-spacing: -0.02em;
-  color: var(--t-title);
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Round yellow add button that logs extra activity, matching the create buttons elsewhere and the Todos family colour */
@@ -296,17 +264,17 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   background: transparent;
   border: none;
   border-radius: var(--t-r-btn);
-  padding: 4px 5px 4px 8px;
+  padding: 0;
 }
 .hp-timer-display {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--t-text-3);
   user-select: none;
 }
 .hp-timer-display.running { color: var(--t-text); }
-.hp-timer-btn { font-size: 11px; padding: 3px 10px; border-radius: var(--t-r-btn); }
+.hp-timer-btn { font-size: 11px; padding: 2px 10px; border-radius: var(--t-r-btn); }
 /* Family ink actions, green Start, blue Resume, amber Pause, red Clear */
 .hp-timer-btn--start { background: var(--t-green); border-color: var(--t-green); color: var(--t-accent-fg); }
 .hp-timer-btn--start:hover { background: var(--t-green); border-color: var(--t-green); color: var(--t-accent-fg); filter: brightness(0.92); }
@@ -480,9 +448,10 @@ input[type="checkbox"].hp-todo-check:checked { background-size: 12px; }
 
 /* Study session */
 .hp-session {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: scroll;
-  padding: 20px var(--t-page-pad);
+  padding: var(--t-bar-gap) var(--t-page-pad) 20px;
   /* Extra left padding mirrors the 10px scrollbar so the centered card stays centered */
   padding-left: calc(var(--t-page-pad) + 10px);
   box-sizing: border-box;
@@ -490,35 +459,21 @@ input[type="checkbox"].hp-todo-check:checked { background-size: 12px; }
 
 .hp-session-inner { max-width: 580px; margin: 0 auto; }
 
-.hp-session-header {
+.hp-session-timerbar {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  justify-content: flex-end;
+  margin-bottom: 8px;
 }
-.hp-session-header .quiet {
-  flex: none;
-  background: var(--t-blue-btn);
-  border-color: var(--t-blue-btn);
-  color: var(--t-accent-fg);
-  box-shadow: none;
-}
-.hp-session-header .quiet:hover {
-  background: var(--t-blue-btn);
-  border-color: var(--t-blue-btn);
-  color: var(--t-accent-fg);
-  filter: brightness(0.92);
-}
-.hp-session-header h2 { margin: 0; flex: 1; text-align: left; font-family: var(--t-font-head); font-size: var(--t-title-size); font-weight: 700; letter-spacing: -0.01em; color: var(--t-title); }
+.hp-session-timerbar .hp-timer { padding-right: 0; }
 
-/* Card status row, type pill on the left and session counts on the right */
 .hp-session-status {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
+.hp-session-status .hp-timer { padding-right: 0; }
 .hp-session-counts { display: flex; gap: 6px; }
 /* Sized to their own text, so a pill grows and shrinks with its number instead of holding a fixed slot */
 .hp-session-counts .pill { font-variant-numeric: tabular-nums; }
@@ -635,8 +590,8 @@ input[type="checkbox"].hp-todo-check:checked { background-size: 12px; }
   text-align: center;
   padding: 56px 0;
 }
-.hp-done-title  { font-family: var(--t-font-head); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 6px; color: var(--t-text); }
-.hp-done-sub    { font-size: 13px; color: var(--t-text-3); }
+.hp-done-title  { font-family: var(--t-font-head); font-size: 23px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 6px; color: var(--t-text); }
+.hp-done-sub    { font-size: 15px; color: var(--t-text-3); }
 
 .hp-similar {
   margin-top: 16px;

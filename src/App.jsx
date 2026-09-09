@@ -13,7 +13,7 @@ import Toast from "./Toast";
 import Plans from "./Plans/Plans";
 import Decks from "./Decks/Decks";
 import Notebooks from "./Notebooks/Notebooks";
-import Homepage from "./Homepage";
+import Homepage, { flushDeckTime } from "./Homepage";
 import Stats from "./Stats/Stats";
 import ToGo from "./ToGo/ToGo";
 import HowTo, { HELP_PAGES } from "./HowTo";
@@ -101,7 +101,8 @@ export default function App() {
 
   // Clicking the tab you're already on backs out to that tab's own front page, and the
   // counter is what the pages watch since re-clicking wouldn't re-render anything
-  function navigate(key) {
+  async function navigate(key) {
+    await flushDeckTime();
     if (key === menu) setHomeSignal(c => c + 1);
     setMenu(key);
     setReturnTo(null);
@@ -140,6 +141,7 @@ export default function App() {
     (async () => {
       const win = getCurrentWindow();
       const fn = await win.onCloseRequested(async (event) => {
+        await flushDeckTime();
         // A push or pull is already in flight, so swallow the repeat close before it can
         // stack dialogs or push twice
         if (togoLock.active) return event.preventDefault();

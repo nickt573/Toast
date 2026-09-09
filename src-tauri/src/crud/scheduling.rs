@@ -511,6 +511,17 @@ fn write_group_stat(
     Ok(())
 }
 
+/// Time recorded against a live deck today, so the study session timer can pick up where the
+/// day left off when the deck is reopened
+pub fn get_group_time_today(group_id: i64, conn: &Connection) -> Result<f64> {
+    let today = get_date(conn)?;
+    conn.query_row(
+        "SELECT COALESCE(SUM(time_spent_minutes), 0.0) FROM group_stats WHERE group_id = ?1 AND date = ?2",
+        rusqlite::params![group_id, &today],
+        |r| r.get(0),
+    )
+}
+
 pub fn add_group_time(group_id: i64, minutes: f64, conn: &Connection) -> Result<()> {
     let Some(line) = open_stat_line(group_id, conn)? else {
         return Ok(());

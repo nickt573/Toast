@@ -124,6 +124,8 @@
   /* Spacing and shape */
   --t-nav-h:         54px;
   --t-page-pad:      24px;
+  /* Gap below a family header bar before the first content item, shared by every page */
+  --t-bar-gap:       16px;
   /* The air between one content item and the next, rows in a list, cards in a landing
      page, and every list measures from this so the whole app loosens together */
   --t-list-gap:      12px;
@@ -640,7 +642,7 @@ textarea { overflow-y: scroll; }
 
 /* Plans containers */
 .plans-root  { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.plans-scroll { flex: 1; overflow-y: scroll; padding: 16px var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
+.plans-scroll { flex: 1; overflow-y: scroll; padding: var(--t-bar-gap) var(--t-page-pad); padding-right: calc(var(--t-page-pad) - 10px); }
 
 /* Unified landing pages for Plans, Decks and Notebooks, solid family bands, each taking
    the shade its content boxes rest their bars in so no divider line is needed */
@@ -670,7 +672,7 @@ textarea { overflow-y: scroll; }
    notebooks rather than each keeping a copy */
 .landing-body,
 .dk-list,
-.nb-list { flex: 1; overflow-y: scroll; padding: 16px calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; align-items: center; gap: var(--t-list-gap); }
+.nb-list { flex: 1; overflow-y: scroll; padding: var(--t-bar-gap) calc(var(--t-page-pad) - 10px) 10px var(--t-page-pad); display: flex; flex-direction: column; align-items: center; gap: var(--t-list-gap); }
 .landing-empty { font-size: 13px; color: var(--t-text-3); font-style: italic; padding: 20px 0; text-align: center; }
 
 /* The round add button in a landing header opens a small create popup, taking its family
