@@ -566,6 +566,9 @@ textarea { overflow-y: scroll; }
   user-select: none;
   transition: background var(--t-ease), border-color var(--t-ease), color var(--t-ease);
 }
+/* The name caps and ellipsises so one long deck, notebook or resource can't stretch the pill
+   across the row; the checkbox and type badge stay put beside it */
+.picker-pill-name { min-width: 0; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .picker-pill.active-deck     { border-color: var(--t-blue);   background: var(--t-blue);   color: var(--t-accent-fg); }
 .picker-pill.active-notebook { border-color: var(--t-plum);   background: var(--t-plum);   color: var(--t-accent-fg); }
 .picker-pill.active-resource { border-color: var(--t-clay);   background: var(--t-clay);   color: var(--t-accent-fg); }
@@ -933,7 +936,7 @@ textarea { overflow-y: scroll; }
 .landing-card--notebook { --t-stripe: var(--t-plum-stripe);   --t-stripe-hi: var(--t-plum-lt); }
 .landing-card-body { flex: 1; min-width: 0; }
 .landing-card-body > input { width: 100%; box-sizing: border-box; }
-.landing-card-name { display: block; font-family: var(--t-font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.01em; color: var(--t-title); }
+.landing-card-name { display: block; font-family: var(--t-font-head); font-size: 26px; font-weight: 800; letter-spacing: -0.01em; color: var(--t-title); overflow-wrap: anywhere; }
 .landing-card-meta { font-size: 11px; color: var(--t-text-3); margin-top: 2px; }
 .landing-card-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 

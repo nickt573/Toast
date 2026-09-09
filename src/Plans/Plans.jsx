@@ -611,7 +611,7 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
                                     <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
                                         <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
                                             onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
-                                        {r.name}
+                                        <span className="picker-pill-name">{r.name}</span>
                                     </label>
                                 ))}
                             </div>
@@ -629,7 +629,7 @@ function TodoCreator({ planId, plans, groups, planResources, setToast, onCreated
                                         <label key={g.id} className={`picker-pill${active ? fam : ""}`}>
                                             <input type="checkbox" checked={active}
                                                 onChange={() => toggleGroup(g.id)} style={{ margin: 0 }} />
-                                            {g.name}
+                                            <span className="picker-pill-name">{g.name}</span>
                                             <GroupTypeBadge type={g.group_type} />
                                         </label>
                                     );

@@ -186,6 +186,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
   letter-spacing: -0.02em;
   line-height: 1.15;
   color: var(--t-title);
+  /* min-width: 0 lets the flex child wrap; overflow-wrap breaks a long unspaced name */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .hp-streak-badge {
   display: inline-flex; align-items: center;

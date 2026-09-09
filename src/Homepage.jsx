@@ -397,7 +397,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                                 <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
                                     <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
                                         onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
-                                    {r.name}
+                                    <span className="picker-pill-name">{r.name}</span>
                                 </label>
                             ))}
                         </div>
@@ -412,7 +412,7 @@ function TodoCompletePopup({ todo, todoGroups, todoResources, planResources, all
                                 <label key={g.id} className={`picker-pill${selectedGroupIds.includes(g.id) ? (g.group_type === "notebook" ? " active-notebook" : " active-deck") : ""}`}>
                                     <input type="checkbox" checked={selectedGroupIds.includes(g.id)}
                                         onChange={() => toggleGroup(g.id)} style={{ margin: 0 }} />
-                                    {g.name}
+                                    <span className="picker-pill-name">{g.name}</span>
                                     <GroupTypeBadge type={g.group_type} />
                                 </label>
                             ))}
@@ -604,7 +604,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                                 <label key={r.id} className={`picker-pill${selectedResourceIds.includes(r.id) ? " active-resource" : ""}`}>
                                     <input type="checkbox" checked={selectedResourceIds.includes(r.id)}
                                         onChange={() => toggleResource(r.id)} style={{ margin: 0 }} />
-                                    {r.name}
+                                    <span className="picker-pill-name">{r.name}</span>
                                 </label>
                             ))}
                         </div>
@@ -619,7 +619,7 @@ function FreeTodoPopup({ planId, planResources, allGroups, todos = [], onConfirm
                                 <label key={g.id} className={`picker-pill${selectedGroupIds.includes(g.id) ? (g.group_type === "notebook" ? " active-notebook" : " active-deck") : ""}`}>
                                     <input type="checkbox" checked={selectedGroupIds.includes(g.id)}
                                         onChange={() => toggleGroup(g.id)} style={{ margin: 0 }} />
-                                    {g.name}
+                                    <span className="picker-pill-name">{g.name}</span>
                                     <GroupTypeBadge type={g.group_type} />
                                 </label>
                             ))}

@@ -1691,7 +1691,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
                 return (
                   <label key={g.id} className={`picker-pill${active ? fam : ""}`}>
                     <input type="checkbox" checked={active} onChange={() => toggleAddId("addGroupIds")(g.id)} style={{ margin: 0 }} />
-                    {g.name}<GroupTypeBadge type={g.group_type} />
+                    <span className="picker-pill-name">{g.name}</span><GroupTypeBadge type={g.group_type} />
                   </label>
                 );
               })}
@@ -1708,7 +1708,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
                   return (
                     <label key={o.key} className={`picker-pill${active ? " active-remove" : ""}${o.live ? "" : " pill-dead"}`}>
                       <input type="checkbox" checked={active} onChange={() => toggleMassKey("removeGroupKeys")(o.key)} style={{ margin: 0 }} />
-                      {o.name}{o.group_type && <GroupTypeBadge type={o.group_type} />}
+                      <span className="picker-pill-name">{o.name}</span>{o.group_type && <GroupTypeBadge type={o.group_type} />}
                     </label>
                   );
                 })}
@@ -1724,7 +1724,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
                 return (
                   <label key={pr.id} className={`picker-pill${active ? " active-resource" : ""}`}>
                     <input type="checkbox" checked={active} onChange={() => toggleAddId("addResourceIds")(pr.id)} style={{ margin: 0 }} />
-                    {pr.name}
+                    <span className="picker-pill-name">{pr.name}</span>
                   </label>
                 );
               })}
@@ -1741,7 +1741,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
                   return (
                     <label key={o.key} className={`picker-pill${active ? " active-remove" : ""}${o.live ? "" : " pill-dead"}`}>
                       <input type="checkbox" checked={active} onChange={() => toggleMassKey("removeResourceKeys")(o.key)} style={{ margin: 0 }} />
-                      {o.name}
+                      <span className="picker-pill-name">{o.name}</span>
                     </label>
                   );
                 })}
@@ -2062,7 +2062,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
                                     : [...f.addResourceIds, pr.id],
                                 }))}
                                 style={{ margin: 0 }} />
-                              {pr.name}
+                              <span className="picker-pill-name">{pr.name}</span>
                             </label>
                           ))}
                         </div>
@@ -2106,7 +2106,7 @@ function TodosTab({ todoStats, today, filtersOpen, onDeleted, setToast, allGroup
                                       : [...f.addGroupIds, g.id],
                                   }))}
                                   style={{ margin: 0 }} />
-                                {g.name}
+                                <span className="picker-pill-name">{g.name}</span>
                                 <GroupTypeBadge type={g.group_type} />
                               </label>
                             );
@@ -2347,7 +2347,8 @@ export default function Stats({ setToast, onNavigateToGroup, returnContext, onCo
                 <button
                   key={p.deleted ? `d-${p.id}` : p.id}
                   ref={canDelete ? activePillRef : null}
-                  className={`st-pill${p.dead ? ` st-pill-dead st-pill-dead--${p.dead}` : ""}${selectedPlanId === p.id ? " active" : ""}`}
+                  className={`st-pill${canDelete ? "" : " st-pill--name"}${p.dead ? ` st-pill-dead st-pill-dead--${p.dead}` : ""}${selectedPlanId === p.id ? " active" : ""}`}
+                  title={p.name}
                   onClick={() => { setSelectedPlanId(p.id); setConfirmDelId(null); }}
                 >
                   {p.name}
