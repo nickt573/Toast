@@ -794,6 +794,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
     const displayTodos = weekDay === null || dayMode === "all" ? todos : todos.filter((t) => activeOnDay(t, weekDay));
     const totalTodos = plans.reduce((s, p) => s + (summaries[p.id]?.todos ?? 0), 0);
     const totalResources = plans.reduce((s, p) => s + (summaries[p.id]?.resources ?? 0), 0);
+    const totalDecks = plans.reduce((s, p) => s + (summaries[p.id]?.decks ?? 0), 0);
 
     if (editingPlan) {
         return (
@@ -805,6 +806,9 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                         <button className="quiet" onClick={() => { setEditingPlan(null); setPlanResources([]); loadSummaries(); }}>← Back</button>
                     )}
                     <div className="detail-title detail-title--plan">{editingPlan.name}</div>
+                    <span className="hdr-context">
+                        {(summaries[editingPlan.id]?.todos ?? 0)} {(summaries[editingPlan.id]?.todos ?? 0) === 1 ? "todo" : "todos"} · {(summaries[editingPlan.id]?.resources ?? 0)} {(summaries[editingPlan.id]?.resources ?? 0) === 1 ? "resource" : "resources"} · {(summaries[editingPlan.id]?.decks ?? 0)} {(summaries[editingPlan.id]?.decks ?? 0) === 1 ? "deck" : "decks"}
+                    </span>
                 </div>
                 <div className="plans-scroll">
                     <div className="plan-builder-cols">
@@ -881,7 +885,7 @@ export default function Plans({ setToast, onNavigateToGroup, returnContext, onCo
                 <h2>Plans</h2>
                 {plans.length > 0 && (
                     <span className="hdr-context">
-                        {plans.length} {plans.length === 1 ? "plan" : "plans"} · {totalTodos} {totalTodos === 1 ? "todo" : "todos"} · {totalResources} {totalResources === 1 ? "resource" : "resources"}
+                        {plans.length} {plans.length === 1 ? "plan" : "plans"} · {totalTodos} {totalTodos === 1 ? "todo" : "todos"} · {totalResources} {totalResources === 1 ? "resource" : "resources"} · {totalDecks} {totalDecks === 1 ? "deck" : "decks"}
                     </span>
                 )}
                 <CreateMenu open={creating} onToggle={() => setCreating((c) => !c)}
