@@ -41,6 +41,7 @@
 .dk-merge-row .unit-picker-control, .dk-merge-row .unit-picker-select { width: 100%; min-width: 0; }
 .dk-merge-row .unit-picker-select { justify-content: space-between; }
 .dk-merge-row .unit-picker-select-label { max-width: none; min-width: 0; text-align: left; }
+.dk-merge-swap { flex: none; }
 /* The card order chip fills its row, its label truncating rather than stretching the row */
 .dk-order-select { flex: 1; min-width: 0; }
 .dk-order-select .unit-picker-select { width: 100%; min-width: 0; justify-content: space-between; }

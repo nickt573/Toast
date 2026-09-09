@@ -311,7 +311,8 @@ function DeckList({ setToast, onOpenDeck }) {
             <SelectMenu value={mergeDeckA} onChange={(v) => setMergeDeckA(v)}
               placeholder="Select a deck"
               options={decks.filter(d => d.id !== mergeDeckB).map(d => ({ value: d.id, label: d.name }))} />
-            <span style={{ fontSize: 12, color: "var(--t-text-3)" }}>+</span>
+            <button type="button" className="dk-merge-swap" title="Swap the two decks" aria-label="Swap the two decks"
+              onClick={() => { setMergeDeckA(mergeDeckB); setMergeDeckB(mergeDeckA); }}>⇄</button>
             <SelectMenu value={mergeDeckB} onChange={(v) => setMergeDeckB(v)}
               placeholder="Select a deck"
               options={decks.filter(d => d.id !== mergeDeckA).map(d => ({ value: d.id, label: d.name }))} />
