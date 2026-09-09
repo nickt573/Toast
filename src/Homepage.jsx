@@ -1173,8 +1173,8 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                         {(srsGroups.length > 0 || studiedToday.newCards > 0 || studiedToday.reviews > 0) && (
                             <span className="hp-studied-today">
                                 <span className="hp-studied-label">Studied today</span>
-                                <span className="hp-deck-new">New {studiedToday.newCards}</span>
-                                <span className="hp-deck-review">Review {studiedToday.reviews}</span>
+                                <span className="hp-deck-new">New: {studiedToday.newCards}</span>
+                                <span className="hp-deck-review">Review: {studiedToday.reviews}</span>
                             </span>
                         )}
                     </div>
@@ -1447,9 +1447,9 @@ export default function Homepage({ setToast, onNavigateToGroup, returnContext, o
                                                 <span className="hp-stat-lbl">{(counts?.cards ?? 0) == 1 ? "card due" : "cards due"}</span>
                                             </div>
                                             <div className="hp-plan-detail">
-                                                <span className={`hp-plan-mini hp-plan-mini--new${counts?.newDue > 0 ? "" : " is-zero"}`}>New {counts?.newDue ?? 0}</span>
-                                                <span className={`hp-plan-mini hp-plan-mini--review${counts?.reviewDue > 0 ? "" : " is-zero"}`}>Review {counts?.reviewDue ?? 0}</span>
-                                                {counts?.cramDue > 0 && <span className="hp-plan-mini hp-plan-mini--cram">Cram {counts.cramDue}</span>}
+                                                <span className={`hp-plan-mini hp-plan-mini--new${counts?.newDue > 0 ? "" : " is-zero"}`}>New: {counts?.newDue ?? 0}</span>
+                                                <span className={`hp-plan-mini hp-plan-mini--review${counts?.reviewDue > 0 ? "" : " is-zero"}`}>Review: {counts?.reviewDue ?? 0}</span>
+                                                {counts?.cramDue > 0 && <span className="hp-plan-mini hp-plan-mini--cram">Cram: {counts.cramDue}</span>}
                                             </div>
                                         </div>
                                     </div>
