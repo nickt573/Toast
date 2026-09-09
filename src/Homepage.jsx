@@ -1193,7 +1193,7 @@ function PlanStudyPage({ plan, onBack, onStartSession, onNavigateToGroup, setToa
                                 onClick={() => hasDue && onStartSession(group)}
                                 className={`hp-deck-row${!hasDue && doneToday ? " hp-deck-row--empty" : ""}${!hasDue && !doneToday ? " hp-deck-row--idle" : ""}`}
                             >
-                                {!hasDue && doneToday && <span className="hp-deck-check">✓</span>}
+                                {!hasDue && doneToday && <span className="hp-deck-check" />}
                                 <span className="hp-deck-name">{group.name}</span>
                                 {hasDue &&
                                     <span className="hp-deck-counts">

@@ -362,7 +362,10 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 /* Name and skip button sit on the first line, the skip pairs with that line even when the name wraps */
 .hp-todo-head { display: flex; align-items: flex-start; gap: 10px; }
 /* The checkbox rides inline as the name's first character, so wrapped lines fall back under it */
-.hp-todo-check { vertical-align: middle; margin: 0 10px 0 0; }
+.hp-todo-check { vertical-align: middle; position: relative; top: -2px; margin: 0 10px 0 0; }
+/* Circular and green with a white check when done, matching the plan's own checkmark */
+input[type="checkbox"].hp-todo-check { width: 20px; height: 20px; border-radius: 50%; color: var(--t-green); }
+input[type="checkbox"].hp-todo-check:checked { background-size: 12px; }
 
 /* Prescreen todo list, no inner scroll so the whole popup scrolls instead */
 /* Half-height option rows, so they keep the tighter gap the standard lists moved off of */
@@ -464,7 +467,9 @@ button.hp-help-btn:hover { color: var(--t-text); border-color: var(--t-accent-bd
 .hp-deck-row--idle { cursor: default !important; --t-idle: color-mix(in srgb, var(--t-blue-lt) 32%, #d8dce0); --t-stripe: var(--t-idle); --t-stripe-hi: var(--t-idle); opacity: 0.6; }
 .hp-deck-row--idle .hp-deck-name { color: color-mix(in srgb, var(--t-blue) 55%, #777); font-weight: 600; }
 .hp-deck-name { flex: 1; font-weight: 700; font-size: 18px; color: var(--t-title); }
-.hp-deck-check { color: var(--t-green); font-weight: 700; font-size: 14px; flex-shrink: 0; user-select: none; }
+/* The completed mark is the plan's own green circle and white check, not a glyph */
+.hp-deck-check { position: relative; width: 20px; height: 20px; border-radius: 50%; background: var(--t-green); flex-shrink: 0; user-select: none; }
+.hp-deck-check::after { content: ""; position: absolute; top: 46%; left: 50%; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: translate(-50%, -55%) rotate(45deg); }
 .hp-studied-today { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
 .hp-studied-label { font-size: 11px; font-weight: 600; color: var(--t-text-3); }
 .hp-studied-today .hp-deck-new, .hp-studied-today .hp-deck-review { font-size: 12px; min-width: 0; }
