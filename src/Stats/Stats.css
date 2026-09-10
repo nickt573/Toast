@@ -336,9 +336,9 @@ input[type="checkbox"].st-select-check:checked { background-size: 13px; backgrou
 .st-todo-list { display: flex; flex-direction: column; gap: var(--t-list-gap); }
 /* Day sections, where a labeled rule replaces per-row dates */
 .st-day-group { display: flex; flex-direction: column; gap: var(--t-list-gap); }
-/* The group's own 12px gap sits below the date, so a negative bottom margin claws most of it
-   back and drops the date snug over its first todo, with the breathing room kept above instead */
-.st-day-divider { display: flex; justify-content: center; gap: 10px; margin: 6px 0 -8px; font-size: 12px; font-weight: 700; color: var(--t-label); user-select: none; }
+.st-day-divider { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; font-size: 12px; font-weight: 700; color: var(--t-label); user-select: none; }
+/* The rules take the date's own ink watered down, so they read as the same mark without shouting */
+.st-day-divider::before, .st-day-divider::after { content: ""; flex: 1; height: 2px; background: color-mix(in srgb, var(--t-label) 45%, var(--t-bg)); }
 .st-day-group:first-child .st-day-divider { margin-top: 0; }
 /* Todo rows wear the yellow todos wear everywhere else, unframed like a deck card */
 .st-todo-row { background: var(--t-surface); border: none; border-radius: var(--t-r); overflow: hidden; box-shadow: var(--t-shadow-sm); }
