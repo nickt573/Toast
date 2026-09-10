@@ -42,8 +42,9 @@ const CATEGORY_COLORS = CATEGORY_COLOR_BY_LABEL;
 
 function fmtTime(minutes) {
   if (!minutes) return "0m";
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
+  const total = Math.round(minutes);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
