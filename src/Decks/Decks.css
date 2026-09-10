@@ -156,7 +156,7 @@
 .dk-creator-toggle-row:hover { filter: brightness(0.97); }
 
 /* Muted backdrop so bright editable inputs read as real fields and read-only ones as locked */
-.dk-editor-pane { --dk-pane: #FEF4EC; flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; gap: 12px; background: var(--dk-pane); }
+.dk-editor-pane { --dk-pane: #FEF4EC; flex: 1; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow-y: scroll; padding: 18px 22px; padding-right: 12px; gap: 12px; background: var(--dk-pane); }
 /* Previewing swaps the muted editor backdrop for the app background, so the paper card and its shadow stand off it */
 .dk-editor-pane--preview { background: var(--t-bg); }
 .dk-editor-pane textarea, .dk-editor-pane input[type="text"] { background: var(--t-surface); }
@@ -215,6 +215,13 @@
 /* Both creator panels sit on a deeper backdrop than the editor pane, so a filled picker can
    go deeper too and still read as the same step up */
 .dk-new-card input.input-readonly.has-file { background: var(--t-file-filled-deep); border-color: var(--t-border-3); }
+
+.dk-creator-mode-btn { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 5px 12px; white-space: nowrap; border-radius: var(--t-r-btn); background: var(--t-btn); border: 1px solid var(--t-btn); color: var(--t-btn-fg); box-shadow: none; cursor: pointer; }
+.dk-creator-mode-btn:hover { background: var(--t-btn-h); border-color: var(--t-btn-h); color: var(--t-btn-fg); box-shadow: none; }
+.dk-creator-mode-icon { display: inline-flex; align-items: center; }
+.dk-creator-mode-btn .nb-search-glass { margin: 0; vertical-align: 0; }
+.dk-card-search-box { border: 1px solid var(--t-border); }
+.dk-card-search-more { padding: 8px 4px; font-size: 12px; color: var(--t-text-3); font-style: normal; transform: skewX(-11deg); transform-origin: 0 50%; }
 
 .dk-preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 0; }
 .dk-preview-card { width: 100%; max-width: 480px; min-height: 120px; border: none; border-radius: var(--t-r); padding: 20px 24px; background: var(--t-surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; word-break: break-word; overflow-wrap: break-word; box-shadow: var(--t-shadow); }

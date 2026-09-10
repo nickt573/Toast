@@ -468,8 +468,15 @@ function DeckList({ setToast, onOpenDeck }) {
 
 // Card Editor
 
-function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan, logVersion }) {
-  const [form, setForm] = useState(null);
+export function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan, logVersion, onBack = null }) {
+  const [form, setForm] = useState(() => card ? {
+    ...card,
+    support: card.support ?? "",
+    front_image: card.front_image ?? null,
+    back_image: card.back_image ?? null,
+    front_audio: card.front_audio ?? null,
+    back_audio: card.back_audio ?? null,
+  } : null);
   const [previewing, setPreviewing] = useState(false);
   const [previewFlipped, setPreviewFlipped] = useState(false);
   const [cardLog, setCardLog] = useState([]);
@@ -627,6 +634,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
     return (
       <div className="dk-editor-pane dk-editor-pane--preview" ref={paneRef} onScroll={handlePaneScroll}>
         <div className="dk-editor-topbar">
+          {onBack && <button className="quiet" onClick={onBack}>← Back</button>}
           <button className="quiet" onClick={() => setPreviewing(false)}>Edit</button>
           {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
           <button style={{ marginLeft: "auto" }} onClick={() => setPreviewFlipped((f) => !f)}>
@@ -646,6 +654,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
   return (
     <div className="dk-editor-pane" ref={paneRef} onScroll={handlePaneScroll}>
       <div className="dk-editor-topbar">
+        {onBack && <button className="quiet" onClick={onBack}>← Back</button>}
         <button onClick={() => { setPreviewing(true); setPreviewFlipped(false); }}>Preview</button>
         {form.is_uploaded && <span className="dk-uploaded-badge">Anki Import</span>}
       </div>
@@ -770,7 +779,7 @@ function CardEditor({ setToast, card, onSaved, onDeleted, onRescheduled, inPlan,
 
 // New Card Form
 
-export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null }) {
+export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null, topSlot = null }) {
   const blank = () => emptyNewCard(groupId);
   const [form, setForm] = useState(blank);
   const [createFlipped, setCreateFlipped] = useState(false);
@@ -832,6 +841,7 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
 
   return (
     <div className="dk-new-card">
+      {topSlot}
       {deckSelector}
       <div className="dk-new-card-row"><label>Front</label><textarea rows={2} value={form.front} onChange={(e) => set("front", e.target.value)} /></div>
       <div className="dk-new-card-row">
@@ -896,6 +906,90 @@ export function NewCardForm({ setToast, groupId, onCreated, deckSelector = null 
         </div>
         <button className="primary" onClick={submit}>+ Add Card</button>
       </div>
+    </div>
+  );
+}
+
+// Card Search Form
+
+export function CardSearchForm({ cards, onSelect, selectedId, topSlot = null }) {
+  const [query, setQuery] = useState("");
+  const [scopeMain, setScopeMain] = useState(true);
+  const [scopeSupport, setScopeSupport] = useState(true);
+
+  const toggleScope = (which) => {
+    if (which === "main") { if (scopeMain && !scopeSupport) return; setScopeMain(v => !v); }
+    else { if (scopeSupport && !scopeMain) return; setScopeSupport(v => !v); }
+  };
+
+  const results = useMemo(() => {
+    if (!query.trim()) return cards;
+    const q = normalizeSearchText(query).toLowerCase();
+    return cards.filter((c) => {
+      const fields = [];
+      if (scopeMain) {
+        fields.push(
+          normalizeSearchText(c.front),
+          normalizeSearchText(c.back),
+          stripHtml(c.imported_front ?? ""),
+          stripHtml(c.imported_back ?? ""),
+        );
+      }
+      if (scopeSupport) {
+        fields.push(
+          normalizeSearchText(c.support ?? ""),
+          stripHtml(c.imported_support ?? ""),
+        );
+      }
+      return fields.some((t) => t.toLowerCase().includes(q));
+    });
+  }, [cards, query, scopeMain, scopeSupport]);
+
+  const CAP = 200;
+  const shown = results.slice(0, CAP);
+
+  return (
+    <div className="dk-new-card dk-card-search">
+      {topSlot}
+      <div className="dk-search-row">
+        <input type="text" className="dk-search-input" placeholder="Search cards..." value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") setQuery(""); }} />
+        <div className="dk-search-scope">
+          <button className={`dk-scope-btn${scopeMain ? " active" : ""}`}
+            onClick={() => toggleScope("main")} title="Search the front and back of cards">Front / Back</button>
+          <button className={`dk-scope-btn${scopeSupport ? " active" : ""}`}
+            onClick={() => toggleScope("support")} title="Search the support field of cards">Support</button>
+        </div>
+      </div>
+      {results.length === 0 ? (
+        <div className="dk-table-empty">
+          {cards.length === 0 ? "No cards yet, create some first!" : "No cards match your search."}
+        </div>
+      ) : (
+        <div className="dk-card-search-box">
+          <table className="dk-card-table dk-card-search-table">
+            <colgroup><col /><col /></colgroup>
+            <tbody>
+              {shown.map((card, i) => {
+                const front = [stripHtml(card.imported_front ?? ""), card.front].filter(Boolean).join(" · ");
+                const back = [stripHtml(card.imported_back ?? ""), card.back].filter(Boolean).join(" · ");
+                return (
+                  <tr key={card.id}
+                    className={[i % 2 === 1 ? "dk-even" : "", card.id === selectedId ? "selected" : ""].filter(Boolean).join(" ")}
+                    onClick={() => onSelect(card.id)}>
+                    <td><div className="dk-cell-clamp">{front}</div></td>
+                    <td><div className="dk-cell-clamp">{back}</div></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {results.length > CAP && (
+        <div className="dk-card-search-more">Showing the first {CAP} matches, refine your search to narrow them.</div>
+      )}
     </div>
   );
 }

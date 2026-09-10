@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { NewCardForm } from "../Decks/Decks";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import { NewCardForm, CardSearchForm, CardEditor } from "../Decks/Decks";
 import { ConfirmDelete, CreateMenu, SelectMenu } from "../UIUtils";
 import { mediaSrc } from "../mediaPaths";
 import { AudioPlayer } from "../Decks/CardFace";
@@ -667,10 +667,16 @@ function CardCreatorPanel({ setToast }) {
     const [open, setOpen] = useState(false);
     const [decks, setDecks] = useState([]);
     const [deckId, setDeckId] = useState(null);
+    const [mode, setMode] = useState("create");
+    const [cards, setCards] = useState([]);
+    const [selectedCardId, setSelectedCardId] = useState(null);
     // Dragged panel height, null means size to fit the form
     const [creatorHeight, setCreatorHeight] = useState(null);
+    const [resizing, setResizing] = useState(false);
     const creatorRef = useRef(null);
     const dragMovedRef = useRef(false);
+    const viewRef = useRef(null);
+    const gridScrollRef = useRef(0);
 
     // Panel can't shrink below this while dragging
     const CREATOR_MIN_PX = 90;
@@ -692,11 +698,13 @@ function CardCreatorPanel({ setToast }) {
             if (!moved && Math.abs(ev.clientY - startY) < 4) return;
             moved = true;
             dragMovedRef.current = true;
+            setResizing(true);
             setCreatorHeight(heightAt(ev));
         };
         const onUp = () => {
             document.removeEventListener("mousemove", onMove);
             document.removeEventListener("mouseup", onUp);
+            setResizing(false);
         };
         document.addEventListener("mousemove", onMove);
         document.addEventListener("mouseup", onUp);
@@ -705,8 +713,30 @@ function CardCreatorPanel({ setToast }) {
 
     const toggle = () => {
         if (dragMovedRef.current) { dragMovedRef.current = false; return; }
-        setOpen((o) => !o);
+        setOpen((o) => {
+            if (o) { setMode("create"); setSelectedCardId(null); }
+            return !o;
+        });
     };
+
+    // Lock the open panel to the create form's height so switching views never resizes it
+    useLayoutEffect(() => {
+        if (!open || creatorHeight != null) return;
+        const panel = creatorRef.current;
+        const toggleBar = panel?.querySelector(".nb-card-toggle");
+        const view = panel?.querySelector(".nb-cc-view");
+        const header = panel?.querySelector(".nb-cc-header");
+        if (!panel || !toggleBar || !view) return;
+        const frame = panel.offsetParent;
+        const maxHeight = frame ? frame.getBoundingClientRect().height - 12 : Infinity;
+        const natural = toggleBar.offsetHeight + (header?.offsetHeight ?? 0) + view.scrollHeight;
+        setCreatorHeight(Math.min(natural, maxHeight));
+    }, [open, creatorHeight]);
+
+    useLayoutEffect(() => {
+        const el = viewRef.current;
+        if (el) el.scrollTop = selectedCardId ? 0 : gridScrollRef.current;
+    }, [selectedCardId]);
 
     useEffect(() => {
         loggedInvoke("get_groups")
@@ -714,8 +744,38 @@ function CardCreatorPanel({ setToast }) {
             .catch(e => logError("catch", e));
     }, []);
 
+    useEffect(() => {
+        setSelectedCardId(null);
+        if (!deckId) { setCards([]); return; }
+        loggedInvoke("get_cards", { deckId }).then(setCards).catch(e => logError("catch", e));
+    }, [deckId]);
+
+    const selectedDeck = decks.find((d) => d.id === deckId) ?? null;
+    const selectedCard = cards.find((c) => c.id === selectedCardId) ?? null;
+
+    const onCardSaved = async (updated) => {
+        const old = cards.find((c) => c.id === updated.id);
+        if (old?.is_paused !== updated.is_paused) {
+            const fresh = await loggedInvoke("get_cards", { deckId });
+            setCards(fresh);
+        } else {
+            setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+        }
+    };
+    const onCardDeleted = async () => {
+        const fresh = await loggedInvoke("get_cards", { deckId });
+        setCards(fresh);
+        setSelectedCardId(null);
+    };
+    const onCardRescheduled = (updated) => setCards((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+
+    const openCard = (id) => {
+        gridScrollRef.current = viewRef.current?.scrollTop ?? 0;
+        setSelectedCardId(id);
+    };
+
     const deckSelector = (
-        <div className="dk-new-card-row">
+        <div className="nb-cc-deck">
             <label>Deck</label>
             <SelectMenu value={deckId} onChange={(v) => setDeckId(v)}
                 placeholder="Select a deck…"
@@ -724,10 +784,24 @@ function CardCreatorPanel({ setToast }) {
         </div>
     );
 
+    const searchGlass = (
+        <svg className="nb-search-glass" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="7" />
+            <line x1="15.5" y1="15.5" x2="21" y2="21" />
+        </svg>
+    );
+
+    const modeButton = mode === "create"
+        ? { icon: searchGlass, label: "Search", onClick: () => {
+            if (!deckId) { setToast("Please select a deck.", "warn"); return; }
+            setMode("search");
+        } }
+        : { icon: "+", label: "Create", onClick: () => setMode("create") };
+
     return (
         <div
             ref={creatorRef}
-            className={`nb-card-creator${open ? " open" : ""}`}
+            className={`nb-card-creator${open ? " open" : ""}${resizing ? " resizing" : ""}`}
             style={open && creatorHeight != null ? { height: creatorHeight } : undefined}
         >
             <div className="nb-card-toggle" onMouseDown={startDrag} onClick={toggle}>
@@ -736,12 +810,41 @@ function CardCreatorPanel({ setToast }) {
             </div>
             {/* Kept mounted while closed so in-progress input survives toggling */}
             <div className="nb-card-body">
-                <NewCardForm
-                    groupId={deckId}
-                    setToast={setToast}
-                    onCreated={() => {}}
-                    deckSelector={deckSelector}
-                />
+                <div className="nb-cc-header">
+                    <button className="dk-creator-mode-btn" onClick={modeButton.onClick}>
+                        <span className="dk-creator-mode-icon">{modeButton.icon}</span>{modeButton.label}
+                    </button>
+                    {deckSelector}
+                </div>
+                <div className="nb-cc-view" ref={viewRef}>
+                    {/* Kept mounted under search so a half-filled create form survives the switch */}
+                    <div style={{ display: mode === "create" ? "contents" : "none" }}>
+                        <NewCardForm
+                            groupId={deckId}
+                            setToast={setToast}
+                            onCreated={(card) => setCards((prev) => [...prev, card])}
+                            deckSelector={null}
+                        />
+                    </div>
+                    {mode === "search" && (selectedCard ? (
+                        <CardEditor
+                            setToast={setToast}
+                            card={selectedCard}
+                            onSaved={onCardSaved}
+                            onDeleted={onCardDeleted}
+                            onRescheduled={onCardRescheduled}
+                            inPlan={!!selectedDeck?.plan_id}
+                            logVersion={0}
+                            onBack={() => setSelectedCardId(null)}
+                        />
+                    ) : (
+                        <CardSearchForm
+                            cards={cards}
+                            selectedId={selectedCardId}
+                            onSelect={openCard}
+                        />
+                    ))}
+                </div>
             </div>
         </div>
     );
